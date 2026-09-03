@@ -1,0 +1,40 @@
+﻿{
+  "name": "dsh-profile-desktop",
+  "private": true,
+  "dependencies": {
+    "@dsh-external/dsh-client-ui-skin-deep-whale-day-night": "link:D:/dsp/deep-whale-day-night-theme",
+    "@dsh-external/dsh-super-injector": "link:C:/Users/admin/Downloads/dsh-super-injector",
+    "dsh-file-drop": "link:D:/dsp/dsh-file-drop",
+    "dsh-plugin-smooth-stream": "link:D:/dsp/dsh-plugin-smooth-stream",
+    "dsh-deepseek-usage": "link:D:/dsp/dsh-deepseek-usage-patch",
+    "dsh-config-doctor": "link:D:/dsp/dsh-config-doctor",
+    "dshmarket": "^1.9.0",
+    "@linxin666/dsh-client-ui-web-ui-settings": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-web-ui-settings",
+    "@linxin666/dsh-client-ui-community-plugins": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-community-plugins",
+    "@linxin666/dsh-client-ui-notification-center": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/notification-center",
+    "@linxin666/dsh-client-ui-conversation-exporter": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/conversation-exporter",
+    "@linxin666/dsh-client-ui-workspace-analyzer": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/workspace-analyzer",
+    "@linxin666/dsh-client-ui-task-board": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-task-board",
+    "@linxin666/dsh-client-ui-git-graph": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-git-graph",
+    "@linxin666/dsh-client-ui-aionui-panel": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-aionui-panel",
+    "@linxin666/dsh-remote-web-ui": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-remote-web-ui",
+    "@linxin666/dsh-live-stats": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-live-stats",
+    "@linxin666/dsh-ssh": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-ssh",
+    "@linxin666/dsh-tool-describe-image": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-tool-describe-image",
+    "@linxin666/dsh-liangshen": "link:C:/Users/admin/Downloads/dsh-web-ui-main/packages/dsh-liangshen"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "@dsh-external/dsh-client-ui-skin-deep-whale-day-night",
+        "@dsh-external/dsh-super-injector",
+        "dsh-file-drop",
+        "dsh-plugin-smooth-stream",
+        "dsh-deepseek-usage",
+        "dsh-config-doctor"
+      ]
+    }
+  }
+}

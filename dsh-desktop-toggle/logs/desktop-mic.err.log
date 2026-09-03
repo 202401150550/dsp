@@ -1,0 +1,5 @@
+(node:20024) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `DSH Desktop --trace-deprecation ...` to show where the warning was created)
+fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'

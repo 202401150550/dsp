@@ -1,0 +1,32 @@
+{
+  "name": "rra-proto",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Neural RRA prototype L6/M2 — hot-read longctx; not full RRA",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/status.mjs",
+  "exports": {
+    ".": "./src/status.mjs",
+    "./baselines": "./src/baselines.mjs",
+    "./rope": "./src/rope.mjs",
+    "./compress": "./src/compress.mjs",
+    "./l3-eval": "./src/l3-eval.mjs",
+    "./l4-longctx": "./src/l4-longctx.mjs",
+    "./kv-bank": "./src/kv-bank.mjs",
+    "./l6-m2-hotread": "./src/l6-m2-hotread.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "bench": "node bench/byte-matched-baseline.mjs",
+    "gate:l3": "node bench/l3-gate.mjs",
+    "gate:l4": "node bench/l4-gate.mjs",
+    "gate:l6": "node bench/l6-gate.mjs",
+    "gate:m1": "node bench/l6-m1-gate.mjs",
+    "gate:m2": "node bench/l6-m2-gate.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

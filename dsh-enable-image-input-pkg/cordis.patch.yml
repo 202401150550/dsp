@@ -1,0 +1,10 @@
+# DSH skill-filesystem provider for dsh-enable-image-input.
+# Exposes the skill via @deepseek-ai/dsh-skill-filesystem so DSH's
+# skill_search / skill_load tools can discover and invoke it.
+- insert:
+    - id: dsh-enable-image-input-skill-filesystem
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      config:
+        providerName: dsh-enable-image-input
+        includeDefaultRoots: false
+        bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('dsh-enable-image-input-pkg/package.json')), 'skills')

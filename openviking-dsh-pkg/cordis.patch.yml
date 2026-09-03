@@ -1,0 +1,13 @@
+# DSH skill-filesystem provider for OpenViking memory skill.
+# Exposes the openviking-memory skill via @deepseek-ai/dsh-skill-filesystem.
+#
+# NOTE: The MCP server (servers/mcp-proxy.mjs) requires a running OpenViking
+# server (pip install openviking && openviking-server). The skill alone provides
+# memory guidance; full recall/retain requires the server + MCP connection.
+- insert:
+    - id: openviking-skill-filesystem
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      config:
+        providerName: openviking
+        includeDefaultRoots: false
+        bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('openviking-dsh-pkg/package.json')), 'skills')

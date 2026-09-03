@@ -1,0 +1,5 @@
+# dsh-open-world：开放世界指挥中心（Host + Web Client）
+- insert:
+    - id: dsh-open-world
+      name: dsh-open-world
+      inject: [webServer, sessions]

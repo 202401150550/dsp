@@ -1,0 +1,52 @@
+# ── dependencies / package managers ──
+node_modules/
+.pnpm-store/
+
+# ── editor & tool caches ──
+.build-tools/
+.freebuff/
+.workbuddy/
+
+# ── local scratch (tidy-workspace.ps1 会把根目录调试产物移入) ──
+_scratch/
+
+# ── doctor / toggle / DSH 调试会话产物 ──
+_doctor-last.json
+_dsh_*
+_cdp_*
+_dsh_extract/
+_asar_snip/
+_asar_tmp/
+
+# ── 根目录日志与 stdout/stderr 转储 ──
+/*.log
+/dsh-stdout*.txt
+/dsh-stderr*.txt
+/nul
+
+# ── 根目录截图 / 剪贴板 OCR 调试 ──
+/*.png
+/clipboard-*
+/ocr-*.txt
+/ocr-*.ps1
+
+# ── 根目录 asar / CDP 一次性脚本 ──
+/parse-asar.js
+/search-asar.js
+/search-dsh-src.js
+/list-asar-presets.js
+/find-skill-loader.js
+/_fix_corrupted_src.*
+/main.js
+/test-zhipu.mjs
+/get-clipboard-image.ps1
+/tmp-*.json
+
+# ── 备份与散落 tgz ──
+/package.json.bak-*
+/*.tgz
+
+# ── OS ──
+Thumbs.db
+Desktop.ini
+.DS_Store

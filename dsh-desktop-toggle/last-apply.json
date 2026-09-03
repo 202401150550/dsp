@@ -1,0 +1,91 @@
+{
+  "ok": true,
+  "action": "apply",
+  "applied_at": "2026-09-03T13:56:20.665Z",
+  "profile_dir": "C:/Users/admin/.dsh/profiles/desktop",
+  "preset": null,
+  "bundles": [
+    "@deepseek-ai/dsh-base",
+    "@deepseek-ai/dsh-web-app",
+    "dsh-self",
+    "@dsh-external/dsh-client-ui-skin-deep-whale-day-night",
+    "@vectorize-io/hindsight-coding-agents",
+    "@tt-a1i/archify-dsh",
+    "dsh-enable-image-input-pkg"
+  ],
+  "enabled": [
+    "apiproxy-compat (ApiProxy 兼容层（alpha）)",
+    "dsh-open-world (开放世界指挥中心)",
+    "web-ui-rewind (对话回退 Rewind)",
+    "ventus-progress (子代理进度)",
+    "better-sidebar (右侧工作台)",
+    "web-ui-settings (Web UI 设置分组)",
+    "web-ui-task-board (任务看板)",
+    "web-ui-live-stats (实时状态)",
+    "web-ui-describe-image (图片描述工具)",
+    "hindsight (Hindsight 长期记忆)",
+    "archify (Archify 架构图)",
+    "dsh-enable-image-input (图片输入修复)"
+  ],
+  "disabled": [
+    "host-apiproxy (Host ApiProxy 网关（官方 rc，已弃用）)",
+    "ventus-search (Ventus 搜索)",
+    "dsh-market (插件市场)",
+    "web-ui-community-plugins (社区插件索引)",
+    "web-ui-notification-center (通知中心)",
+    "web-ui-conversation-exporter (对话导出)",
+    "web-ui-workspace-analyzer (工作区分析)",
+    "web-ui-git-graph (Git 图谱)",
+    "web-ui-aionui-panel (AionUI 面板)",
+    "web-ui-pet (桌宠)",
+    "web-ui-remote-web-ui (远程 Web UI)",
+    "web-ui-ssh (SSH 远程)",
+    "web-ui-liangshen (良神扩展)",
+    "dsh-mic-input (语音输入（浏览器 Web Speech）)",
+    "dsh-voice (语音输入（离线）)",
+    "openviking (OpenViking 技能说明)",
+    "openviking-dsh-memory (OpenViking DSH 记忆插件)",
+    "dsh-super-injector (Super Injector)",
+    "web-ui-skin-center (皮肤中心（XP/初音/Minecraft 等）)",
+    "web-ui-all (Web UI 全家桶)"
+  ],
+  "blocked": [],
+  "market_disabled": [
+    "@linxin666/dsh-client-ui-skin-center",
+    "@linxin666/dsh-skins",
+    "@linxin666/dsh-client-ui-skin-xp",
+    "@linxin666/dsh-client-ui-skin-miku",
+    "@linxin666/dsh-client-ui-skin-minecraft",
+    "@linxin666/dsh-client-ui-skin-tokyo-night",
+    "@linxin666/dsh-client-ui-skin-dracula",
+    "@linxin666/dsh-client-ui-skin-cyberpunk",
+    "@linxin666/dsh-client-ui-skin-blue-fantasy",
+    "@linxin666/dsh-client-ui-skin-dragon-heir",
+    "@linxin666/dsh-client-ui-skin-harbor",
+    "@linxin666/dsh-client-ui-skin-maid-atelier",
+    "@linxin666/dsh-client-ui-skin-matrix",
+    "@linxin666/dsh-client-ui-skin-trading",
+    "@linxin666/dsh-client-ui-skin-whale-mom",
+    "@linxin666/dsh-client-ui-skin-whale-song",
+    "@nn12138/dsh-voice",
+    "sherpa-onnx-node"
+  ],
+  "install": {
+    "skipped": false,
+    "code": 0
+  },
+  "api_remotes_patch": {
+    "skipped": true,
+    "reason": "host-apiproxy-disabled"
+  },
+  "doctor": {
+    "skipped": false,
+    "ok": true,
+    "exit_code": 0,
+    "checked_at": "2026-09-03T13:56:20.656Z",
+    "hot_count": 0,
+    "dep_count": 14,
+    "issues": []
+  },
+  "restart_required": true
+}

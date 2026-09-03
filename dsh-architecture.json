@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DeepSeek Harness Desktop",
+    "subtitle": "本地 GUI · Agent Runtime · 多模型 Providers",
+    "output": "dsh-architecture.html"
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "用户", "sublabel": "浏览器 GUI", "pos": [40, 300], "size": [120, 60] },
+    { "id": "webgui", "type": "frontend", "label": "Web GUI", "sublabel": "dsh-web · React", "pos": [240, 300], "size": [140, 60], "tag": "端口 :3318" },
+    { "id": "gateway", "type": "backend", "label": "API Gateway", "sublabel": "dsh-host-apiproxy", "pos": [440, 300], "size": [140, 60], "tag": "模型切换校验" },
+    { "id": "runtime", "type": "backend", "label": "Agent Runtime", "sublabel": "agent loop + tools", "pos": [640, 300], "size": [140, 60] },
+    { "id": "deepseek", "type": "cloud", "label": "DeepSeek API", "sublabel": "deepseek-v4-flash", "pos": [440, 90], "size": [140, 60], "tag": "纯文本" },
+    { "id": "zhipu", "type": "cloud", "label": "智谱 GLM API", "sublabel": "GLM-4V / 4.6V-Flash", "pos": [640, 90], "size": [140, 60], "tag": "多模态 · 图片" },
+    { "id": "tools", "type": "backend", "label": "本地工具", "sublabel": "OCR / PowerShell / FS", "pos": [640, 490], "size": [140, 60] },
+    { "id": "storage", "type": "database", "label": "本地存储", "sublabel": "sessions · settings.yaml", "pos": [440, 490], "size": [140, 60], "tag": "jsonl.zstd" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "用户本地桌面 (Windows)", "wraps": ["webgui", "gateway", "runtime", "tools", "storage"] },
+    { "kind": "region", "label": "云端模型 API", "wraps": ["deepseek", "zhipu"] }
+  ],
+  "connections": [
+    { "from": "users", "to": "webgui", "label": "HTTPS :3318", "variant": "emphasis" },
+    { "from": "webgui", "to": "gateway", "label": "RPC" },
+    { "from": "gateway", "to": "runtime", "label": "dispatch" },
+    { "from": "runtime", "to": "deepseek", "label": "Chat API · text", "fromSide": "top", "toSide": "bottom" },
+    { "from": "runtime", "to": "zhipu", "label": "Chat API · image+text", "variant": "emphasis", "fromSide": "top", "toSide": "bottom" },
+    { "from": "runtime", "to": "tools", "label": "本地调用", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "from": "runtime", "to": "storage", "label": "读写会话", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "gateway", "to": "storage", "label": "模型能力元数据", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelDy": 58 }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "界面层", "items": ["Web GUI 运行于本地 :3318", "模型选择器：DeepSeek / 智谱 GLM"] },
+    { "dot": "emerald", "title": "能力层", "items": ["API Gateway 校验模型 inputModalities", "Agent Runtime 执行 agent loop 与工具调用"] },
+    { "dot": "amber", "title": "多模态要点", "items": ["DeepSeek 纯文本：会话含图时切换被 model-unavailable 拦截", "GLM 支持 image+text：一张图仅占几千 token", "本地 OCR 提字：图片不进入会话上下文"] }
+  ]
+}

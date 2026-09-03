@@ -1,0 +1,29 @@
+﻿# Phase 2 宿主策略（脊梁）。改完需重启 Desktop。
+version: 1
+max_steps: 20
+max_read_bytes: 131072
+max_write_bytes: 262144
+timeout_ms: 30000
+max_output_chars: 8000
+
+# 允许读写的根目录。出界一律拒绝。
+roots:
+  - D:/dsp
+
+# 文件名黑名单（任意根下都不读写）
+deny_names:
+  - .credentials.yaml
+  - credentials.json
+  - .env
+  - .env.local
+  - id_rsa
+  - id_ed25519
+
+# 参数化命令（禁止 shell:true；argv 逐项校验）
+commands:
+  git:
+    bin: git
+  node:
+    bin: node
+  pnpm:
+    bin: pnpm

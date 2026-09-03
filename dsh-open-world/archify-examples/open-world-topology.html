@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open World ATI Topology</title>
+<style>
+:root{--bg:#05070d;--cyan:#5eead4;--violet:#a78bfa;--text:#e6f1ff;--muted:#7c8ea6}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Consolas,"Segoe UI","Microsoft YaHei UI",sans-serif;display:grid;place-items:center;padding:24px}
+.wrap{max-width:880px;width:100%}
+h1{font-size:14px;letter-spacing:.35em;color:var(--cyan);margin:0 0 8px}
+p{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 20px}
+svg{width:100%;height:auto;display:block;border:1px solid rgba(94,234,212,.2);background:rgba(8,14,24,.85)}
+.node{cursor:pointer}.lbl{font-size:11px;fill:var(--text)}.sub{font-size:9px;fill:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>OPEN WORLD · ATI TOPOLOGY</h1>
+<p>器官拓扑：用户中心 → 当前会话 → AI 引擎 → 任务/记忆/网络 · 消息总线广播 · 跨机 remote-web-ui 配对</p>
+<svg viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#5eead4"/>
+</linearGradient>
+</defs>
+<line x1="120" y1="210" x2="280" y2="120" stroke="url(#g)" stroke-width="1.5" opacity=".6"/>
+<line x1="280" y1="120" x2="400" y2="210" stroke="url(#g)" stroke-width="2" opacity=".8"/>
+<line x1="400" y1="210" x2="560" y2="120" stroke="url(#g)" stroke-width="1.5" opacity=".6"/>
+<line x1="400" y1="210" x2="560" y2="300" stroke="url(#g)" stroke-width="1.5" opacity=".6"/>
+<line x1="400" y1="210" x2="280" y2="300" stroke="url(#g)" stroke-width="1.5" opacity=".5"/>
+<line x1="120" y1="210" x2="280" y2="300" stroke="url(#g)" stroke-width="1" opacity=".4"/>
+<circle class="node" cx="120" cy="210" r="28" fill="#f4a26133" stroke="#f4a261" stroke-width="2"/>
+<text class="lbl" x="120" y="214" text-anchor="middle">用户中心</text>
+<circle class="node" cx="280" cy="120" r="24" fill="#a78bfa33" stroke="#a78bfa" stroke-width="2"/>
+<text class="lbl" x="280" y="124" text-anchor="middle">当前会话</text>
+<circle class="node" cx="400" cy="210" r="34" fill="#f5d67a33" stroke="#f5d67a" stroke-width="2.5"/>
+<text class="lbl" x="400" y="206" text-anchor="middle">AI 引擎</text>
+<text class="sub" x="400" y="222" text-anchor="middle">COGNITION</text>
+<circle class="node" cx="560" cy="120" r="24" fill="#38bdf833" stroke="#38bdf8" stroke-width="2"/>
+<text class="lbl" x="560" y="124" text-anchor="middle">任务队列</text>
+<circle class="node" cx="560" cy="300" r="24" fill="#a78bfa33" stroke="#a78bfa" stroke-width="2"/>
+<text class="lbl" x="560" y="304" text-anchor="middle">记忆库</text>
+<circle class="node" cx="280" cy="300" r="22" fill="#5eead433" stroke="#5eead4" stroke-width="2"/>
+<text class="lbl" x="280" y="304" text-anchor="middle">网络/远程</text>
+<rect x="620" y="40" width="150" height="90" rx="6" fill="rgba(94,234,212,.06)" stroke="rgba(94,234,212,.25)"/>
+<text class="lbl" x="695" y="68" text-anchor="middle">消息总线</text>
+<text class="sub" x="695" y="88" text-anchor="middle">mailbox + SSE</text>
+<text class="sub" x="695" y="104" text-anchor="middle">跨机 outbox</text>
+</svg>
+</div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Harness 数据模型</title>
+  <style>
+    :root { --bg: #fff; --fg: #222; --border: #ddd; }
+    [data-theme="dark"] { --bg: #1a1a1a; --fg: #eee; --border: #444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: SimSun, serif; background: var(--bg); color: var(--fg); padding: 20px; }
+    .bar { position: fixed; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
+    .bar button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); cursor: pointer; }
+    h1 { text-align: center; margin-bottom: 5px; }
+    .sub { text-align: center; color: #888; margin-bottom: 15px; }
+    .box { border: 1px solid var(--border); border-radius: 8px; padding: 15px; max-width: 1400px; margin: 0 auto; overflow: auto; }
+    .info { text-align: center; margin-top: 15px; font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button onclick="toggleTheme()">切换主题</button>
+    <button onclick="exportPNG()">导出PNG</button>
+    <button onclick="exportSVG()">导出SVG</button>
+  </div>
+  <h1>DeepSeek Harness 数据模型</h1>
+  <p class="sub">陈氏 ER 图（Chen's ER Diagram）</p>
+  <div class="box"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 690" width="100%"><defs>
+    <style>
+      :root { --bg: #fff; --fg: #222; --light: #666; }
+      [data-theme="dark"] { --bg: #1a1a1a; --fg: #eee; --light: #999; }
+      .ent { fill: var(--bg); stroke: var(--fg); stroke-width: 2; }
+      .ent-txt { font: bold 13px SimSun; fill: var(--fg); text-anchor: middle; dominant-baseline: middle; }
+      .dia { fill: var(--bg); stroke: var(--fg); stroke-width: 2; }
+      .dia-txt { font: 11px SimSun; fill: var(--fg); text-anchor: middle; dominant-baseline: middle; }
+      .attr { fill: var(--bg); stroke: var(--light); stroke-width: 1.5; }
+      .attr-txt { font: 10px SimSun; fill: var(--fg); text-anchor: middle; dominant-baseline: middle; }
+      .line { stroke: var(--fg); stroke-width: 1.5; fill: none; }
+      .attr-line { stroke: var(--light); stroke-width: 1; fill: none; stroke-dasharray: 4; }
+      .card { font: bold 13px SimSun; fill: var(--fg); text-anchor: middle; dominant-baseline: middle; }
+      .card-bg { fill: var(--bg); }
+    </style>
+  </defs><line x1="210" y1="165" x2="310" y2="235" class="line"/><line x1="470" y1="325" x2="390" y2="235" class="line"/><rect x="220" y="169" width="20" height="20" rx="3" class="card-bg"/><text x="230" y="179" class="card">1</text><rect x="444" y="297" width="20" height="20" rx="3" class="card-bg"/><text x="454" y="307" class="card">n</text><line x1="470" y1="325" x2="560" y2="235" class="line"/><line x1="730" y1="165" x2="640" y2="235" class="line"/><rect x="478" y="297" width="20" height="20" rx="3" class="card-bg"/><text x="488" y="307" class="card">1</text><rect x="702" y="169" width="20" height="20" rx="3" class="card-bg"/><text x="712" y="179" class="card">n</text><line x1="730" y1="165" x2="770" y2="300" class="line"/><line x1="730" y1="485" x2="770" y2="350" class="line"/><rect x="728" y="182" width="20" height="20" rx="3" class="card-bg"/><text x="738" y="192" class="card">1</text><rect x="728" y="448" width="20" height="20" rx="3" class="card-bg"/><text x="738" y="458" class="card">n</text><line x1="470" y1="325" x2="470" y2="430" class="line"/><line x1="470" y1="555" x2="470" y2="480" class="line"/><rect x="460" y="336" width="20" height="20" rx="3" class="card-bg"/><text x="470" y="346" class="card">n</text><rect x="460" y="530" width="20" height="20" rx="3" class="card-bg"/><text x="470" y="540" class="card">1</text><line x1="210" y1="485" x2="310" y2="535" class="line"/><line x1="470" y1="555" x2="390" y2="535" class="line"/><rect x="220" y="485" width="20" height="20" rx="3" class="card-bg"/><text x="230" y="495" class="card">1</text><rect x="444" y="541" width="20" height="20" rx="3" class="card-bg"/><text x="454" y="551" class="card">n</text><ellipse cx="175" cy="100" rx="32" ry="16" class="attr"/><text x="175" y="100" class="attr-txt">路径</text><line x1="210" y1="140" x2="175" y2="116" class="attr-line"/><ellipse cx="245" cy="100" rx="32" ry="16" class="attr"/><text x="245" y="100" class="attr-txt">名称</text><line x1="210" y1="140" x2="245" y2="116" class="attr-line"/><ellipse cx="435" cy="260" rx="32" ry="16" class="attr"/><text x="435" y="260" class="attr-txt">会话ID</text><line x1="470" y1="300" x2="435" y2="276" class="attr-line"/><ellipse cx="505" cy="260" rx="32" ry="16" class="attr"/><text x="505" y="260" class="attr-txt">创建时间</text><line x1="470" y1="300" x2="505" y2="276" class="attr-line"/><ellipse cx="660" cy="100" rx="32" ry="16" class="attr"/><text x="660" y="100" class="attr-txt">角色</text><line x1="730" y1="140" x2="660" y2="116" class="attr-line"/><ellipse cx="730" cy="100" rx="32" ry="16" class="attr"/><text x="730" y="100" class="attr-txt">内容</text><line x1="730" y1="140" x2="730" y2="116" class="attr-line"/><ellipse cx="800" cy="100" rx="32" ry="16" class="attr"/><text x="800" y="100" class="attr-txt">时间戳</text><line x1="730" y1="140" x2="800" y2="116" class="attr-line"/><ellipse cx="660" cy="420" rx="32" ry="16" class="attr"/><text x="660" y="420" class="attr-txt">hash</text><line x1="730" y1="460" x2="660" y2="436" class="attr-line"/><ellipse cx="730" cy="420" rx="32" ry="16" class="attr"/><text x="730" y="420" class="attr-txt">媒体类型</text><line x1="730" y1="460" x2="730" y2="436" class="attr-line"/><ellipse cx="800" cy="420" rx="32" ry="16" class="attr"/><text x="800" y="420" class="attr-txt">大小</text><line x1="730" y1="460" x2="800" y2="436" class="attr-line"/><ellipse cx="400" cy="490" rx="32" ry="16" class="attr"/><text x="400" y="490" class="attr-txt">模型ID</text><line x1="470" y1="530" x2="400" y2="506" class="attr-line"/><ellipse cx="470" cy="490" rx="32" ry="16" class="attr"/><text x="470" y="490" class="attr-txt">上下文窗口</text><line x1="470" y1="530" x2="470" y2="506" class="attr-line"/><ellipse cx="540" cy="490" rx="32" ry="16" class="attr"/><text x="540" y="490" class="attr-txt">支持图片</text><line x1="470" y1="530" x2="540" y2="506" class="attr-line"/><ellipse cx="175" cy="420" rx="32" ry="16" class="attr"/><text x="175" y="420" class="attr-txt">名称</text><line x1="210" y1="460" x2="175" y2="436" class="attr-line"/><ellipse cx="245" cy="420" rx="32" ry="16" class="attr"/><text x="245" y="420" class="attr-txt">baseURL</text><line x1="210" y1="460" x2="245" y2="436" class="attr-line"/><rect x="140" y="140" width="140" height="50" rx="4" class="ent"/><text x="210" y="165" class="ent-txt">工作区</text><rect x="400" y="300" width="140" height="50" rx="4" class="ent"/><text x="470" y="325" class="ent-txt">会话</text><rect x="660" y="140" width="140" height="50" rx="4" class="ent"/><text x="730" y="165" class="ent-txt">消息</text><rect x="660" y="460" width="140" height="50" rx="4" class="ent"/><text x="730" y="485" class="ent-txt">附件</text><rect x="400" y="530" width="140" height="50" rx="4" class="ent"/><text x="470" y="555" class="ent-txt">模型</text><rect x="140" y="460" width="140" height="50" rx="4" class="ent"/><text x="210" y="485" class="ent-txt">提供商</text><polygon points="350,210 390,235 350,260 310,235" class="dia"/><text x="350" y="235" class="dia-txt">拥有</text><polygon points="600,210 640,235 600,260 560,235" class="dia"/><text x="600" y="235" class="dia-txt">包含</text><polygon points="770,300 810,325 770,350 730,325" class="dia"/><text x="770" y="325" class="dia-txt">引用</text><polygon points="470,430 510,455 470,480 430,455" class="dia"/><text x="470" y="455" class="dia-txt">选择</text><polygon points="350,510 390,535 350,560 310,535" class="dia"/><text x="350" y="535" class="dia-txt">提供</text></svg></div>
+  <p class="info">实体: 6 | 联系: 5</p>
+  <script>
+    function toggleTheme() {
+      const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.body.setAttribute('data-theme', t);
+      document.querySelector('svg')?.setAttribute('data-theme', t);
+    }
+    function exportPNG() {
+      const svg = document.querySelector('svg');
+      const data = new XMLSerializer().serializeToString(svg);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.width * 2; c.height = img.height * 2;
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const a = document.createElement('a');
+        a.download = 'dsh-er.html.png';
+        a.href = c.toDataURL('image/png');
+        a.click();
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+    }
+    function exportSVG() {
+      const data = new XMLSerializer().serializeToString(document.querySelector('svg'));
+      const a = document.createElement('a');
+      a.download = 'dsh-er.html.svg';
+      a.href = URL.createObjectURL(new Blob([data], {type:'image/svg+xml'}));
+      a.click();
+    }
+    if (matchMedia('(prefers-color-scheme:dark)').matches) {
+      document.body.setAttribute('data-theme', 'dark');
+      document.querySelector('svg')?.setAttribute('data-theme', 'dark');
+    }
+  </script>
+</body>
+</html>

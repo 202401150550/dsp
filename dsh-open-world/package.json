@@ -1,0 +1,79 @@
+{
+  "name": "dsh-open-world",
+  "version": "2.46.0",
+  "description": "DSH 开放世界指挥舱：OWIP 0.2-draft · 模块化壳",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "bridge",
+    "client",
+    "scripts/compose-client.mjs",
+    "scripts/check-client-fresh.mjs",
+    "scripts/client-build-meta.mjs",
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "open-world.yml",
+    "idea-presets.json",
+    "README.md",
+    "SYSOP_v0.1.md",
+    "OWIP_v0.1.md",
+    "CHECKLIST.md",
+    "QUICKSTART.md",
+    "RRM.md",
+    "test/smoke.mjs",
+    "test/bridge.mjs",
+    "test/manifest.mjs",
+    "test/rrm.mjs",
+    "test/fleet.mjs",
+    "test/world-state.mjs",
+    "test/space-auth.mjs",
+    "test/action-layers.mjs",
+    "test/live.mjs"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "scripts": {
+    "pretest": "node scripts/check-client-fresh.mjs",
+    "test": "node test/smoke.mjs && node test/bridge.mjs && node test/manifest.mjs && node test/rrm.mjs && node test/fleet.mjs && node test/world-state.mjs && node test/space-auth.mjs && node test/action-layers.mjs",
+    "test:smoke": "node test/smoke.mjs",
+    "test:bridge": "node test/bridge.mjs",
+    "test:manifest": "node test/manifest.mjs",
+    "test:rrm": "node test/rrm.mjs",
+    "test:fleet": "node test/fleet.mjs",
+    "test:world-state": "node test/world-state.mjs",
+    "test:space": "node test/space-auth.mjs",
+    "test:layers": "node test/action-layers.mjs",
+    "test:live": "node test/live.mjs",
+    "build:client": "node scripts/compose-client.mjs",
+    "check:client": "node scripts/check-client-fresh.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

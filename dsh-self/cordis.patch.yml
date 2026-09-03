@@ -1,0 +1,5 @@
+# 自身插件 — 必须早于外来 insert 加载（放在 profile bundles 里）
+- insert:
+    - id: dsh-self
+      name: dsh-self
+      inject: [webServer, sessions]

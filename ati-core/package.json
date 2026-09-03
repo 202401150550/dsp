@@ -1,0 +1,32 @@
+{
+  "name": "ati-core",
+  "version": "0.6.0",
+  "description": "ATI 分层架构：数学 + 拓扑 + 算子 + 社交（元宇宙）+ 接口 + ACI",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./linalg": "./src/linalg.js",
+    "./topology": "./src/topology.js",
+    "./optimize": "./src/optimize.js",
+    "./stats": "./src/stats.js",
+    "./operators": "./src/operators.js",
+    "./executor": "./src/executor.js",
+    "./social": "./src/social.js",
+    "./server": "./src/server.js",
+    "./memory": "./src/memory.js",
+    "./planner": "./src/planner.js",
+    "./feedback": "./src/feedback.js",
+    "./conflict": "./src/conflict.js",
+    "./aci": "./src/aci.js",
+    "./llm": "./src/llm.js",
+    "./ai-social": "./src/ai-social.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

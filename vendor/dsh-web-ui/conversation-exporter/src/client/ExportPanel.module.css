@@ -1,0 +1,44 @@
+.root {
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.hint {
+  color: var(--dsh-muted, #718096);
+  font-size: 12px;
+  margin: 8px 0;
+}
+.btn {
+  background: var(--dsh-accent, #3182ce);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.status {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.done { color: #38a169; }
+.error { color: #e53e3e; }
+select {
+  padding: 4px 8px;
+  border: 1px solid var(--dsh-border, #e2e8f0);
+  border-radius: 4px;
+  background: var(--dsh-bg, #fff);
+}

@@ -1,0 +1,31 @@
+{
+  "name": "dsh-open-world",
+  "version": "2.46.0",
+  "description": "DSH 系统壳：SYSOP + OWIP 0.2-draft · 模块化客户端",
+  "entry": {
+    "name": "dsh-open-world",
+    "inject": ["webServer", "sessions"]
+  },
+  "openWorld": {
+    "node": {
+      "id": "open-world",
+      "label": "开放世界",
+      "labelEn": "OPEN WORLD",
+      "probe": "openWorld"
+    },
+    "actions": [
+      {
+        "id": "open-world.panel",
+        "label": "打开指挥舱",
+        "bridge": { "type": "embed", "panel": "open-world" }
+      }
+    ]
+  },
+  "client": {
+    "platform": "web",
+    "inject": [
+      "@deepseek-ai/dsh-client-runtime",
+      "@deepseek-ai/dsh-client-ui-slots"
+    ]
+  }
+}

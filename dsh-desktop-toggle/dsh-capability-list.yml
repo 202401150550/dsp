@@ -1,0 +1,229 @@
+﻿# 与《万物即是插件》配套的实现清单（饱满版）
+# 公理：原子能力归入插件组；禁止一能力一市场包
+version: 2
+theory_doc: ../万物即是插件.md
+profile: desktop
+
+buckets:
+  experience:
+    default: minimal
+    forbid: [dsh-web-ui-all, skin-center-bulk]
+  capability:
+    default: whitelist
+  ops:
+    default: build-first
+    phase: 1
+  execution:
+    default: needs-host
+    phase: 2
+  cognition_meta:
+    default: model-native
+    phase: 3
+
+phase1_groups:
+  - id: config-doctor
+    bucket: ops
+    title: 配置医生
+    items:
+      - detect-loading-plugins
+      - list-hot-yml
+      - clear-hot-yml
+      - detect-electron-run-as-node
+      - check-lib-index
+      - boot-entry-probe
+      - skin-pack-warn
+  - id: feature-toggle-ui
+    bucket: ops
+    title: 功能开关面板
+    items:
+      - read-plugins-yml
+      - toggle-one-feature
+      - run-apply
+      - show-enabled-summary
+      - block-web-ui-all
+      - block-skin-center-bulk
+  - id: health-check
+    bucket: ops
+    title: 健康检查套件
+    fused_into: dsh-self
+    items:
+      - check-process-alive
+      - check-web-port
+      - check-usage-ball
+      - check-no-hot-yml
+      - check-describe-image-config
+      - one-click-report
+  - id: baseline
+    bucket: ops
+    title: 基线备份与恢复
+    items:
+      - backup-package-json
+      - backup-cordis-patch
+      - backup-settings-yaml
+      - restore-baseline
+      - diff-against-baseline
+  - id: settings-wizards
+    bucket: ops
+    title: 设置向导
+    items:
+      - wizard-zhipu-vision
+      - wizard-bind-apikey-env
+      - wizard-open-settings-section
+  - id: ui-placement-kit
+    bucket: ops
+    title: UI 挂载规范
+    items:
+      - prefer-settings-slot
+      - prefer-shell-overlay
+      - forbid-body-sidebar-dump
+      - family-card-chrome
+  - id: self-adopt
+    bucket: ops
+    title: 自身插件 / 外来收编
+    items:
+      - native-contract
+      - capability-registry-one-owner
+      - inspect-foreign
+      - wrap-keep-host-replace-client
+      - runtime-slot-remap
+      - runtime-body-dump-bin
+
+phase2_groups:
+  - id: local-agent-runtime
+    bucket: execution
+    title: 本机 Agent 宿主
+    items:
+      - whitelist-dirs
+      - whitelist-commands
+      - confirm-dangerous
+      - run-shell-sandboxed
+      - read-write-files
+      - restart-dsh
+      - clear-bad-env
+  - id: local-debug-tools
+    bucket: execution
+    title: 本机调试手
+    items:
+      - plugin-bisect
+      - cdp-dom-probe
+      - local-http-probe
+      - wait-port-or-log
+      - capture-stderr-snippet
+  - id: local-build-tools
+    bucket: execution
+    title: 本机构建手
+    items:
+      - pnpm-filter-build
+      - ensure-lib-built
+      - profile-pnpm-install
+  - id: local-git-tools
+    bucket: execution
+    title: 本机 Git 手
+    items:
+      - git-status-diff
+      - git-commit-on-request
+      - no-force-push-main
+      - no-git-config-write
+
+capability_existing:
+  - deepseek-usage-ball
+  - conversation-export
+  - notification-center
+  - describe-image-zhipu
+  - dsh-market
+  - workspace-analyzer
+  - git-graph
+  - task-board
+  - live-stats
+  - aionui-panel
+  - ssh
+  - remote-web-ui
+  - file-drop
+  - smooth-stream
+  - config-doctor-oob        # dsh-doctor CLI（带外）
+  - config-doctor-in-app     # APIs owned by dsh-self（原 dsh-config-doctor 已卸）
+  - feature-toggle-ui        # plugins.yml + apply.mjs；API 在 dsh-self
+  - self-adopt               # dsh-self native contract + convert foreign plugins
+
+cognition_native:
+  - language-detect
+  - intent-detect
+  - constraint-extract
+  - reference-resolve
+  - plan-and-bisect
+  - secret-redaction
+  - scope-control
+  - tool-subset-routing
+
+acceptance:
+  - recover-from-loading-in-5min
+  - dangerous-toggles-greyed-out
+  - zhipu-vision-wizard-once
+  - say-clear-hot-and-restart
+  - one-click-baseline
+
+implementation_order:
+  - out-of-band-doctor-safe-mode   # Phase 1a DONE: dsp/dsh-doctor/
+  - config-doctor                 # Phase 1b DONE → APIs absorbed into dsh-self
+  - feature-toggle-ui             # DONE: plugins.yml + apply.mjs；API via dsh-self
+  - self-adopt                    # DONE: dsp/dsh-self contract + inspect/wrap + runtime remap
+  - organs-iterate-1              # DONE: 细分 atoms + 融合进 dsh-self organs.yml
+  - ops-ui-merge                  # DONE: doctor+toggle cards fused into SelfCard
+  - ops-true-merge                # DONE: doctor/toggle HTTP owned by dsh-self; config-doctor removed from profile
+  - observe-entry-fuse            # DONE: usage/live-stats settings absorbed into SelfCard
+  - settings-shell-keep           # DONE: web-ui-settings locked infra; do not unload
+  - declutter-notify-mascot       # DONE: notification-center off; whale mascot default off
+  - health-check                  # fused into dsh-self ops toolbar
+  - baseline                      # DONE: doctor baseline-save in SelfCard
+  - settings-wizards              # DONE: wizard-vision.mjs（只绑 apiKeyEnv）
+  - local-agent-runtime           # DONE: chat tools dsh_host_catalog/preview/run + fs/shell/git
+  - local-debug-tools
+  - local-build-tools
+  - local-git-tools               # DONE (subset): status/diff/commit; push/config forbidden
+
+phase1a_deliverable:
+  path: D:/dsp/dsh-doctor
+  commands: [check, fix, baseline-save, baseline-restore, launch, safe-launch, report]
+  note: Out-of-band; does not require DSH UI.
+
+phase1b_deliverable:
+  path: D:/dsp/dsh-self
+  apis: [/api/dsh-doctor/check, /api/dsh-doctor/fix, /api/dsh-doctor/baseline-save, /api/dsh-toggle/list, /api/dsh-toggle/set]
+  ui: SelfCard (ops organ)
+  archived: D:/dsp/dsh-config-doctor
+  note: In-app wrapper around 1a CLI; UI hang still needs safe-launch.cmd
+
+feature_toggle_deliverable:
+  path: D:/dsp/dsh-desktop-toggle
+  files: [plugins.yml, apply.mjs, apply.cmd]
+  apis: [/api/dsh-toggle/list, /api/dsh-toggle/set]
+  ui: SelfCard organs (API host = dsh-self)
+  blocks: [web-ui-all, web-ui-skin-center]
+
+spine_not_marketplace:
+  - host-executor
+  - policy-engine
+  - audit-pipeline
+  - out-of-band-recovery
+  - circuit-breakers
+
+hard_requirements:
+  - tool-output-untrusted
+  - parameterized-tools-only
+  - package-signature-and-manifest
+  - measurable-acceptance-gates
+  - memory-schema-with-provenance
+
+trust_ceiling_phase2plus:
+  - capability-contract-taint-labels
+  - plan-composition-validator
+  - dry-run-impact-summary
+  - dynamic-risk-scoring
+  - failure-attribution-tags
+  - upgrade-regression-suite
+
+wont_do:
+  - web-ui-all-bundle
+  - skin-center-bulk
+  - one-atom-one-market-package
+  - unsandboxed-shell

@@ -1,0 +1,12 @@
+{
+  "name": "dsh-config-doctor",
+  "description": "配置医生：应用内调用带外 dsh-doctor（check / fix / baseline-save）",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-config-doctor",
+    "inject": ["webServer"]
+  },
+  "client": {
+    "platform": "web"
+  }
+}

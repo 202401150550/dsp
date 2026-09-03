@@ -1,0 +1,4 @@
+[32m2026-08-18 23:54:33.242[0m | [1mINFO    [0m | [36mopenviking.telemetry.tracer[0m:[36minit_tracer_from_server_config[0m:[36m233[0m - [1m[TRACER] disabled in server.observability.traces[0m
+[08/18/26 23:54:33] INFO     StreamableHTTP       streamable_http_manager.py:131
+                             session manager                                    
+                             started                                            

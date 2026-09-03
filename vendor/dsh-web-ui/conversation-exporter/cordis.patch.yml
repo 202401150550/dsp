@@ -1,0 +1,7 @@
+# bundle patch for the conversation-exporter plugin: inserts its plugin row into the web
+# profile roster. Applied as a profile bundle layer (the `dsh.bundle.patch`
+# manifest field); install with
+# `dsh plugin --profile web add link:<repo>/packages/conversation-exporter`.
+- insert:
+    - id: ui-conversation-exporter
+      name: '@linxin666/dsh-client-ui-conversation-exporter'

@@ -1,0 +1,384 @@
+# DSH Desktop 统一插件开关
+# ----------------------------
+# 用法：
+#   1. 改下面 features 里的 true / false，或切档位：
+#        node apply.mjs preset daily|bridge|full
+#        node apply.mjs presets
+#   2. 运行 apply.cmd（或 node apply.mjs）— 每次 apply 后自动 doctor check
+#   3. 完全退出并重启 DSH Desktop
+# 也可在设置页「功能开关」里单开单关（内部仍走本文件 + apply.mjs）。
+#
+# 说明：
+# - always_on：桌面默认底座，始终加载（不要关）
+# - features：可开关功能；false = 不写入启动列表
+# - 禁止 dsh-web-ui-all / 皮肤中心整包（会卡在 Loading plugins...）
+# - 只把 enabled 包写进 package.json（否则 dshmarket 会 hot-mount）
+# - 第三方 web-ui / injector 的 link 一律指向 D:/dsp/vendor（勿再链 Downloads）
+# - 刷新 vendor：node D:/dsp/vendor/sync-from-downloads.mjs
+# - 档位定义：presets.yml（daily 瘦身 / bridge 指挥舱 / full 全开）
+
+profile: desktop
+profile_dir: C:/Users/admin/.dsh/profiles/desktop
+
+always_on:
+  - id: dsh-base
+    bundle: '@deepseek-ai/dsh-base'
+  - id: dsh-web-app
+    bundle: '@deepseek-ai/dsh-web-app'
+  - id: dsh-self
+    bundle: dsh-self
+    dep: dsh-self
+    link: D:/dsp/dsh-self
+  - id: deep-whale-day-night
+    bundle: '@dsh-external/dsh-client-ui-skin-deep-whale-day-night'
+    dep: '@dsh-external/dsh-client-ui-skin-deep-whale-day-night'
+    link: D:/dsp/deep-whale-day-night-theme
+  # file-drop / smooth-stream / deepseek-usage 已收编进 dsh-self（organs iteration 9）
+  # 源码仍在 dsh-file-drop、dsh-plugin-smooth-stream、dsh-deepseek-usage-patch，由 dsh-self compose 加载
+
+features:
+  # Desktop 2.0.4 / alpha.1 不能再挂官方 dsh-host-apiproxy（rc 与 alpha 导出名对不上）。
+  # 用 dsp 兼容层提供 ctx.apiProxy，供 task-board Host 执行器使用。
+  # 退出：dsh-apiproxy-compat/README.md · 探测：node apply.mjs probe-apiproxy
+  host-apiproxy:
+    enabled: false
+    title: Host ApiProxy 网关（官方 rc，已弃用）
+    group: desktop
+    note: "勿开：rc.7 对 alpha.1 缺导出。probe-apiproxy 绿灯后再开；见 dsh-apiproxy-compat/README.md"
+    insert_id: api-proxy-official
+    name: '@deepseek-ai/dsh-host-apiproxy'
+    dep: '@deepseek-ai/dsh-host-apiproxy'
+    link: C:/Users/admin/AppData/Local/Programs/DSH Desktop/resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-host-apiproxy
+    insert_config:
+      nativeOpen: true
+
+  apiproxy-compat:
+    enabled: true
+    title: ApiProxy 兼容层（alpha）
+    group: desktop
+    note: "为 task-board 提供 ctx.apiProxy；退出见 README + probe-apiproxy（bridge/full 档会开）"
+    insert_id: api-proxy
+    name: 'dsh-apiproxy-compat'
+    dep: 'dsh-apiproxy-compat'
+    link: D:/dsp/dsh-apiproxy-compat
+
+  dsh-open-world:
+    enabled: true
+    title: 开放世界指挥中心
+    group: web-ui
+    note: NEXORA 风全屏界面；拓扑配置见 open-world.yml 或 ~/.dsh/open-world.yml
+    insert_id: dsh-open-world
+    name: dsh-open-world
+    dep: dsh-open-world
+    link: D:/dsp/dsh-open-world
+
+  web-ui-rewind:
+    enabled: true
+    title: 对话回退 Rewind
+    group: web-ui
+    note: 消息旁 ↶ 回退；文件快照 ~/.dsh/rewind-snapshots；Open World 时间轴
+    insert_id: dsh-rewind-plugin
+    name: dsh-rewind-plugin
+    dep: dsh-rewind-plugin
+    link: D:/dsp/dsh-rewind-plugin
+
+  ventus-progress:
+    enabled: true
+    title: 子代理进度
+    group: web-ui
+    note: progress-json 分段进度条；顶栏「进度」悬停面板（Ventus 单插件）
+    insert_id: dsh-ventus-progress
+    name: dsh-ventus-progress
+    dep: dsh-ventus-progress
+    link: D:/dsp/dsh-ventus-progress
+
+  better-sidebar:
+    enabled: true
+    title: 右侧工作台
+    group: web-ui
+    note: VSCode 式侧栏：文件/编辑器/终端/Git/浏览器；ctx.betterSidebar 可扩展
+    insert_id: better-sidebar
+    name: dsh-better-sidebar
+    dep: dsh-better-sidebar
+    link: D:/dsp/dsh-better-sidebar
+
+  ventus-search:
+    enabled: false
+    title: Ventus 搜索
+    group: web-ui
+    note: Bing/360/Bilibili 多引擎 + Readability 正文抓取；输入框 @ 触发
+    insert_id: dsh-ventus-search
+    name: dsh-ventus-search
+    dep: dsh-ventus-search
+    link: D:/dsp/dsh-ventus-search
+
+  dsh-market:
+    enabled: false
+    title: 插件市场
+    group: desktop
+    insert_id: dsh-market
+    name: dshmarket
+    dep: dshmarket
+    version: ^1.9.0
+
+  web-ui-settings:
+    enabled: true
+    title: Web UI 设置分组
+    group: web-ui
+    note: "基础设施。已适配 Desktop 2.0.4（createSnapshotStore → dsh-client-store）"
+    insert_id: web-ui-settings
+    name: '@linxin666/dsh-client-ui-web-ui-settings'
+    dep: '@linxin666/dsh-client-ui-web-ui-settings'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-web-ui-settings
+
+  web-ui-community-plugins:
+    enabled: false
+    title: 社区插件索引
+    group: web-ui
+    note: 入口已并入 dshmarket；关索引避免与市场重复。需要时再开。副本在 vendor。
+    insert_id: web-ui-community-plugins
+    name: '@linxin666/dsh-client-ui-community-plugins'
+    dep: '@linxin666/dsh-client-ui-community-plugins'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-community-plugins
+
+  web-ui-notification-center:
+    enabled: false
+    title: 通知中心
+    group: web-ui
+    note: 收件箱壳；暂无业务投递，默认关。需要时再开。副本在 vendor。
+    insert_id: web-ui-notification-center
+    name: '@linxin666/dsh-client-ui-notification-center'
+    dep: '@linxin666/dsh-client-ui-notification-center'
+    link: D:/dsp/vendor/dsh-web-ui/notification-center
+
+  web-ui-conversation-exporter:
+    enabled: false
+    title: 对话导出
+    group: web-ui
+    note: 设置页卡片
+    insert_id: web-ui-conversation-exporter
+    name: '@linxin666/dsh-client-ui-conversation-exporter'
+    dep: '@linxin666/dsh-client-ui-conversation-exporter'
+    link: D:/dsp/vendor/dsh-web-ui/conversation-exporter
+
+  web-ui-workspace-analyzer:
+    enabled: false
+    title: 工作区分析
+    group: web-ui
+    note: 仅设置页
+    insert_id: web-ui-workspace-analyzer
+    name: '@linxin666/dsh-client-ui-workspace-analyzer'
+    dep: '@linxin666/dsh-client-ui-workspace-analyzer'
+    link: D:/dsp/vendor/dsh-web-ui/workspace-analyzer
+
+  web-ui-task-board:
+    enabled: true
+    title: 任务看板
+    group: web-ui
+    note: "依赖 apiproxy-compat（ctx.apiProxy）；阶段 A"
+    insert_id: web-ui-task-board
+    name: '@linxin666/dsh-client-ui-task-board'
+    dep: '@linxin666/dsh-client-ui-task-board'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-task-board
+
+  web-ui-git-graph:
+    enabled: false
+    title: Git 图谱
+    group: web-ui
+    insert_id: web-ui-git-graph
+    name: '@linxin666/dsh-client-ui-git-graph'
+    dep: '@linxin666/dsh-client-ui-git-graph'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-git-graph
+
+  web-ui-aionui-panel:
+    enabled: false
+    title: AionUI 面板
+    group: web-ui
+    insert_id: web-ui-dsh-aionui-panel
+    name: '@linxin666/dsh-client-ui-aionui-panel'
+    dep: '@linxin666/dsh-client-ui-aionui-panel'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-aionui-panel
+
+  web-ui-pet:
+    enabled: false
+    title: 桌宠
+    group: web-ui
+    note: 按需；默认关。副本在 vendor。
+    insert_id: web-ui-pet
+    name: '@linxin666/dsh-pet'
+    dep: '@linxin666/dsh-pet'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-pet
+
+  web-ui-remote-web-ui:
+    enabled: false
+    title: 远程 Web UI
+    group: web-ui
+    note: "apiProxy 已可挂；默认仍关（浮层手机坞）。副本在 vendor。"
+    insert_id: web-ui-remote-web-ui
+    name: '@linxin666/dsh-remote-web-ui'
+    dep: '@linxin666/dsh-remote-web-ui'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-remote-web-ui
+
+  web-ui-live-stats:
+    enabled: true
+    title: 实时状态
+    group: web-ui
+    insert_id: web-ui-live-stats
+    name: '@linxin666/dsh-live-stats'
+    dep: '@linxin666/dsh-live-stats'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-live-stats
+
+  web-ui-ssh:
+    enabled: false
+    title: SSH 远程
+    group: web-ui
+    insert_id: web-ui-ssh
+    name: '@linxin666/dsh-ssh'
+    dep: '@linxin666/dsh-ssh'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-ssh
+
+  web-ui-describe-image:
+    enabled: true
+    title: 图片描述工具
+    group: web-ui
+    note: 智谱 glm-4.6v-flash / ZHIPU_API_KEY
+    insert_id: web-ui-describe-image
+    name: '@linxin666/dsh-tool-describe-image'
+    dep: '@linxin666/dsh-tool-describe-image'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-tool-describe-image
+
+  web-ui-liangshen:
+    enabled: false
+    title: 良神扩展
+    group: web-ui
+    insert_id: web-ui-liangshen
+    name: '@linxin666/dsh-liangshen'
+    dep: '@linxin666/dsh-liangshen'
+    link: D:/dsp/vendor/dsh-web-ui/dsh-liangshen
+
+  hindsight:
+    enabled: true
+    title: Hindsight 长期记忆
+    group: desktop
+    note: 仅在本机 9077 daemon 已通时开启。启动只注册钩子，不拉 MCP。不要和 openviking 技能包一起开。
+    insert_id: hindsight
+    name: '@vectorize-io/hindsight-coding-agents/dsh'
+    dep: '@vectorize-io/hindsight-coding-agents'
+    version: 0.3.4
+    bundle: '@vectorize-io/hindsight-coding-agents'
+
+  archify:
+    enabled: true
+    title: Archify 架构图
+    group: desktop
+    note: 对话里说「画架构图」即可；技能 archify
+    insert_id: archify-skill-filesystem
+    name: '@tt-a1i/archify-dsh'
+    dep: '@tt-a1i/archify-dsh'
+    version: 0.1.0
+    bundle: '@tt-a1i/archify-dsh'
+
+  dsh-enable-image-input:
+    enabled: true
+    title: 图片输入修复
+    group: desktop
+    note: 模型能看图但仍提示不支持图片时，让 AI 跑这个 skill
+    insert_id: dsh-enable-image-input-skill-filesystem
+    name: dsh-enable-image-input-pkg
+    dep: dsh-enable-image-input-pkg
+    link: D:/dsp/dsh-enable-image-input-pkg
+    bundle: dsh-enable-image-input-pkg
+
+  dsh-mic-input:
+    enabled: false
+    title: 语音输入（浏览器 Web Speech）
+    group: desktop
+    note: Desktop/Electron 下 Web Speech 必报 network error（连 Google 语音服务）。已改用 dsh-voice 离线识别。
+    insert_id: dsh-mic-input
+    name: dsh-mic-input
+    dep: dsh-mic-input
+    link: D:/dsp/dsh-mic-input
+    bundle: dsh-mic-input
+
+  dsh-voice:
+    enabled: false
+    title: 语音输入（离线）
+    group: desktop
+    note: 未 build、且会拉 sherpa-onnx，暂关以免 Desktop 起不来。Web Speech 在 Electron 下会 network error。
+    insert_id: voice
+    name: '@nn12138/dsh-voice'
+    dep: '@nn12138/dsh-voice'
+    link: D:/dsp/dsh-voice
+    bundle: '@nn12138/dsh-voice'
+    extra_deps:
+      sherpa-onnx-node: ^1.13.5
+
+  openviking:
+    enabled: false
+    title: OpenViking 技能说明
+    group: desktop
+    note: 禁止与记忆插件同时开。mcp.json 会在启动时拉 stdio MCP，容易卡在 Loading plugins。
+    insert_id: openviking-skill-filesystem
+    name: openviking-dsh-pkg
+    dep: openviking-dsh-pkg
+    link: D:/dsp/openviking-dsh-pkg
+    bundle: openviking-dsh-pkg
+
+  openviking-dsh-memory:
+    enabled: false
+    title: OpenViking DSH 记忆插件
+    group: desktop
+    note: 安全 inject 已改；缺 @deepseek-ai/dsh-llm 解析失败时先关。技能包仍关。副本在 vendor。
+    insert_id: openviking-memory
+    name: '@openviking/dsh-memory-plugin'
+    dep: '@openviking/dsh-memory-plugin'
+    link: D:/dsp/vendor/openviking-dsh-memory
+    bundle: '@openviking/dsh-memory-plugin'
+
+  dsh-super-injector:
+    enabled: false
+    title: Super Injector
+    group: desktop
+    note: rc.7 下 keyed slot 缺 key，暂关以免 Failed to load plugins。副本在 vendor。
+    insert_id: dsh-super-injector
+    name: '@dsh-external/dsh-super-injector'
+    dep: '@dsh-external/dsh-super-injector'
+    link: D:/dsp/vendor/dsh-super-injector
+
+  web-ui-skin-center:
+    enabled: false
+    forbidden: true
+    title: 皮肤中心（XP/初音/Minecraft 等）
+    group: skins
+    note: 禁止。整包皮肤会被 dshmarket hot-mount，卡在 Loading plugins...。未迁入 vendor；extra_deps 仅用于 market 黑名单。
+    insert_id: web-ui-skin-center
+    name: '@linxin666/dsh-client-ui-skin-center'
+    dep: '@linxin666/dsh-client-ui-skin-center'
+    # link 故意省略；forbidden 保证不会写入 profile
+    extra_deps:
+      '@linxin666/dsh-skins': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-xp': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-miku': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-minecraft': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-tokyo-night': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-dracula': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-cyberpunk': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-blue-fantasy': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-dragon-heir': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-harbor': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-maid-atelier': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-matrix': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-trading': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-whale-mom': D:/dsp/vendor/_not-vendored
+      '@linxin666/dsh-client-ui-skin-whale-song': D:/dsp/vendor/_not-vendored
+
+  web-ui-all:
+    enabled: false
+    forbidden: true
+    title: Web UI 全家桶
+    group: forbidden
+    note: 禁止。一次插入十几个插件 + 皮肤中心，会卡在 Loading plugins...。未迁入 vendor。
+    insert_id: web-ui-all
+    name: '@linxin666/dsh-web-ui-all'
+    dep: '@linxin666/dsh-web-ui-all'
+

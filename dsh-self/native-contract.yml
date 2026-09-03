@@ -1,0 +1,36 @@
+# 自身插件契约 — dsh-self
+# 别人的包要进来，必须被收编成符合本契约的形态。
+# 脊梁仍不可替换；本文件约束的是「器官怎么挂」。
+
+version: 1
+id: dsh-self
+
+slots:
+  allowed:
+    - ventus.plugin.item
+    - web-ui.plugin.item
+    - settings.plugin.item
+    - shell.overlay
+    - conversation.input.left
+    - conversation.composer.dock
+  remap:
+    sidebar.footer.action: ventus.plugin.item
+    sidebar.footer: ventus.plugin.item
+  forbidden_as_panel:
+    - document.body
+    - sidebar.footer.action
+
+ui:
+  settings_card: family-plugin-card
+  overlay: shell.overlay
+  forbid_body_sidebar_dump: true
+
+identity:
+  # 自身：一个插件组，不是 165 个市场包
+  kind: native-organ-host
+  converts_foreign: true
+  dedup_capabilities: true
+
+refuse:
+  - dsh-web-ui-all
+  - skin-center-bulk

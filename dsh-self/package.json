@@ -1,0 +1,59 @@
+{
+  "name": "dsh-self",
+  "version": "0.1.0",
+  "description": "自身插件：契约 + 把外来插件收编成设置卡/浮层，并去掉重复能力",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "client/client-main.js",
+    "file-drop-host.mjs",
+    "usage-host.mjs",
+    "organ-atoms.mjs",
+    "scripts/compose-client.mjs",
+    "adopt.mjs",
+    "wizard-vision.mjs",
+    "host-agent.mjs",
+    "host-runtime.mjs",
+    "host-chat.mjs",
+    "node-bin.mjs",
+    "host-policy.yml",
+    "native-contract.yml",
+    "capability-registry.yml",
+    "organs.yml",
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "timer"
+      ]
+    }
+  },
+  "scripts": {
+    "build:client": "node scripts/compose-client.mjs"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

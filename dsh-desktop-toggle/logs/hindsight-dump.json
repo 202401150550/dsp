@@ -1,0 +1,912 @@
+{
+    "memories":  {
+                     "items":  [
+                                   {
+                                       "id":  "690555f5-5a89-45ef-a267-0f041b64de4b",
+                                       "text":  "å©ææ¯ç¾å¢å¼åç AI è¯­è¨æ¨¡åï¼åä¸º LongCatã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:11:00.312000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:11:00.312000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "cddb58ea-08b5-4dc8-91a9-7c37074389a4",
+                                       "text":  "å©ææ¯ç¾å¢å¼åç AI è¯­è¨æ¨¡åï¼åä¸º LongCatã | Involving: å©æ (LongCat)",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:11:00.312000+00:00",
+                                       "fact_type":  "experience",
+                                       "document_id":  "conversation:session-f856b5a7-a657-4418-90b3-f48aa9879571",
+                                       "mentioned_at":  "2026-08-18T16:11:00.312000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "AIè¯­è¨æ¨¡å, ç¾å¢, LongCat",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-f856b5a7-a657-4418-90b3-f48aa9879571_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-f856b5a7-a657-4418-90b3-f48aa9879571",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-f856b5a7-a657-4418-90b3-f48aa9879571"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:11:51.379211+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "962c43f0-8e79-4731-bfa0-6c31723b5e17",
+                                       "text":  "ç¨æ·åAIå©ææåºå²å­¦é®é¢âææ¯ä»ä¹âï¼è¡¨ç°åºå¯¹èªæè®¤ç¥åèº«ä»½è®¤åçæèã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:08:38.427000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:08:48.737000+00:00",
+                                       "occurred_start":  "2026-08-18T16:08:38.427000+00:00",
+                                       "occurred_end":  "2026-08-18T16:08:38.427000+00:00",
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "76ddb47d-564c-4571-9931-51aa322c8f53",
+                                       "text":  "ç¨æ·åAIå©ææåºå²å­¦é®é¢âææ¯ä»ä¹âï¼è¡¨ç°åºå¯¹èªæè®¤ç¥åèº«ä»½è®¤åçæèã | When: 2026å¹´8æ18æ¥ | Involving: ç¨æ· | æ¾ç¤ºäºç¨æ·çåæè½ååå²å­¦å\u0085´è¶£",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:08:38.427000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                       "mentioned_at":  "2026-08-18T16:08:48.737000+00:00",
+                                       "occurred_start":  "2026-08-18T16:08:38.427000+00:00",
+                                       "occurred_end":  "2026-08-18T16:08:38.427000+00:00",
+                                       "entities":  "èªæè®¤ç¥, user, AIå©æ",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-ee5bfc6d-3142-4901-850e-338dc91c66a3"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:09:24.158666+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "23713aae-50d6-45ba-8b10-f770c6ed272d",
+                                       "text":  "ç¨æ·ä½¿ç¨ä¸­ææé®ï¼å æ­¤è³å°ææ¡ä¸­æã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:08:48.727000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:08:48.727000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "5775b3d4-0277-4c4b-9a45-68b5097f10f0",
+                                       "text":  "ç¨æ·ä½¿ç¨ä¸­ææé®ï¼å æ­¤è³å°ææ¡ä¸­æã | When: æ  | Involving: ç¨æ· | ä¸éç¨",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:08:48.727000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                       "mentioned_at":  "2026-08-18T16:08:48.727000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "user, ä¸­æ",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-ee5bfc6d-3142-4901-850e-338dc91c66a3"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:09:24.158666+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "e1432ace-004b-4b90-bda6-de6e98051dc9",
+                                       "text":  "ç¨æ·ä¸ºå©æè®¾å®äºå·¥å\u0085·è°ç¨è§åï¼ä»\u0085å½æç¡®è¦æ±ååºå®¿ä¸»ãé¢æ¼æè¯»å dsp ç½ååæä»¶æ¶æè½è°ç¨ dsh_host_catalogãdsh_host_previewãdsh_host_runï¼ååºå®¿ä¸»æ¶ç´æ¥è°ç¨ dsh_host_catalog({})ï¼æ¶åè®°å¿/Hindsight æ¶ä½¿ç¨ hindsight_* æ dev_tool_searchï¼èä¸è°ç¨ dsh_host_catalogï¼ç¨æ·åªè¯´âå¼å§âæææå¼æ¶æ­£å¸¸é®åï¼ä¸æç´¢å·¥å\u0085·ãä¸è¯»æä»¶ãä¸æ§è¡ lsã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:07:33.975000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:07:33.975000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "c72ea995-f5c8-4aeb-9144-d26327d93e2d",
+                                       "text":  "ç¨æ·ä¸ºå©æè®¾å®å·¥å\u0085·è°ç¨è§åï¼ä»\u0085å½æç¡®è¦æ±ååºå®¿ä¸»ãé¢æ¼æè¯»å dsp ç½ååæä»¶æ¶æè°ç¨ dsh_host_catalogãdsh_host_previewãdsh_host_runï¼ååºå®¿ä¸»æ¶ç´æ¥è°ç¨ dsh_host_catalog({})ï¼æ¶åè®°å¿/Hindsight æ¶ä½¿ç¨ hindsight_* æ dev_tool_searchï¼ä¸è°ç¨ dsh_host_catalogï¼ç¨æ·åªè¯´âå¼å§âæææå¼æ¶æ­£å¸¸é®åï¼ä¸æç´¢å·¥å\u0085·ãä¸è¯»æä»¶ãä¸æ§è¡ lsã | Involving: ç¨æ·",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:07:33.975000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                       "mentioned_at":  "2026-08-18T16:07:33.975000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "Hindsight, dsh_host_run, ç¨æ·, dev_tool_search, dsh_host_preview, dsh_host_catalog",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:11:29.465358+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "c6e93bca-a81f-4c80-bd45-70cf976d4c0d",
+                                       "text":  "å©æåå«å°è¥é±¼ã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:07:33.955000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:07:33.965000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "7ce7ae37-aa94-4770-b3c3-76ce7d0f011c",
+                                       "text":  "ç¨æ·å³å®ä»¥åé»è®¤ç§°å¼å©æä¸ºâå°è¥é±¼â | Involving: ç¨æ·",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:07:33.965000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                       "mentioned_at":  "2026-08-18T16:07:33.965000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "ç¨æ·, å°è¥é±¼",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:11:29.465358+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "16c38405-bbac-4fb9-a15d-c66363134a5c",
+                                       "text":  "ç¨æ·æ¯ä¸åè§£å³å·¥ä½é®é¢çå¼åè\u0085ã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:07:33.955000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:07:33.955000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "3b59191b-3eae-4d21-84fe-d4159b12c55b",
+                                       "text":  "ç¨æ·æ¯å©æå°è¥é±¼çä¸»äººï¼å©æè¡¨ç¤ºéæ¶å¾\u0085å½å¸®ç¨æ·è§£å³é®é¢ã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T16:07:33.955000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T16:07:33.955000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "7db3d5f2-7325-421b-acba-ffb3415f7569",
+                                       "text":  "å©æåå«å°è¥é±¼ï¼ç¨æ·æ¯å®çä¸»äººï¼å©æè¡¨ç¤ºéæ¶å¾\u0085å½å¸®ç¨æ·è§£å³é®é¢ã | Involving: ç¨æ·, å©æå°è¥é±¼",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:07:33.955000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                       "mentioned_at":  "2026-08-18T16:07:33.955000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "å°è¥é±¼, user",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1_1",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:11:29.465358+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "40b3f047-145b-41c8-a11f-0d7641956884",
+                                       "text":  "ç¨æ·æ¯ä¸åè§£å³å·¥ä½é®é¢çå¼åè\u0085 | Involving: ç¨æ·",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T16:07:33.955000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                       "mentioned_at":  "2026-08-18T16:07:33.955000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "å¼åè\u0085, ç¨æ·",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T16:11:29.465358+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "5c15bb13-722f-4dec-9d33-d22edf5da6ab",
+                                       "text":  "ç¨æ·èªæä»ç»ä¸ºâèâã",
+                                       "context":  "",
+                                       "date":  "2026-08-18T15:44:57.433000+00:00",
+                                       "fact_type":  "observation",
+                                       "document_id":  null,
+                                       "mentioned_at":  "2026-08-18T15:44:57.433000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "",
+                                       "chunk_id":  null,
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+
+                                                    },
+                                       "consolidated_at":  null,
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   },
+                                   {
+                                       "id":  "b30eb2df-2ac8-4676-8c07-e6ffd47fdbcb",
+                                       "text":  "ç¨æ·èªæä»ç»ä¸ºâèâ | Involving: ç¨æ·",
+                                       "context":  "coding agent session",
+                                       "date":  "2026-08-18T15:44:57.433000+00:00",
+                                       "fact_type":  "world",
+                                       "document_id":  "conversation:session-44ad2448-866e-4124-9b07-b7f783d2f619",
+                                       "mentioned_at":  "2026-08-18T15:44:57.433000+00:00",
+                                       "occurred_start":  null,
+                                       "occurred_end":  null,
+                                       "entities":  "user, è",
+                                       "chunk_id":  "coding-agent::Desktop_conversation:session-44ad2448-866e-4124-9b07-b7f783d2f619_0",
+                                       "proof_count":  1,
+                                       "tags":  [
+                                                    "source:chat",
+                                                    "harness:dsh"
+                                                ],
+                                       "metadata":  {
+                                                        "ref_id":  "conversation:session-44ad2448-866e-4124-9b07-b7f783d2f619",
+                                                        "source":  "chat",
+                                                        "harness":  "dsh",
+                                                        "session_id":  "session-44ad2448-866e-4124-9b07-b7f783d2f619"
+                                                    },
+                                       "consolidated_at":  "2026-08-18T15:50:03.274210+00:00",
+                                       "consolidation_failed_at":  null,
+                                       "state":  "valid",
+                                       "invalidation_reason":  null,
+                                       "invalidated_at":  null,
+                                       "edited_at":  null
+                                   }
+                               ],
+                     "total":  16,
+                     "limit":  50,
+                     "offset":  0
+                 },
+    "mental_models":  {
+                          "items":  [
+
+                                    ]
+                      },
+    "operations":  {
+                       "bank_id":  "coding-agent::Desktop",
+                       "total":  25,
+                       "limit":  25,
+                       "offset":  0,
+                       "operations":  [
+                                          {
+                                              "id":  "4e776f93-1e63-47f6-8656-fef00f7ec156",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:11:13.114895+00:00",
+                                              "updated_at":  "2026-08-18T16:11:51.763196+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "d40ab3b6-a362-48ea-90fa-8827dd55bca9",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-f856b5a7-a657-4418-90b3-f48aa9879571",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:11:00.332437+00:00",
+                                              "updated_at":  "2026-08-18T16:11:13.124978+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T16:11:13.070816+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  {
+                                                                              "facts_committed":  1
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "0e7b4220-9853-5b5c-9f11-f48dc6ec2615",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-f856b5a7-a657-4418-90b3-f48aa9879571",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:11:00.332437+00:00",
+                                              "updated_at":  "2026-08-18T16:11:13.124978+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "b37fb663-0f9d-4d94-9ffd-694e4835df14",
+                                              "task_type":  "graph_maintenance",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:52.063783+00:00",
+                                              "updated_at":  "2026-08-18T16:10:52.569088+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "a07f9f32-05c8-4218-a5d3-3570c6b81346",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:52.052135+00:00",
+                                              "updated_at":  "2026-08-18T16:11:51.404641+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T16:11:51.397832+00:00",
+                                                               "processed":  5,
+                                                               "total":  5,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "fc6065bb-6f6a-4a34-9fa3-6264deef3113",
+                                              "task_type":  "graph_maintenance",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:24.467825+00:00",
+                                              "updated_at":  "2026-08-18T16:10:24.888517+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "1dca8e53-1af2-42dc-93d6-7c52760d7b68",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:24.457526+00:00",
+                                              "updated_at":  "2026-08-18T16:10:40.299206+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T16:10:40.289224+00:00",
+                                                               "processed":  3,
+                                                               "total":  3,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "56e41745-9a06-4877-8d1f-48ce36d3582d",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:22.301857+00:00",
+                                              "updated_at":  "2026-08-18T16:10:52.070815+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T16:10:52.003422+00:00",
+                                                               "processed":  2,
+                                                               "total":  2,
+                                                               "detail":  {
+                                                                              "facts_committed":  4
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "fbdb98de-cb76-53f2-af95-f3b24119ad50",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:22.301857+00:00",
+                                              "updated_at":  "2026-08-18T16:10:52.070815+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "74c2cb3e-4710-4a7c-80ad-11f46e107447",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:01.778702+00:00",
+                                              "updated_at":  "2026-08-18T16:10:24.474956+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T16:10:24.414376+00:00",
+                                                               "processed":  2,
+                                                               "total":  2,
+                                                               "detail":  {
+                                                                              "facts_committed":  3
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "8c777d35-f295-5041-8c8f-b3c92168ae9d",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:10:01.778702+00:00",
+                                              "updated_at":  "2026-08-18T16:10:24.474956+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "ff263281-5aea-4470-a3c0-9650095caa30",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:09:12.674640+00:00",
+                                              "updated_at":  "2026-08-18T16:09:24.183654+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T16:09:24.176667+00:00",
+                                                               "processed":  2,
+                                                               "total":  2,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "86492a75-2756-4ce3-bc51-34db7008cbcb",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:08:48.749423+00:00",
+                                              "updated_at":  "2026-08-18T16:09:12.689571+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T16:09:12.626118+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  {
+                                                                              "facts_committed":  2
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "31afa865-4578-50ef-832b-ccbbf9422b20",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-ee5bfc6d-3142-4901-850e-338dc91c66a3",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:08:48.749423+00:00",
+                                              "updated_at":  "2026-08-18T16:09:12.689571+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "08bf63f9-70a7-4d54-8694-b5e6e42ddc6d",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:08:25.646753+00:00",
+                                              "updated_at":  "2026-08-18T16:09:01.112790+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T16:09:01.099765+00:00",
+                                                               "processed":  5,
+                                                               "total":  5,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "f8156de6-bf0a-5409-b14b-83b45052f749",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:08:01.028382+00:00",
+                                              "updated_at":  "2026-08-18T16:08:25.657221+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "999780ba-7bca-4dca-9f40-11a64129271a",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:08:01.028382+00:00",
+                                              "updated_at":  "2026-08-18T16:08:25.657221+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "8d5bbad9-b763-4a47-acd4-6f5dd8158910",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:07:45.113159+00:00",
+                                              "updated_at":  "2026-08-18T16:07:54.086821+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T16:07:54.078830+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "50fa9f6f-c450-5cc7-bed4-f52a46458893",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:07:33.998085+00:00",
+                                              "updated_at":  "2026-08-18T16:07:45.130359+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "dfbfc5c2-951f-4db8-a86f-ad08926e0aeb",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-2365cdc0-3b4e-48ae-bfc6-9bedace3c1d1",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T16:07:33.998085+00:00",
+                                              "updated_at":  "2026-08-18T16:07:45.130359+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T16:07:45.057486+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  {
+                                                                              "facts_committed":  1
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "cc609095-8485-4ec8-ad51-88b45b514464",
+                                              "task_type":  "consolidation",
+                                              "items_count":  0,
+                                              "document_id":  null,
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T15:49:56.872751+00:00",
+                                              "updated_at":  "2026-08-18T15:50:03.327972+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  {
+                                                               "stage":  "refreshing_mental_models",
+                                                               "at":  "2026-08-18T15:50:03.303223+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  null
+                                                           }
+                                          },
+                                          {
+                                              "id":  "833075e9-24f7-42ed-9fb0-b164dcfd24ab",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-44ad2448-866e-4124-9b07-b7f783d2f619",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T15:44:57.557110+00:00",
+                                              "updated_at":  "2026-08-18T15:49:56.899007+00:00",
+                                              "status":  "completed",
+                                              "error_message":  "RuntimeError: Fact extraction failed: 1/1 chunks failed. First failures: chunk 0: AuthenticationError: Error code: 401 - {\u0027error\u0027: {\u0027code\u0027: \u0027\u0027, \u0027message\u0027: \u0027Invalid token (request id: 202608181545011571095058268d9d6lzY6yHks)\u0027, \u0027type\u0027: \u0027new_api_error\u0027}}",
+                                              "retry_count":  1,
+                                              "next_retry_at":  "2026-08-18T15:46:01.452383+00:00",
+                                              "progress":  {
+                                                               "stage":  "storing",
+                                                               "at":  "2026-08-18T15:49:56.737287+00:00",
+                                                               "processed":  1,
+                                                               "total":  1,
+                                                               "detail":  {
+                                                                              "facts_committed":  1
+                                                                          }
+                                                           }
+                                          },
+                                          {
+                                              "id":  "9304e81c-53dd-53d1-a8ac-3d5aa86cb694",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-44ad2448-866e-4124-9b07-b7f783d2f619",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T15:44:57.557110+00:00",
+                                              "updated_at":  "2026-08-18T15:49:56.899007+00:00",
+                                              "status":  "completed",
+                                              "error_message":  null,
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "1e46a9bb-7266-55f5-a258-2eac3959d6da",
+                                              "task_type":  "batch_retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-160c2a53-ddb4-480b-a438-f6b94811c94f",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T14:51:10.732125+00:00",
+                                              "updated_at":  "2026-08-18T14:54:12.698666+00:00",
+                                              "status":  "failed",
+                                              "error_message":  "RuntimeError: Fact extraction failed: 1/1 chunks failed. First failures: chunk 0: AuthenticationError: Error code: 401 - {\u0027error\u0027: {\u0027code\u0027: \u0027\u0027, \u0027message\u0027: \u0027Invalid token (request id: 202608181454126448675168268d9d6oVBButXo)\u0027, \u0027type\u0027: \u0027new_api_error\u0027}}",
+                                              "retry_count":  0,
+                                              "next_retry_at":  null,
+                                              "progress":  null
+                                          },
+                                          {
+                                              "id":  "f45e9135-747b-4d7e-9c45-911f3a2d32cb",
+                                              "task_type":  "retain",
+                                              "items_count":  1,
+                                              "document_id":  "conversation:session-160c2a53-ddb4-480b-a438-f6b94811c94f",
+                                              "filename":  null,
+                                              "created_at":  "2026-08-18T14:51:10.732125+00:00",
+                                              "updated_at":  "2026-08-18T14:54:12.698666+00:00",
+                                              "status":  "failed",
+                                              "error_message":  "RuntimeError: Fact extraction failed: 1/1 chunks failed. First failures: chunk 0: AuthenticationError: Error code: 401 - {\u0027error\u0027: {\u0027code\u0027: \u0027\u0027, \u0027message\u0027: \u0027Invalid token (request id: 202608181454126448675168268d9d6oVBButXo)\u0027, \u0027type\u0027: \u0027new_api_error\u0027}}",
+                                              "retry_count":  3,
+                                              "next_retry_at":  "2026-08-18T14:54:12.122328+00:00",
+                                              "progress":  null
+                                          }
+                                      ]
+                   }
+}

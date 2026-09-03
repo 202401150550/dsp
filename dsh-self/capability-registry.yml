@@ -1,0 +1,88 @@
+# 能力只有一个主人。第二个声称同一能力的外来包 = 重复，拒绝或收编为只读宿主。
+version: 1
+
+capabilities:
+  conversation-export:
+    owner: web-ui-conversation-exporter
+    match: [conversation-exporter, conversation_exporter]
+    title: 对话导出
+  notifications:
+    owner: web-ui-notification-center
+    match: [notification-center, notification_center]
+    title: 通知
+  workspace-analyze:
+    owner: web-ui-workspace-analyzer
+    match: [workspace-analyzer]
+    title: 工作区分析
+  task-board:
+    owner: web-ui-task-board
+    match: [task-board, taskboard]
+    title: 任务看板
+  git-graph:
+    owner: web-ui-git-graph
+    match: [git-graph, gitgraph]
+    title: Git 图谱
+  describe-image:
+    owner: web-ui-describe-image
+    match: [describe-image, describe_image]
+    title: 图片描述
+  live-stats:
+    owner: web-ui-live-stats
+    match: [live-stats]
+    title: 实时吞吐（入口归属 dsh-self 观测器官）
+  usage-ball:
+    owner: dsh-self
+    match: [deepseek-usage, usage]
+    title: DeepSeek 用量（入口归属 dsh-self 观测器官）
+  observe-entry:
+    owner: dsh-self
+    match: [observe, 观测]
+    title: 观测统一入口
+  remote-web-ui:
+    owner: web-ui-remote-web-ui
+    match: [remote-web-ui]
+    title: 远程 Web UI
+  ssh:
+    owner: web-ui-ssh
+    match: [dsh-ssh]
+    title: SSH
+  file-drop:
+    owner: dsh-self
+    match: [file-drop]
+    title: 文件拖放
+  smooth-stream:
+    owner: dsh-self
+    match: [smooth-stream, dss]
+    title: 流畅流式
+  voice-input:
+    owner: dsh-voice
+    match: [dsh-voice, mic-input, voice-input, webspeech]
+    title: 语音输入
+  config-doctor:
+    owner: dsh-self
+    match: [config-doctor, dsh-doctor]
+    title: 配置医生（应用内 API；带外仍用 dsp/dsh-doctor）
+  plugin-market:
+    owner: dsh-market
+    match: [dshmarket, dsh-market]
+    title: 插件市场
+  subagent-progress:
+    owner: ventus-progress
+    match: [ventus-progress, dsh-ventus-progress]
+    title: 子代理进度
+  better-sidebar:
+    owner: better-sidebar
+    match: [better-sidebar, dsh-better-sidebar]
+    title: 右侧工作台
+  ventus-search:
+    owner: ventus-search
+    match: [ventus-search, dsh-ventus-search]
+    title: Ventus 多引擎搜索
+  memory-semantic:
+    owner: hindsight
+    match: [hindsight, hindsight-coding-agents]
+    title: 语义长期记忆（L4）
+  memory-graph:
+    owner: openviking-dsh-memory
+    match: [openviking-dsh-memory, openviking-memory]
+    title: 图谱冷存记忆（L5，默认关）

@@ -1,0 +1,5 @@
+# Phase 1b — in-app config doctor (settings card). Out-of-band CLI remains dsp/dsh-doctor.
+- insert:
+    - id: dsh-config-doctor
+      name: dsh-config-doctor
+      inject: [webServer]

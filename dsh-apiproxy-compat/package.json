@@ -1,0 +1,19 @@
+{
+  "name": "dsh-apiproxy-compat",
+  "version": "1.0.0",
+  "description": "Minimal ctx.apiProxy for Desktop 2.0.4 / dsh-base alpha.1 — wraps sessionController so linxin task-board can run without legacy dsh-host-apiproxy. Exit: see README.md; probe with dsh-desktop-toggle/probe-apiproxy.mjs.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

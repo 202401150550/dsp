@@ -1,0 +1,327 @@
+# 自身器官图（迭代源）
+# ----------------------------
+# 细分：一个市场包拆成多个 atom，禁止 atom=市场包。
+# 融合：atom 的主人是 dsh-self 的某个 organ；provider 只是临时供应商。
+# 迭代：fused: true 之后，下一轮把实现搬进自身，关掉 provider，避免重复。
+#
+# status:
+#   fused     — 已在自身里，可单独开关，不必再开别人的包
+#   provider  — 本轮仍靠外来包；开任意 atom ≈ 开整个 provider（下一轮再拆实现）
+#   pending   — 计划中的原子，尚未落地
+
+version: 2
+iteration: 9
+owner: dsh-self
+
+organs:
+  ops:
+    title: 运维器官
+    bucket: ops
+    fused: true
+    atoms:
+      slot-remap:
+        title: 侧栏槽改挂设置卡
+        status: fused
+        enabled: true
+      body-bin:
+        title: body 乱挂收入编盒
+        status: fused
+        enabled: true
+      inspect:
+        title: 扫描外来包
+        status: fused
+        enabled: true
+      wrap:
+        title: wrap 换 client
+        status: fused
+        enabled: true
+      doctor-check:
+        title: 配置诊断
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      doctor-fix:
+        title: 一键修复 hot/皮肤
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      nav-demote-injector:
+        title: 侧栏去掉注入器重复「插件」
+        status: fused
+        enabled: true
+      nav-demote-webui:
+        title: 侧栏去掉 Web UI 插件分组
+        status: fused
+        enabled: true
+      nav-demote-community:
+        title: 侧栏去掉社区插件（收编为卡片）
+        status: fused
+        enabled: true
+      toggle-apply:
+        title: 功能开关 apply
+        status: fused
+        impl: dsh-desktop-toggle
+        enabled: true
+      health-process:
+        title: 进程在线
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      health-hot:
+        title: 无 hot-yml
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      health-forbidden:
+        title: 无全家桶/皮肤整包
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      baseline:
+        title: 基线备份/恢复
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      wizard-vision:
+        title: 智谱看图向导
+        status: fused
+        impl: wizard-vision
+        enabled: true
+
+  chat:
+    title: 对话器官
+    bucket: capability
+    fused: true
+    atoms:
+      file-drop:
+        title: 拖放/回形针文件
+        status: fused
+        impl: file-drop
+        enabled: true
+      smooth-stream:
+        title: 流畅流式
+        status: fused
+        impl: smooth-stream
+        enabled: true
+      export-md:
+        title: 导出 Markdown
+        status: provider
+        provider: web-ui-conversation-exporter
+        enabled: true
+      export-json:
+        title: 导出 JSON
+        status: provider
+        provider: web-ui-conversation-exporter
+        enabled: true
+      export-html:
+        title: 导出 HTML
+        status: provider
+        provider: web-ui-conversation-exporter
+        enabled: true
+      notify-bell:
+        title: 通知铃铛
+        status: provider
+        provider: web-ui-notification-center
+        enabled: false
+      notify-badge:
+        title: 未读角标
+        status: provider
+        provider: web-ui-notification-center
+        enabled: false
+
+  observe:
+    title: 观测器官
+    bucket: capability
+    # 入口已融合进自身；现场表面（浮球 / TPS）仍由供应商提供
+    entry_fused: true
+    fused: false
+    atoms:
+      settings-absorb:
+        title: 收编用量/吞吐设置卡
+        status: fused
+        enabled: true
+      usage-balance:
+        title: 用量余额球
+        status: fused
+        impl: deepseek-usage
+        enabled: true
+      usage-today:
+        title: 今日 tokens
+        status: fused
+        impl: deepseek-usage
+        enabled: true
+      live-throughput:
+        title: 实时吞吐（对话栏 TPS）
+        status: provider
+        provider: web-ui-live-stats
+        enabled: true
+      workspace-scan:
+        title: 工作区分析
+        status: provider
+        provider: web-ui-workspace-analyzer
+        enabled: true
+
+  code:
+    title: 代码器官
+    bucket: capability
+    fused: false
+    atoms:
+      git-graph:
+        title: Git 图谱
+        status: provider
+        provider: web-ui-git-graph
+        enabled: true
+      task-board:
+        title: 任务看板
+        status: provider
+        provider: web-ui-task-board
+        enabled: true
+      aionui-panel:
+        title: 仓库面板
+        status: provider
+        provider: web-ui-aionui-panel
+        enabled: true
+
+  vision:
+    title: 视觉器官
+    bucket: capability
+    fused: false
+    atoms:
+      describe-image:
+        title: 图片描述（智谱）
+        status: provider
+        provider: web-ui-describe-image
+        enabled: true
+
+  remote:
+    title: 远程器官
+    bucket: capability
+    fused: false
+    atoms:
+      ssh:
+        title: SSH
+        status: provider
+        provider: web-ui-ssh
+        enabled: true
+      remote-web-ui:
+        title: 远程 Web UI
+        status: provider
+        provider: web-ui-remote-web-ui
+        enabled: true
+
+  execute:
+    title: 执行器官
+    bucket: execution
+    fused: true
+    atoms:
+      host-catalog:
+        title: 参数化工具目录
+        status: fused
+        enabled: true
+      host-dry-run:
+        title: 执行前影响摘要
+        status: fused
+        enabled: true
+      host-audit:
+        title: 审计日志
+        status: fused
+        enabled: true
+      host-budget:
+        title: 步数预算熔断
+        status: fused
+        enabled: true
+      host-chat:
+        title: 对话调宿主（preview / run）
+        status: fused
+        impl: host-chat
+        enabled: true
+      fs-read:
+        title: 白名单读文件
+        status: fused
+        impl: host-runtime
+        enabled: true
+      fs-write:
+        title: 白名单写文件（需确认）
+        status: fused
+        impl: host-runtime
+        enabled: true
+      shell-param:
+        title: 参数化 git/node/pnpm
+        status: fused
+        impl: host-runtime
+        enabled: true
+      git-status:
+        title: Git status/diff
+        status: fused
+        impl: host-runtime
+        enabled: true
+      git-commit:
+        title: Git commit（明示才提交）
+        status: fused
+        impl: host-runtime
+        enabled: true
+      dsh-restart:
+        title: 清有害 env 后启动
+        status: fused
+        impl: dsh-doctor
+        enabled: true
+      shell-freeform:
+        title: 自由拼 shell
+        status: forbidden
+        enabled: false
+      git-config:
+        title: 改 git config
+        status: forbidden
+        enabled: false
+      git-force-push:
+        title: force push / 推 main
+        status: forbidden
+        enabled: false
+
+  experience:
+    title: 体验器官
+    bucket: experience
+    fused: false
+    atoms:
+      theme-deep-whale:
+        title: Deep Whale 主题
+        status: fused
+        provider: deep-whale-day-night
+        enabled: true
+      market:
+        title: 插件市场
+        status: provider
+        provider: dsh-market
+        enabled: true
+      settings-shell:
+        title: Web UI 设置分组壳（基础设施，勿关）
+        status: infra
+        provider: web-ui-settings
+        enabled: true
+        locked: true
+        note: 提供 webUiSettings 绑定与 web-ui.plugin.item 槽；侧栏分区已 skip，包必须保留
+      community-index:
+        title: 社区插件索引
+        status: provider
+        provider: web-ui-community-plugins
+        enabled: false
+      whale-mascot:
+        title: 主题自带鲸鱼娘桌宠
+        status: fused
+        enabled: false
+        note: 写 localStorage whale-moe:pet；与 web-ui-pet 无关
+      pet:
+        title: 桌宠（web-ui 包）
+        status: provider
+        provider: web-ui-pet
+        enabled: false
+      skin-center:
+        title: 皮肤中心整包
+        status: forbidden
+        provider: web-ui-skin-center
+        enabled: false
+      web-ui-all:
+        title: Web UI 全家桶
+        status: forbidden
+        provider: web-ui-all
+        enabled: false

@@ -1,0 +1,12 @@
+{
+  "name": "dsh-self",
+  "description": "自身插件：收编外来包、去重、把错误挂载转到设置卡/浮层",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-self",
+    "inject": ["webServer", "sessions"]
+  },
+  "client": {
+    "platform": "web"
+  }
+}

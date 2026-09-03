@@ -1,0 +1,65 @@
+# Desktop 功能档位（由 apply.mjs preset 使用）
+# --------------------------------------------
+#   node apply.mjs presets           # 列出档位
+#   node apply.mjs preset daily      # 切到日常瘦身并 apply + doctor
+#   node apply.mjs preset bridge     # 指挥舱
+#   node apply.mjs preset full       # 全开调试（不含 forbidden）
+#
+# enable 列表之外的 features 一律关掉；always_on 不动；forbidden 永关。
+
+presets:
+  daily:
+    title: 日常对话
+    note: 瘦身冷启——聊天底座 + 回退/进度/侧栏/记忆/看图；不开 Open World / 市场 / 看板
+    enable:
+      - web-ui-settings
+      - web-ui-rewind
+      - ventus-progress
+      - better-sidebar
+      - ventus-search
+      - web-ui-describe-image
+      - hindsight
+      - archify
+      - dsh-enable-image-input
+
+  bridge:
+    title: 指挥舱
+    note: Open World + 任务看板 + 回退/进度/侧栏；不开市场与杂项面板
+    enable:
+      - apiproxy-compat
+      - dsh-open-world
+      - web-ui-settings
+      - web-ui-rewind
+      - ventus-progress
+      - better-sidebar
+      - web-ui-task-board
+      - web-ui-live-stats
+      - web-ui-describe-image
+      - hindsight
+      - archify
+      - dsh-enable-image-input
+
+  full:
+    title: 全开调试
+    note: 常用全集（vendor 内已迁入的 web-ui）；仍禁全家桶/皮肤中心
+    enable:
+      - apiproxy-compat
+      - dsh-open-world
+      - web-ui-rewind
+      - ventus-progress
+      - better-sidebar
+      - ventus-search
+      - dsh-market
+      - web-ui-settings
+      - web-ui-conversation-exporter
+      - web-ui-workspace-analyzer
+      - web-ui-task-board
+      - web-ui-git-graph
+      - web-ui-aionui-panel
+      - web-ui-live-stats
+      - web-ui-ssh
+      - web-ui-describe-image
+      - web-ui-liangshen
+      - hindsight
+      - archify
+      - dsh-enable-image-input

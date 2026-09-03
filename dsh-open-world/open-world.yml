@@ -1,0 +1,80 @@
+# dsh-open-world 框架配置 v2.12
+# 用户覆盖：~/.dsh/open-world.yml
+# 协议：space.enabled 时 framework.protocol = owip/0.2-draft，否则 owip/0.1
+
+default_view: ati
+merge_synapses: true
+dynamic_plugins: true
+
+# 消息总线（本机信箱 + 广播 + 跨机 outbox + 记忆/拓扑附件）
+messaging:
+  enabled: true
+  max_messages: 200
+  allow_broadcast: true
+  allow_agent_inject: true
+  outbox_dir: open-world/outbox
+
+# 集成层：remote-web-ui 配对 / notification-center / hindsight / archify
+integrations:
+  pair: true
+  notifications: true
+  hindsight_port: 9077
+  archify_dirs:
+    - open-world/archify
+    - .dsh-drops
+
+# IDEA Lab：调试人格沙箱（非独立 npm 包，内置于 Open World）
+idea:
+  enabled: true
+
+# Reciprocal Resolution Memory（壳层；神经 RRA 见 bridge/rra-neural.stub.mjs）
+rrm:
+  enabled: true
+  tau_ms: 60000
+  alpha: 1
+  exact_window: 8
+  compressed_max: 24
+  landmark_max: 12
+  byte_budget: 48000
+  archive_path: open-world/rrm-archive.jsonl
+  mailbox_exact_window: 6
+  mailbox_compressed_max: 20
+  mailbox_landmark_max: 10
+  mailbox_byte_budget: 64000
+  mailbox_archive_path: open-world/rrm-mailbox-archive.jsonl
+  task_exact_window: 6
+  task_compressed_max: 16
+  task_landmark_max: 8
+  task_byte_budget: 32000
+  task_archive_path: open-world/rrm-task-archive.jsonl
+
+# 神经 RRA 薄适配器（L5）：默认关；probe=true 仅探测 rra-proto，不启用神经路径
+rra:
+  probe: false
+
+# 空间 / 多人（阶段 C · OWIP 0.2-draft）
+# 非 loopback 需 Authorization: Bearer <token>
+# token 文件：~/.dsh/open-world/space-token.json
+# 第二屏页：/api/open-world/space/view?token=...
+space:
+  enabled: true
+  require_token_for_lan: true
+  require_token_always: false
+  seal_outbox: true
+  sync: true
+  token_ttl_hours: 168
+
+synapses:
+  - [memory, ai-engine]
+  - [user-hub, ai-engine]
+  - [session-active, ai-engine]
+  - [network, ai-engine]
+  - [ai-engine, analytics]
+  - [ai-engine, task-board]
+  - [analytics, security]
+  - [task-board, runtime]
+  - [task-board, storage]
+  - [runtime, core]
+  - [security, core]
+  - [storage, core]
+  - [user-hub, session-active]

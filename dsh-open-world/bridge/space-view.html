@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXORA · 第二屏</title>
+  <style>
+    :root {
+      --bg: #071018;
+      --panel: rgba(12, 22, 34, 0.92);
+      --border: rgba(94, 234, 212, 0.18);
+      --cyan: #5eead4;
+      --text: #e6f1ff;
+      --muted: #7c8ea6;
+      --gold: #f5d67a;
+      --mono: Consolas, "Courier New", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(94,234,212,.12), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(245,214,122,.08), transparent 50%),
+        var(--bg);
+    }
+    header {
+      padding: 18px 20px 10px;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: .08em; }
+    .sub { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+    .status { font-size: 11px; font-family: var(--mono); color: var(--cyan); }
+    main { padding: 16px 20px 28px; display: grid; gap: 14px; max-width: 920px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px;
+    }
+    .label { color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+    .value { margin-top: 6px; font-size: 22px; font-family: var(--mono); color: var(--cyan); }
+    .value.gold { color: var(--gold); }
+    h2 { margin: 0 0 8px; font-size: 13px; color: var(--muted); letter-spacing: .08em; }
+    .row {
+      display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid rgba(94,234,212,.08); font-size: 12px;
+    }
+    .kind { color: var(--muted); font-size: 10px; }
+    .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ev { font-size: 12px; color: #c9d7e8; padding: 6px 0; border-bottom: 1px solid rgba(94,234,212,.08); }
+    .ev time { color: var(--muted); font-family: var(--mono); font-size: 10px; margin-right: 8px; }
+    .err { color: #f87171; font-size: 12px; }
+    footer { padding: 0 20px 20px; color: var(--muted); font-size: 11px; font-family: var(--mono); text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>NEXORA · 第二屏</h1>
+      <div class="sub" id="proto">owip/0.2-draft · live sync</div>
+    </div>
+    <div class="status" id="link">连接中…</div>
+  </header>
+  <main>
+    <div class="grid">
+      <div class="card"><div class="label">健康</div><div class="value" id="health">—</div></div>
+      <div class="card"><div class="label">会话</div><div class="value" id="sessions">—</div></div>
+      <div class="card"><div class="label">舰队运行</div><div class="value gold" id="running">—</div></div>
+      <div class="card"><div class="label">信箱未读</div><div class="value" id="unread">—</div></div>
+    </div>
+    <section class="card">
+      <h2>进程舰队</h2>
+      <div id="fleet"></div>
+    </section>
+    <section class="card">
+      <h2>最近事件</h2>
+      <div id="events"></div>
+    </section>
+    <p class="err" id="err" hidden></p>
+  </main>
+  <footer id="foot">等待首包…</footer>
+  <script>
+(function () {
+  const params = new URLSearchParams(location.search)
+  const token = params.get('token') || params.get('access_token') || ''
+  const q = token ? ('?token=' + encodeURIComponent(token) + '&role=second-screen') : '?role=second-screen'
+  const api = {
+    screen: '/api/open-world/space/second-screen' + (token ? ('?token=' + encodeURIComponent(token)) : ''),
+    stream: '/api/open-world/stream' + q,
+  }
+  const el = (id) => document.getElementById(id)
+  function showErr(msg) {
+    const n = el('err')
+    if (!msg) { n.hidden = true; n.textContent = ''; return }
+    n.hidden = false
+    n.textContent = msg
+  }
+  function render(data) {
+    if (!data || !data.ok) return
+    el('proto').textContent = (data.protocol || 'owip/0.2-draft') + ' · second-screen'
+    el('health').textContent = (data.core && data.core.healthScore != null) ? data.core.healthScore : '—'
+    el('sessions').textContent = (data.core && data.core.sessionCount != null) ? data.core.sessionCount : '—'
+    const counts = (data.fleet && data.fleet.counts) || {}
+    el('running').textContent = counts.running != null ? counts.running : '—'
+    el('unread').textContent = (data.mailbox && data.mailbox.unread != null) ? data.mailbox.unread : '—'
+    const fleet = el('fleet')
+    const procs = (data.fleet && data.fleet.processes) || []
+    fleet.innerHTML = procs.length
+      ? procs.slice(0, 12).map((p) => (
+          '<div class="row"><span class="kind">' + (p.kind || '') + '</span>' +
+          '<span class="title">' + (p.title || p.id || '') + '</span>' +
+          '<span class="kind">' + (p.status || '') + '</span></div>'
+        )).join('')
+      : '<div class="sub">暂无进程</div>'
+    const events = el('events')
+    const evs = data.events || []
+    events.innerHTML = evs.length
+      ? evs.map((e) => (
+          '<div class="ev"><time>' + ((e.ts || e.at || '').toString().slice(11, 19) || '') + '</time>' +
+          (e.text || e.message || e.kind || JSON.stringify(e)) + '</div>'
+        )).join('')
+      : '<div class="sub">暂无事件</div>'
+    el('foot').textContent = '捕获 ' + (data.capturedAt || '—')
+    showErr('')
+  }
+  async function poll() {
+    try {
+      const res = await fetch(api.screen, { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status))
+      render(data)
+      el('link').textContent = '轮询 · ' + new Date().toLocaleTimeString()
+    } catch (err) {
+      showErr(String(err.message || err))
+      el('link').textContent = '轮询失败'
+    }
+  }
+  let es
+  try {
+    es = new EventSource(api.stream)
+    es.onopen = () => { el('link').textContent = 'SSE 已连接' }
+    es.onerror = () => {
+      el('link').textContent = 'SSE 断开 · 回退轮询'
+      try { es.close() } catch (_) {}
+      poll()
+      setInterval(poll, 4000)
+    }
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data)
+        if (data.type === 'second-screen') render(data)
+        else if (data.type === 'hello') {
+          el('link').textContent = 'SSE · hello'
+          if (data.secondScreen) render(data.secondScreen)
+          else poll()
+        } else if (data.type === 'mailbox' || data.type === 'snapshot-delta') {
+          poll()
+        }
+      } catch (_) {}
+    }
+  } catch (_) {
+    poll()
+    setInterval(poll, 4000)
+  }
+  // 首屏立即拉一次，避免等 SSE
+  poll()
+})()
+  </script>
+</body>
+</html>

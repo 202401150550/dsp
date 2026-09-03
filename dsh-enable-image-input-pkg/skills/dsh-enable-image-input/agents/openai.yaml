@@ -1,0 +1,4 @@
+interface:
+  display_name: "修复 DSH 图片输入"
+  short_description: "诊断并修复 DSH 切换视觉模型后仍无法上传和识别图片"
+  default_prompt: "使用 $dsh-enable-image-input 检查并修复当前 DSH 模型的图片输入能力。"

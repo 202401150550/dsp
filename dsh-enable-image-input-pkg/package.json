@@ -1,0 +1,27 @@
+{
+  "name": "dsh-enable-image-input-pkg",
+  "version": "1.0.0",
+  "description": "DSH skill wrapper for dsh-enable-image-input: diagnose and fix image input capabilities for DSH models.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "skills"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-skill"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

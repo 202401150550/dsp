@@ -1,0 +1,8 @@
+# Deep Whale standalone profile row. The upstream Theme Plugins builtin
+# integration (themeCatalog / themePlugins services from
+# dsh-host-theme-catalog and dsh-client-ui-theme-plugins) is not shipped in
+# this deployment, so the row is INSERTED without service inject and the
+# client half activates the skin directly on load.
+- insert:
+    - id: ui-skin-maid-atelier
+      name: '@dsh-external/dsh-client-ui-skin-deep-whale-day-night'

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "diagram_type": "er",
+  "meta": {
+    "title": "DeepSeek Harness 数据模型",
+    "subtitle": "陈氏 ER 图（Chen's ER Diagram）",
+    "output": "dsh-er.html"
+  },
+  "entities": [
+    { "id": "workspace", "label": "工作区", "attributes": ["路径", "名称"], "pos": [60, 90] },
+    { "id": "session", "label": "会话", "attributes": ["会话ID", "创建时间"], "pos": [320, 250] },
+    { "id": "message", "label": "消息", "attributes": ["角色", "内容", "时间戳"], "pos": [580, 90] },
+    { "id": "attachment", "label": "附件", "attributes": ["hash", "媒体类型", "大小"], "pos": [580, 410] },
+    { "id": "model", "label": "模型", "attributes": ["模型ID", "上下文窗口", "支持图片"], "pos": [320, 480] },
+    { "id": "provider", "label": "提供商", "attributes": ["名称", "baseURL"], "pos": [60, 410] }
+  ],
+  "relationships": [
+    {
+      "id": "own",
+      "label": "拥有",
+      "entities": ["workspace", "session"],
+      "pos": [200, 160],
+      "cardinality": { "workspace": "1", "session": "n" }
+    },
+    {
+      "id": "contain",
+      "label": "包含",
+      "entities": ["session", "message"],
+      "pos": [450, 160],
+      "cardinality": { "session": "1", "message": "n" }
+    },
+    {
+      "id": "refer",
+      "label": "引用",
+      "entities": ["message", "attachment"],
+      "pos": [620, 250],
+      "cardinality": { "message": "1", "attachment": "n" }
+    },
+    {
+      "id": "select",
+      "label": "选择",
+      "entities": ["session", "model"],
+      "pos": [320, 380],
+      "cardinality": { "session": "n", "model": "1" }
+    },
+    {
+      "id": "provide",
+      "label": "提供",
+      "entities": ["provider", "model"],
+      "pos": [200, 460],
+      "cardinality": { "provider": "1", "model": "n" }
+    }
+  ]
+}
