@@ -6,11 +6,12 @@
 #   node apply.mjs preset full       # 全开调试（不含 forbidden）
 #
 # enable 列表之外的 features 一律关掉；always_on 不动；forbidden 永关。
+# 注意：默认档不含 hindsight——9077 不通时每轮卡 ~25s，全模型超时。
 
 presets:
   daily:
     title: 日常对话
-    note: 瘦身冷启——聊天底座 + 回退/进度/侧栏/记忆/看图；不开 Open World / 市场 / 看板
+    note: 瘦身冷启——聊天底座 + 回退/进度/侧栏/看图；不开记忆/Open World/市场
     enable:
       - web-ui-settings
       - web-ui-rewind
@@ -18,13 +19,12 @@ presets:
       - better-sidebar
       - ventus-search
       - web-ui-describe-image
-      - hindsight
       - archify
       - dsh-enable-image-input
 
   bridge:
     title: 指挥舱
-    note: Open World + 任务看板 + 回退/进度/侧栏；不开市场与杂项面板
+    note: Open World + 任务看板 + 回退/进度/侧栏；不开 hindsight（先通 9077 再单独 set）
     enable:
       - apiproxy-compat
       - dsh-open-world
@@ -35,13 +35,12 @@ presets:
       - web-ui-task-board
       - web-ui-live-stats
       - web-ui-describe-image
-      - hindsight
       - archify
       - dsh-enable-image-input
 
   full:
     title: 全开调试
-    note: 常用全集（vendor 内已迁入的 web-ui）；仍禁全家桶/皮肤中心
+    note: 常用全集（仍默认不含 hindsight / 全家桶 / 皮肤中心）
     enable:
       - apiproxy-compat
       - dsh-open-world
@@ -60,6 +59,5 @@ presets:
       - web-ui-ssh
       - web-ui-describe-image
       - web-ui-liangshen
-      - hindsight
       - archify
       - dsh-enable-image-input

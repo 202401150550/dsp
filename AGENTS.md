@@ -7,7 +7,8 @@
 
 ## 记忆
 
-- 长期记忆：Hindsight（`hindsight_*`）。不要用 `dsh_host_catalog` 当记忆目录。
+- 长期记忆：Hindsight（`hindsight_*`）。**仅在本机 9077 daemon 已通时开启**；不通时每轮会卡 ~25s，表现为全模型超时。不要用 `dsh_host_catalog` 当记忆目录。
+- 关 Hindsight / OpenViking 时，锚定预设不得再把 `hindsight_*` / `viking_*` 写进 `bootstrapTools`；否则整包工具表倾倒，简单题也会 ~7s「回答时间过长」重试。修复：`node dsh-desktop-toggle/patch-anchored-bootstrap.mjs`（apply / doctor fix 会自动跑）。
 - OpenViking 本机服务可跑，默认不进 Desktop（避免卡启动）。
 - 人设要短、少改，避免破坏前缀缓存。
 

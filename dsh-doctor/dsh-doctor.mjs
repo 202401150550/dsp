@@ -14,7 +14,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawn, execSync } from 'node:child_process'
+import { spawn, spawnSync, execSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DSP = path.resolve(__dirname, '..')
@@ -222,6 +222,41 @@ function diagnose() {
     })
   }
 
+  // Hindsight autoReflect waits up to ~25s per turn when :9077 is down → all-model timeouts.
+  const hindsightOn = Object.keys(deps).some((n) => /hindsight/i.test(n))
+  if (hindsightOn) {
+    const r = spawnSync(process.execPath, ['-e', `
+      const net=require('net');
+      const s=net.connect({host:'127.0.0.1',port:9077},()=>{console.log('ok');s.destroy();process.exit(0)});
+      s.setTimeout(800,()=>{s.destroy();process.exit(1)});
+      s.on('error',()=>process.exit(1));
+    `], { encoding: 'utf8', windowsHide: true, timeout: 2000 })
+    if (r.status !== 0) {
+      issues.push({
+        id: 'hindsight-daemon-down',
+        severity: 'high',
+        message: 'Hindsight 已启用但 127.0.0.1:9077 不通——每轮会卡 ~25s，易表现为全模型 Request timed out。请关 hindsight 或先启动 daemon。',
+      })
+    }
+  }
+
+  // Anchored Standard: requiring missing hindsight_*/viking_* disables bootstrap → full tool catalog → ~7s retries.
+  const anchoredYml = path.join(DSH_ROOT, '.agent-presets', 'anchored-standard', 'agent.cordis.yml')
+  if (exists(anchoredYml)) {
+    const anchoredText = fs.readFileSync(anchoredYml, 'utf8')
+    const vikingOn = Object.keys(deps).some((n) => /openviking|viking/i.test(n))
+    const orphan = []
+    if (!hindsightOn && /hindsight_[a-z0-9_]+/i.test(anchoredText)) orphan.push('hindsight_*')
+    if (!vikingOn && /viking_[a-z0-9_]+/i.test(anchoredText)) orphan.push('viking_*')
+    if (orphan.length) {
+      issues.push({
+        id: 'anchored-bootstrap-orphan-tools',
+        severity: 'high',
+        message: `锚定预设仍要求已关闭插件的工具（${orphan.join(', ')}）→ bootstrap 失效、整包工具表倾倒、简单题也会模型重试。运行: node dsh-desktop-toggle/patch-anchored-bootstrap.mjs`,
+      })
+    }
+  }
+
   const ok = issues.filter((i) => i.severity === 'critical' || i.severity === 'high').length === 0
   return {
     ok,
@@ -255,11 +290,35 @@ function reinforceMarketDisabled() {
   return state.disabled.length
 }
 
+function patchAnchoredBootstrap() {
+  const script = path.join(DSP, 'dsh-desktop-toggle', 'patch-anchored-bootstrap.mjs')
+  if (!exists(script)) return { skipped: true, reason: 'script-missing' }
+  const r = spawnSync(process.execPath, [script], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 15000,
+  })
+  let parsed = null
+  try { parsed = JSON.parse((r.stdout || '').trim() || '{}') } catch {}
+  return {
+    skipped: false,
+    exit_code: r.status,
+    ok: r.status === 0,
+    ...(parsed || { raw: (r.stdout || '').slice(0, 500) }),
+  }
+}
+
 function cmdFix() {
   const n = clearHot()
   const disabled = reinforceMarketDisabled()
   console.log(`[fix] removed ${n} hot-*.yml`)
   console.log(`[fix] market disabled entries: ${disabled}`)
+  const anchored = patchAnchoredBootstrap()
+  if (anchored.patched) {
+    console.log('[fix] patched anchored-standard bootstrap (orphan memory tools stripped)')
+  } else if (anchored.ok === false && !anchored.skipped) {
+    console.warn('[fix] anchored bootstrap patch failed:', anchored.error || anchored)
+  }
   return diagnose()
 }
 

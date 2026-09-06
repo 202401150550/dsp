@@ -60,6 +60,16 @@ function isForbidden(id, feature) {
   return /web-ui-all/i.test(s) || /skin-center/i.test(s) || /dsh-skins$/i.test(s)
 }
 
+function hindsightDaemonUp() {
+  const r = spawnSync(process.execPath, ['-e', `
+    const net=require('net');
+    const s=net.connect({host:'127.0.0.1',port:9077},()=>{s.destroy();process.exit(0)});
+    s.setTimeout(800,()=>{s.destroy();process.exit(1)});
+    s.on('error',()=>process.exit(1));
+  `], { encoding: 'utf8', windowsHide: true, timeout: 2000 })
+  return r.status === 0
+}
+
 function loadCfg() {
   return parse(fs.readFileSync(PLUGINS_FILE, 'utf8'))
 }
@@ -75,6 +85,27 @@ function toPosix(p) {
 
 function linkSpec(link) {
   return `link:${toPosix(link)}`
+}
+
+function patchAnchoredBootstrap() {
+  const script = path.join(ROOT, 'patch-anchored-bootstrap.mjs')
+  if (!fs.existsSync(script)) return { skipped: true, reason: 'script-missing' }
+  const r = spawnSync(process.execPath, [script], {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 15000,
+  })
+  let parsed = null
+  try { parsed = JSON.parse((r.stdout || '').trim() || '{}') } catch {}
+  if (parsed?.patched) {
+    console.log('[patch] anchored-standard: stripped orphan hindsight_*/viking_* from bootstrap')
+  }
+  return {
+    skipped: false,
+    exit_code: r.status,
+    ok: r.status === 0,
+    ...(parsed || {}),
+  }
 }
 
 function runDoctorCheck() {
@@ -367,6 +398,15 @@ function applyNow(opts = {}) {
       disabled.push(`${key} (${f.title || f.insert_id}) [forbidden]`)
       continue
     }
+    // Hindsight without :9077 blocks every turn ~25s → all-model Request timed out.
+    if (key === 'hindsight' && f.enabled && !hindsightDaemonUp()) {
+      console.warn('[skip] hindsight: 127.0.0.1:9077 down — auto-disable to avoid turn timeouts')
+      f.enabled = false
+      try { setEnabledInYml('hindsight', false) } catch {}
+      blocked.push('hindsight')
+      disabled.push(`${key} (${f.title || f.insert_id}) [daemon-down]`)
+      continue
+    }
     // Only ENABLED deps go into package.json — dshmarket hot-mounts the rest.
     if (f.enabled) {
       if (!ensureBuilt(key, f) && (f.group === 'web-ui' || f.group === 'skins')) {
@@ -444,6 +484,7 @@ function applyNow(opts = {}) {
     }
   }
 
+  const anchored_bootstrap_patch = patchAnchoredBootstrap()
   const doctor = runDoctorCheck()
 
   const status = {
@@ -459,6 +500,7 @@ function applyNow(opts = {}) {
     market_disabled: marketState.disabled,
     install,
     api_remotes_patch: apiRemotesPatch,
+    anchored_bootstrap_patch,
     doctor,
     restart_required: true,
   }
@@ -557,6 +599,15 @@ function main() {
         action: 'set',
         error: `forbidden: ${id}`,
         note: f.note || 'blocked by policy (web-ui-all / skin-center)',
+      })
+      process.exit(1)
+    }
+    if (val === 'true' && id === 'hindsight' && !hindsightDaemonUp()) {
+      printJson({
+        ok: false,
+        action: 'set',
+        error: 'hindsight-daemon-down',
+        note: '127.0.0.1:9077 不通。先启动 Hindsight daemon，再 set hindsight true；否则每轮会卡 ~25s 导致全模型超时。',
       })
       process.exit(1)
     }

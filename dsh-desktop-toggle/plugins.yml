@@ -257,10 +257,10 @@ features:
     link: D:/dsp/vendor/dsh-web-ui/dsh-liangshen
 
   hindsight:
-    enabled: true
+    enabled: false
     title: Hindsight 长期记忆
     group: desktop
-    note: 仅在本机 9077 daemon 已通时开启。启动只注册钩子，不拉 MCP。不要和 openviking 技能包一起开。
+    note: "默认关。仅当本机 9077 daemon 已通再开；不通时每轮会卡 ~25s 做 reflect，表现为全模型 Request timed out（5/5）。不要和 openviking 一起开。关着时不要把 hindsight_* 写进 anchored-standard 的 bootstrapTools（否则 full catalog → ~7s 回答时间过长重试）。apply 会自动 patch-anchored-bootstrap。"
     insert_id: hindsight
     name: '@vectorize-io/hindsight-coding-agents/dsh'
     dep: '@vectorize-io/hindsight-coding-agents'
@@ -317,7 +317,7 @@ features:
     enabled: false
     title: OpenViking 技能说明
     group: desktop
-    note: 禁止与记忆插件同时开。mcp.json 会在启动时拉 stdio MCP，容易卡在 Loading plugins。
+    note: "禁止与记忆插件同时开。mcp.json 会在启动时拉 stdio MCP，容易卡在 Loading plugins。关着时不要把 viking_* 写进 anchored-standard 的 bootstrapTools（否则会 full catalog → Request timed out）。"
     insert_id: openviking-skill-filesystem
     name: openviking-dsh-pkg
     dep: openviking-dsh-pkg
