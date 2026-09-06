@@ -1,7 +1,7 @@
 {
   "name": "bridge",
   "title": "指挥舱",
-  "applied_at": "2026-09-03T13:54:33.093Z",
+  "applied_at": "2026-09-05T09:35:07.723Z",
   "enable": [
     "apiproxy-compat",
     "dsh-open-world",
@@ -12,7 +12,6 @@
     "web-ui-task-board",
     "web-ui-live-stats",
     "web-ui-describe-image",
-    "hindsight",
     "archify",
     "dsh-enable-image-input"
   ]

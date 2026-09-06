@@ -71,7 +71,7 @@ function saveTokenToConfigFile(token) {
 }
 /** Resolve the platform userToken from plugin config, env, profile config, then plugin config file. */
 function resolveUserToken(config) {
-    return config.platformUserToken
+    return config?.platformUserToken
         || process.env.DEEPSEEK_PLATFORM_USER_TOKEN
         || readTokenFromProfileConfig()
         || readTokenFromConfigFile();
@@ -91,7 +91,7 @@ function clearStoredToken() {
         writeFileSync(patchFile, cleaned);
 }
 /** Register the plugin. */
-export function apply(ctx, config) {
+export function apply(ctx, config = {}) {
     const token = resolveUserToken(config);
     let snapshot = token === undefined
         ? { balance: null, today: null, price_ratio: null, error: '未登录 DeepSeek 开放平台，请点击面板中的“登录”按钮', fetched_at: new Date().toISOString() }

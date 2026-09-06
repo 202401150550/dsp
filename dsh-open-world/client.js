@@ -1,4 +1,4 @@
-// CLIENT_BUILD 085f0c6ebe 2026-09-03T13:54:32.715Z v2.46
+// CLIENT_BUILD 37d6b6f627 2026-09-03T14:18:29.708Z v2.46
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -787,8 +787,8 @@ window.__ModuleLoader__.load({
     exports.POLL_MS = 2500
     exports.CLIENT_VER = 'v2.46'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '085f0c6ebe'
-    exports.CLIENT_BUILT_AT = '2026-09-03T13:54:32.715Z'
+    exports.CLIENT_BUILD = '37d6b6f627'
+    exports.CLIENT_BUILT_AT = '2026-09-03T14:18:29.708Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -810,29 +810,29 @@ window.__ModuleLoader__.load({
     exports.WM_MODE_KEY = 'dsh-open-world-wm-mode'
     exports.WM_LAST_MODE_KEY = 'dsh-open-world-wm-last'
     exports.WM_MODES = ['fullscreen', 'split', 'float', 'minimized']
-    /** 壳内应用表面（ATI 节点进入�?*/
+    /** 壳内应用表面（ATI 节点进入） */
     exports.APP_SURFACES = {
       'task-board': { title: '任务看板', titleEn: 'TASK BOARD' },
-      rewind: { title: '回退时间�?, titleEn: 'REWIND' },
+      rewind: { title: '回退时间轴', titleEn: 'REWIND' },
       market: { title: '插件市场', titleEn: 'MARKET' },
       memory: { title: '长期记忆', titleEn: 'HINDSIGHT' },
       ssh: { title: 'SSH 远程', titleEn: 'SSH' },
-      remote: { title: '移动端远�?, titleEn: 'REMOTE' },
-      analytics: { title: '工作区分�?, titleEn: 'ANALYTICS' },
+      remote: { title: '移动端远程', titleEn: 'REMOTE' },
+      analytics: { title: '工作区分析', titleEn: 'ANALYTICS' },
       monitor: { title: '系统监视', titleEn: 'MONITOR' },
       fleet: { title: '进程舰队', titleEn: 'FLEET' },
       sidebar: { title: '侧栏 NEXORA', titleEn: 'SIDEBAR' },
     }
 
     exports.ATI_PRESETS = [
-      { id: 'ati-unified', label: '统一�?, sub: 'UNIFIED FIELD', group: 'ATI' },
+      { id: 'ati-unified', label: '统一场', sub: 'UNIFIED FIELD', group: 'ATI' },
       { id: 'manifold-torus', label: '环面', sub: 'TORUS · g=1', group: '拓扑' },
       { id: 'manifold-mobius', label: '莫比乌斯', sub: 'MÖBIUS · 不可定向', group: '拓扑' },
       { id: 'manifold-klein', label: '克莱因瓶', sub: 'KLEIN · 4D', group: '拓扑' },
-      { id: 'poincare-disk', label: '庞加莱圆�?, sub: 'POINCARÉ · 双曲', group: '拓扑' },
+      { id: 'poincare-disk', label: '庞加莱圆盘', sub: 'POINCARÉ · 双曲', group: '拓扑' },
       { id: 'ml-gradient', label: '机器学习', sub: 'GRADIENT · LOSS', group: 'ML' },
       { id: 'deep-attention', label: '深度学习', sub: 'ATTENTION · TRANSFORMER', group: 'DL' },
-      { id: 'molecular-graph', label: '分子�?, sub: 'MOLECULAR GRAPH', group: '化学' },
+      { id: 'molecular-graph', label: '分子图', sub: 'MOLECULAR GRAPH', group: '化学' },
       { id: 'periodic-lattice', label: '元素周期', sub: 'PERIODIC LATTICE', group: '化学' },
       { id: 'ati-evolution', label: 'ATI 演化', sub: 'EMERGENCE', group: 'ATI' },
       { id: 'aci-loop', label: 'ACI 循环', sub: 'THINK LOOP', group: 'ACI' },
@@ -846,7 +846,7 @@ window.__ModuleLoader__.load({
     ]
 
     exports.ATI_STAGES_FALLBACK = [
-      { id: 'seed', zh: '拓扑�? },
+      { id: 'seed', zh: '拓扑胚' },
       { id: 'ml', zh: '机器学习' },
       { id: 'dl', zh: '深度学习' },
       { id: 'chem', zh: '化学计算' },
@@ -854,12 +854,12 @@ window.__ModuleLoader__.load({
     ]
 
     exports.DL_STACK = [
-      { id: 'user-hub', label: 'TOKENIZER', zh: '词元�? },
-      { id: 'network', label: 'EMBEDDING', zh: '嵌入�? },
-      { id: 'ai-engine', label: 'ATTENTION', zh: '多头注意�? },
+      { id: 'user-hub', label: 'TOKENIZER', zh: '词元化' },
+      { id: 'network', label: 'EMBEDDING', zh: '嵌入层' },
+      { id: 'ai-engine', label: 'ATTENTION', zh: '多头注意力' },
       { id: 'analytics', label: 'FFN', zh: '前馈网络' },
       { id: 'task-board', label: 'OPTIMIZER', zh: '梯度优化' },
-      { id: 'core', label: 'ATI HEAD', zh: '输出�? },
+      { id: 'core', label: 'ATI HEAD', zh: '输出头' },
     ]
 
     exports.NODE_ZH = {
@@ -893,9 +893,9 @@ window.__ModuleLoader__.load({
     exports.LOAD_COLORS = ['#5eead4', '#bfe38e', '#f5d67a', '#7ab8f5']
 
     exports.QUICK_ACTIONS = [
-      { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世�?· 新任�? } },
+      { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世界 · 新任务' } },
       { icon: 'diagnosis', label: '进程舰队', action: { type: 'embed', label: '进程舰队', panel: 'fleet' } },
-      { icon: 'scan', label: '安全扫描', action: { type: 'agent-prompt', prompt: '请检�?~/.dsh 配置�?loopback API 暴露面，给出安全建议�? } },
+      { icon: 'scan', label: '安全扫描', action: { type: 'agent-prompt', prompt: '请检查 ~/.dsh 配置与 loopback API 暴露面，给出安全建议。' } },
       { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '内嵌任务看板', panel: 'task-board' } },
       { icon: 'network', label: 'SSH 远程', action: { type: 'embed', label: '进入 SSH', panel: 'ssh' } },
       { icon: 'config', label: '插件市场', action: { type: 'embed', label: '进入插件市场', panel: 'market' } },

@@ -1,15 +1,14 @@
 {
   "ok": true,
   "action": "apply",
-  "applied_at": "2026-09-03T13:56:20.665Z",
+  "applied_at": "2026-09-05T09:35:07.723Z",
   "profile_dir": "C:/Users/admin/.dsh/profiles/desktop",
-  "preset": null,
+  "preset": "bridge",
   "bundles": [
     "@deepseek-ai/dsh-base",
     "@deepseek-ai/dsh-web-app",
     "dsh-self",
     "@dsh-external/dsh-client-ui-skin-deep-whale-day-night",
-    "@vectorize-io/hindsight-coding-agents",
     "@tt-a1i/archify-dsh",
     "dsh-enable-image-input-pkg"
   ],
@@ -23,7 +22,6 @@
     "web-ui-task-board (任务看板)",
     "web-ui-live-stats (实时状态)",
     "web-ui-describe-image (图片描述工具)",
-    "hindsight (Hindsight 长期记忆)",
     "archify (Archify 架构图)",
     "dsh-enable-image-input (图片输入修复)"
   ],
@@ -41,6 +39,7 @@
     "web-ui-remote-web-ui (远程 Web UI)",
     "web-ui-ssh (SSH 远程)",
     "web-ui-liangshen (良神扩展)",
+    "hindsight (Hindsight 长期记忆)",
     "dsh-mic-input (语音输入（浏览器 Web Speech）)",
     "dsh-voice (语音输入（离线）)",
     "openviking (OpenViking 技能说明)",
@@ -82,9 +81,9 @@
     "skipped": false,
     "ok": true,
     "exit_code": 0,
-    "checked_at": "2026-09-03T13:56:20.656Z",
+    "checked_at": "2026-09-05T09:35:07.711Z",
     "hot_count": 0,
-    "dep_count": 14,
+    "dep_count": 13,
     "issues": []
   },
   "restart_required": true
