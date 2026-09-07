@@ -22,6 +22,7 @@
 | **S1-B** | S1 权重条目 → `applyRraSketch`（pooled 桥） | ✅（玩具；非 RoPE 互通；`gate:s1-sketch-bridge`） |
 | **M5-R** | RoPE rope-then-pool 银行 → `applyRraSketch(readAt)` + 权重闭环 + dim32→64→128 阶梯 | ✅（玩具；`gate:m5-rope`；≠ 真实解码器） |
 | **M5-D** | 压缩权重 dim/协议契约护栏 | ✅（`gate:m5-dim`；拒假生产协议；≠ 真解码器） |
+| **M6-P** | 解码器权重包契约（结构可开 / apply 仍拒） | ✅（`gate:decoder-pack`；无真实 checkpoint） |
 
 ## M4 是什么、不是什么
 
@@ -56,6 +57,7 @@ npm run gate:s1-weight
 npm run gate:s1-sketch-bridge
 npm run gate:m5-rope
 npm run gate:m5-dim
+npm run gate:decoder-pack
 npm run gate:m3
 ```
 
@@ -112,6 +114,14 @@ npm run gate:m5-dim
 ```
 
 钉死：合法玩具协议、形状、`q.dim` 对齐；拒绝奇数 dim、假 `rra/1.*` / `implemented:true` 快照。**不是**真解码器，只是通向真实尺度时的护栏。
+
+### M6-P：解码器权重包契约
+
+```powershell
+npm run gate:decoder-pack
+```
+
+定义 `rra/0.11-decoder-compress-pack`：结构可校验并可「打开」，但 **`activateProductionApply` 恒拒**；玩具 family / `productionReady=true` / 缺 source 一律失败。有真实解码器 checkpoint 之前，正式 `applyReciprocalResolutionAttention` 仍抛错。
 
 ## 禁区
 

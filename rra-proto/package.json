@@ -23,6 +23,7 @@
     "./s1-sketch-bridge": "./src/s1-sketch-bridge.mjs",
     "./m5-rope-bridge": "./src/m5-rope-bridge.mjs",
     "./m5-dim-contract": "./src/m5-dim-contract.mjs",
+    "./decoder-weight-pack": "./src/decoder-weight-pack.mjs",
     "./m3-online": "./src/m3-online.mjs",
     "./m3-apply": "./src/m3-apply.mjs"
   },
@@ -45,6 +46,7 @@
     "gate:s1-sketch-bridge": "node bench/s1-sketch-bridge-gate.mjs",
     "gate:m5-rope": "node bench/m5-rope-bridge-gate.mjs",
     "gate:m5-dim": "node bench/m5-dim-contract-gate.mjs",
+    "gate:decoder-pack": "node bench/decoder-weight-pack-gate.mjs",
     "test": "node test/smoke.mjs"
   },
   "engines": {

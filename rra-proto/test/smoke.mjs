@@ -20,6 +20,7 @@ import { createFrozenBackbone, backboneForward, createBackboneCache, synthCorpus
 import { runS1SketchBridgeEval } from '../src/s1-sketch-bridge.mjs'
 import { runM5RopeBridgeEval } from '../src/m5-rope-bridge.mjs'
 import { runM5DimContractEval } from '../src/m5-dim-contract.mjs'
+import { runDecoderWeightPackEval } from '../src/decoder-weight-pack.mjs'
 import { runOnlineCausalEval } from '../src/m3-online.mjs'
 import { runApplySketchEval, applyRraSketch, SKETCH_PROTOCOL } from '../src/m3-apply.mjs'
 import { zeros, randn, l2 } from '../src/math.mjs'
@@ -279,6 +280,13 @@ ok(existsSync(join(root, 'src/l6-m2-hotread.mjs')), 'l6-m2-hotread.mjs present')
     const d = runM5DimContractEval()
     ok(d.ok === true, 'M5-D dim contract eval')
     ok(d.implemented === false && d.fullNeuralRra === false, 'M5-D stays honest')
+  }
+  ok(existsSync(join(root, 'src/decoder-weight-pack.mjs')), 'decoder-weight-pack.mjs present')
+  ok(existsSync(join(root, 'bench/decoder-weight-pack-gate.mjs')), 'decoder-weight-pack-gate.mjs present')
+  {
+    const p = runDecoderWeightPackEval()
+    ok(p.ok === true, 'decoder-pack eval')
+    ok(p.implemented === false && p.fullNeuralRra === false, 'decoder-pack stays honest')
   }
 }
 

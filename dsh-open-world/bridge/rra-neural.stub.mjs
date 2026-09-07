@@ -19,7 +19,7 @@ export const RRA_STATUS = {
     'production-scale neural apply (real decoder + trained weights)',
   ],
   nextStage: 'production-apply',
-  nextCut: '真解码器权重；M5-D dim/协议护栏已开；sketch≠完整 RRA',
+  nextCut: '真实解码器 checkpoint → rra-proto decoder-weight-pack；activate 目前恒拒',
   repoBoundary: 'dsh-open-world stub+adapter; prototype in dsp/rra-proto',
   protoPackage: 'rra-proto@0.10.0',
   protoPath: '../rra-proto',
@@ -63,5 +63,5 @@ export function applyReciprocalResolutionAttention(input) {
   if (input != null && typeof input === 'object' && input.causal === false) {
     throw new Error('RRA rejects causal=false (online constraint). Neural path still unimplemented.')
   }
-  throw new Error('RRA neural path not implemented (L6/M4 sketch is opt-in via rra.sketch; full apply still off). Use shell ow-rrm/0.1. See RRA_NEURAL.md')
+  throw new Error('RRA neural path not implemented (need real decoder weight pack; sketch opt-in via rra.sketch is not full RRA). See RRA_NEURAL.md / gate:decoder-pack')
 }

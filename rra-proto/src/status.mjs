@@ -17,16 +17,17 @@ export const PROTO_STATUS = {
   baselines: ['full-exact', 'fixed-window', 'uniform-stride', 'power-law-shell', 'fixed-chunk', 'reciprocal-untrained', 'reciprocal-query', 'reciprocal-gate'],
   modules: [
     'baselines', 'rope', 'compress', 'l3-eval', 'l4-longctx', 'kv-bank', 'l6-m2-hotread',
-    's1-backbone', 's1-adapter', 's1-train', 's1-beat', 's1-sketch-bridge', 'm5-rope-bridge', 'm5-dim-contract', 'm3-online', 'm3-apply',
+    's1-backbone', 's1-adapter', 's1-train', 's1-beat', 's1-sketch-bridge', 'm5-rope-bridge', 'm5-dim-contract', 'decoder-weight-pack', 'm3-online', 'm3-apply',
   ],
-  note: 'L6/M4：M3 草图 + OW rra.sketch 默认关；S1/M5-R 桥 + M5-D dim 契约；正式 apply 仍抛错。禁止 neural:true。',
+  note: 'L6/M4：草图/对打/M5 护栏 + decoder-weight-pack 契约；正式 apply 仍抛错。禁止 neural:true。',
   nextStage: 'production-apply',
-  nextCut: '真解码器权重；M5-D 已钉 dim/协议护栏（≠ 生产实现）',
+  nextCut: '接入真实解码器 checkpoint → decoder-weight-pack；activateProductionApply 目前恒拒',
   hasWeightRoundtrip: true,
   hasS1SketchBridge: true,
   hasM5RopeBridge: true,
   hasM5CompressWeights: true,
   hasM5DimContract: true,
+  hasDecoderWeightPack: true,
   shellBridge: 'ow-rrm/0.1',
   owAdapter: 'dsh-open-world/bridge/rra-adapter.mjs',
   docs: '../dsh-open-world/RRA_NEURAL.md',
@@ -38,5 +39,9 @@ export function describeProto() {
 }
 
 export function applyReciprocalResolutionAttention() {
-  throw new Error('rra-proto L6/M4: full neural RRA apply not implemented. OW may opt into applyRraSketch via rra.sketch; see PRODUCTION.md')
+  throw new Error(
+    'rra-proto: full neural RRA apply not implemented. '
+    + 'Need real decoder weight pack (see decoder-weight-pack.mjs / gate:decoder-pack). '
+    + 'OW may use applyRraSketch via rra.sketch + optional compress_weights; PRODUCTION.md',
+  )
 }
