@@ -20,7 +20,7 @@
 | **M4** | OW 可选挂载 `tryApplyRraSketch`（`rra.sketch` 默认 false） | ✅（仍非完整神经 RRA） |
 | **S1-W** | S1 适配器权重训→存→载→评闭环 | ✅（玩具尺度；`gate:s1-weight`） |
 | **S1-B** | S1 权重条目 → `applyRraSketch`（pooled 桥） | ✅（玩具；非 RoPE 互通；`gate:s1-sketch-bridge`） |
-| **M5-R** | RoPE rope-then-pool 银行 → `applyRraSketch(readAt)` | ✅（玩具第一刀；`gate:m5-rope`；≠ 真实尺度） |
+| **M5-R** | RoPE rope-then-pool 银行 → `applyRraSketch(readAt)` + 权重闭环 + dim32→64→128 阶梯 | ✅（玩具；`gate:m5-rope`；≠ 真实解码器） |
 
 ## M4 是什么、不是什么
 
@@ -83,9 +83,7 @@ npm run gate:beat-eq-noslot
 ```
 
 语义是 **no-slotMod + attnImitate**（**不是**开放域「内容检索」）。关 `slotMod`，同范数 + 内容 oracle 注意力模仿 + 显著格点打包，预算 ≤12；门禁内含 **无 imitate 消融**（单种子须明显掉召回）。  
-**诚实限制**：e8 同配方软顶约 **0.78**（不能锁 3/3≥0.80，故未做易抖负门禁）；仍依赖合成 **周期** `trueEvery`；不得替代 `gate:beat-eq` / `gate:beat`。  
-**豁免口径**：本门禁 `topicWaiver=0.80`（`contentOnly` 专用；eq 门禁为 0.85）——seed21=0.8452 踩 0.80 线过门，按 0.85 则 3/3 变 2/3，单种子对 0.85 无余量。  
-**常驻口径**：~2.0%（e12 代价）。三条门禁各报各的：beat ~1.6% / beat-eq ~1.9% / 本门禁 ~2.0%，勿混用 1.6%。
+**诚实限制**：e8 同配方软顶约 **0.78**（不能锁 3/3≥0.80，故未做易抖负门禁）；仍依赖合成 **周期** `trueEvery`；不得替代 `gate:beat-eq` / `gate:beat`。
 
 ### 破周期天花板（负结果门禁）
 
@@ -101,7 +99,7 @@ npm run gate:true-random-ceiling
 npm run gate:m5-rope
 ```
 
-与 S1 **pooled** 桥不同：压缩走 `compress.mjs` rope-then-pool，apply 带 `model` 走 **readAt**；须与 pooled-only 路径数值有差。仍是玩具 dim，**不是**生产 apply。
+与 S1 **pooled** 桥不同：压缩走 `compress.mjs` rope-then-pool，apply 带 `model` 走 **readAt**；须与 pooled-only 路径数值有差。门禁另含 **压缩权重存取闭环** 与 **尺度阶梯 dim32→64→128**（冒烟，仍玩具）。**不是**生产 apply / 真解码器。
 
 ## 禁区
 

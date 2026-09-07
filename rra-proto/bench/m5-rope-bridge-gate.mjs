@@ -3,7 +3,7 @@
  * M5-R 门禁：
  * 1) RoPE 银行 → applyRraSketch(readAt)（vs pooled 有差）
  * 2) 压缩权重训→存→载→sketch/readAt 一致
- * 3) 更大 dim=128 冒烟（仍玩具，非真实解码器）
+ * 3) 尺度阶梯 dim64 + dim128 冒烟（仍玩具，非真实解码器）
  */
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -22,13 +22,17 @@ const report = runM5RopeBridgeGate({
   trainSteps: 80,
   seed: 17,
   outDir,
+  midDim: 64,
+  midCodeDim: 16,
+  midLength: 96,
+  midTrainSteps: 50,
   wideDim: 128,
   wideCodeDim: 32,
   wideLength: 128,
   wideTrainSteps: 60,
 })
 const elapsedMs = Date.now() - t0
-const { bridge, weight, wide } = report
+const { bridge, weight, mid, wide } = report
 
 const checks = {
   bridgeOk: bridge.ok === true,
@@ -37,6 +41,8 @@ const checks = {
   weightOk: weight.ok === true,
   weightExact: weight.weightDiff < 1e-12,
   weightCtxMatch: weight.ctxDiff < 1e-12,
+  midOk: mid.ok === true,
+  midDim: mid.dim >= 64,
   wideOk: wide.ok === true,
   wideDim: wide.dim >= 128,
   wideCompressed: wide.compressedTokens > 0,
@@ -62,14 +68,20 @@ const gate = {
     paramCount: weight.paramCount,
     weightPath: weight.weightPath,
   },
+  mid: {
+    dim: mid.dim,
+    pathDiff: mid.pathDiff,
+    compressedTokens: mid.compressedTokens,
+  },
   wide: {
     dim: wide.dim,
     pathDiff: wide.pathDiff,
     compressedTokens: wide.compressedTokens,
   },
+  ladder: report.ladder,
   proto: describeProto(),
   note: ok
-    ? `M5-R 通过：readAt 桥 Δpooled=${bridge.pathDiff}；权重闭环；dim${wide.dim} 冒烟；玩具尺度`
+    ? `M5-R 通过：readAt 桥 Δpooled=${bridge.pathDiff}；权重闭环；阶梯 dim${bridge.dim}→${mid.dim}→${wide.dim}；玩具尺度`
     : `M5-R 失败: ${Object.entries(checks).filter(([, v]) => !v).map(([k]) => k).join(',')}`,
   generatedAt: new Date().toISOString(),
 }
@@ -80,6 +92,7 @@ console.log(JSON.stringify({
   checks: gate.checks,
   bridge: gate.bridge,
   weight: gate.weight,
+  mid: gate.mid,
   wide: gate.wide,
   elapsedMs,
 }, null, 1))
@@ -88,4 +101,4 @@ if (!ok) {
   console.error(gate.note)
   process.exit(1)
 }
-console.log('[m5-rope] PASSED · readAt + weight roundtrip + dim128 · fullNeuralRra=false')
+console.log('[m5-rope] PASSED · readAt + weight roundtrip + dim32/64/128 · fullNeuralRra=false')

@@ -7,6 +7,7 @@ import {
 import {
   createCompressModel, compressBlock, reconstructionLoss, trainToySteps,
   positionReadError, assertCausalBlock, readAt,
+  snapshotCompressModel, restoreCompressModel, maxAbsCompressWeightDiff,
 } from '../src/compress.mjs'
 import { runL3Gate } from '../src/l3-eval.mjs'
 import { runL4Gate, runLongContextByteMatch } from '../src/l4-longctx.mjs'
@@ -262,6 +263,14 @@ ok(existsSync(join(root, 'src/l6-m2-hotread.mjs')), 'l6-m2-hotread.mjs present')
     const m5 = runM5RopeBridgeEval({ length: 64, dim: 16, trainSteps: 40, seed: 3 })
     ok(m5.ok === true, `M5-R rope bridge (compressed=${m5.compressedTokens}, Δpooled=${m5.pathDiff})`)
     ok(m5.implemented === false && m5.fullNeuralRra === false, 'M5-R stays honest')
+  }
+  {
+    const m = createCompressModel({ dim: 8, compressedDim: 2, seedScale: 0.1 })
+    trainToySteps(m, { steps: 5, lr: 0.05, blockSize: 2, batchBlocks: 2 })
+    const snap = snapshotCompressModel(m)
+    const r = restoreCompressModel(snap)
+    ok(snap.protocol === 'rra/0.10-compress-weights', 'M5 compress weight protocol')
+    ok(maxAbsCompressWeightDiff(m, r) === 0, 'M5 compress restore exact')
   }
 }
 

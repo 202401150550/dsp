@@ -149,3 +149,57 @@ export function assertCausalBlock(positions, queryPos = null) {
   }
   return true
 }
+
+export const COMPRESS_WEIGHT_PROTOCOL = 'rra/0.10-compress-weights'
+
+/** 压缩模型权重快照（玩具；可 JSON 落盘） */
+export function snapshotCompressModel(model) {
+  if (!model) throw new Error('snapshotCompressModel: missing model')
+  return {
+    protocol: COMPRESS_WEIGHT_PROTOCOL,
+    dim: model.dim,
+    compressedDim: model.compressedDim,
+    theta: model.theta,
+    kind: model.kind || 'rope-then-pool-linear',
+    Wdown: Array.from(model.Wdown),
+    Wup: Array.from(model.Wup),
+    note: 'rope-then-pool compress weights · toy · not full neural RRA',
+  }
+}
+
+/** 从快照恢复压缩模型（零梯度缓冲） */
+export function restoreCompressModel(snap) {
+  if (!snap || snap.protocol !== COMPRESS_WEIGHT_PROTOCOL) {
+    throw new Error('restoreCompressModel: bad protocol')
+  }
+  if (!snap.Wdown || !snap.Wup) throw new Error('restoreCompressModel: missing weights')
+  if (snap.Wdown.length !== snap.compressedDim * snap.dim) {
+    throw new Error('restoreCompressModel: Wdown shape mismatch')
+  }
+  if (snap.Wup.length !== snap.dim * snap.compressedDim) {
+    throw new Error('restoreCompressModel: Wup shape mismatch')
+  }
+  const model = createCompressModel({
+    dim: snap.dim,
+    compressedDim: snap.compressedDim,
+    theta: snap.theta ?? 10000,
+    seedScale: 0,
+  })
+  model.Wdown = Float64Array.from(snap.Wdown)
+  model.Wup = Float64Array.from(snap.Wup)
+  model.dWdown = zeros(model.Wdown.length)
+  model.dWup = zeros(model.Wup.length)
+  model.kind = snap.kind || model.kind
+  return model
+}
+
+export function maxAbsCompressWeightDiff(a, b) {
+  let m = 0
+  for (let i = 0; i < a.Wdown.length; i++) m = Math.max(m, Math.abs(a.Wdown[i] - b.Wdown[i]))
+  for (let i = 0; i < a.Wup.length; i++) m = Math.max(m, Math.abs(a.Wup[i] - b.Wup[i]))
+  return m
+}
+
+export function compressParamCount(model) {
+  return model.Wdown.length + model.Wup.length
+}

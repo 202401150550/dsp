@@ -50,6 +50,6 @@ npm run gate:m3
 - **`gate:true-random-ceiling`**：`trueRandom` 后召回须 <0.70（负结果）
 - **`gate:s1-weight`**：适配器训→存→载→评闭环（玩具权重，非生产）
 - **`gate:s1-sketch-bridge`**：权重条目 → `applyRraSketch`（pooled；非 RoPE 互通）
-- **`gate:m5-rope`**：RoPE 银行 → `readAt` 草图（相对 pooled 桥的几何第一刀）
+- **`gate:m5-rope`**：RoPE 银行 → `readAt` + 权重闭环 + dim32→64→128 阶梯（玩具）
 
 均非开放域 / 真实模型 SOTA。OW：`rra.probe` / `rra.sketch` 默认关；探测 ≠ 启用。
