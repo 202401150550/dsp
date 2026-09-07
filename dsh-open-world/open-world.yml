@@ -48,9 +48,11 @@ rrm:
   task_byte_budget: 32000
   task_archive_path: open-world/rrm-task-archive.jsonl
 
-# 神经 RRA 薄适配器（L5）：默认关；probe=true 仅探测 rra-proto，不启用神经路径
+# 神经 RRA 薄适配器（L5/M4）：默认关
+# probe=true 仅探测 rra-proto；sketch=true 允许 tryApplyRraSketch（仍非完整神经 RRA）
 rra:
   probe: false
+  sketch: false
 
 # 空间 / 多人（阶段 C · OWIP 0.2-draft）
 # 非 loopback 需 Authorization: Bearer <token>

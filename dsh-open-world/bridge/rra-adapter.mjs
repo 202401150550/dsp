@@ -1,5 +1,7 @@
 /**
- * L5 薄适配器：默认关闭；显式 rra.probe=true 才探测 rra-proto。
+ * L5/M4 薄适配器：默认关闭。
+ * - rra.probe=true → 探测 rra-proto 状态（不启用神经）
+ * - rra.sketch=true → 允许动态调用 applyRraSketch（仍 implemented:false）
  * 永不打开 memory.neural / implemented / fullNeuralRra。
  */
 import { existsSync, readFileSync } from 'node:fs'
@@ -16,6 +18,8 @@ export function defaultRraConfig() {
   return {
     /** 显式开关：探测独立包状态；默认 false */
     probe: false,
+    /** M4：允许跑 applyRraSketch；默认 false；≠ 完整神经 RRA */
+    sketch: false,
   }
 }
 
@@ -110,8 +114,76 @@ export async function probeRraProtoDeep() {
 }
 
 /**
- * 组装 neuralStub（L5）。probe=false 时不碰磁盘。
- * @param {{ probe?: boolean }} rraCfg
+ * M4：在 sketch=true 时动态加载 applyRraSketch。
+ * sketch=false → 拒绝。正式 applyReciprocalResolutionAttention 仍抛错。
+ */
+export async function tryApplyRraSketch(input, rraCfg = {}) {
+  const cfg = mergeRraConfig(rraCfg)
+  if (!cfg.sketch) {
+    return {
+      ok: false,
+      skipped: true,
+      error: 'rra.sketch=false (M4 default-off)',
+      implemented: false,
+      fullNeuralRra: false,
+    }
+  }
+  if (input && input.causal === false) {
+    return {
+      ok: false,
+      skipped: false,
+      error: 'causal must be true',
+      implemented: false,
+      fullNeuralRra: false,
+    }
+  }
+  const dir = resolveRraProtoDir()
+  if (!dir) {
+    return { ok: false, skipped: false, error: 'rra-proto not found', implemented: false, fullNeuralRra: false }
+  }
+  const applyPath = join(dir, 'src', 'm3-apply.mjs')
+  if (!existsSync(applyPath)) {
+    return { ok: false, skipped: false, error: 'm3-apply.mjs missing', implemented: false, fullNeuralRra: false }
+  }
+  try {
+    const mod = await import(pathToFileURL(applyPath).href)
+    if (typeof mod.applyRraSketch !== 'function') {
+      return { ok: false, error: 'applyRraSketch export missing', implemented: false, fullNeuralRra: false }
+    }
+    const out = mod.applyRraSketch({ ...input, causal: true })
+    return {
+      ok: true,
+      skipped: false,
+      sketch: true,
+      implemented: false,
+      fullNeuralRra: false,
+      output: {
+        context: out.context,
+        meta: {
+          ...(out.meta || {}),
+          sketch: true,
+          implemented: false,
+          fullNeuralRra: false,
+          via: 'dsh-open-world/rra-adapter tryApplyRraSketch',
+        },
+        falsify: out.falsify ?? null,
+      },
+      note: 'M4 sketch mount · not full neural RRA',
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      skipped: false,
+      error: String(err.message || err),
+      implemented: false,
+      fullNeuralRra: false,
+    }
+  }
+}
+
+/**
+ * 组装 neuralStub（L5/M4）。probe=false 时不碰磁盘。
+ * @param {{ probe?: boolean, sketch?: boolean }} rraCfg
  * @param {{ deep?: boolean, deepResult?: object }} [opts]
  */
 export function buildNeuralStub(rraCfg = {}, opts = {}) {
@@ -120,19 +192,25 @@ export function buildNeuralStub(rraCfg = {}, opts = {}) {
   const adapter = {
     neuralEnabled: false,
     probe: !!cfg.probe,
+    sketch: !!cfg.sketch,
+    sketchAvailable: true,
     probed: false,
     deep: false,
     protoDir: null,
     proto: null,
     error: null,
-    note: '薄适配器默认关；probe=true 仅探测包状态，不启用神经路径',
+    note: cfg.sketch
+      ? 'M4 sketch 开关开：可 tryApplyRraSketch；neuralEnabled 仍 false'
+      : '薄适配器默认关；probe/sketch 显式开才探测/跑草图，不启用神经路径',
   }
 
   if (!cfg.probe) {
     return {
       ...base,
       adapter,
-      message: '神经 RRA 未实现；L5 适配器未探测（rra.probe=false）。壳层仍用 ow-rrm/0.1。',
+      message: cfg.sketch
+        ? '神经 RRA 未实现；sketch 开关开但未探测包（建议同时 probe）。壳层 ow-rrm/0.1。'
+        : '神经 RRA 未实现；L5/M4 适配器未探测（rra.probe=false）。壳层仍用 ow-rrm/0.1。',
     }
   }
 
@@ -155,7 +233,7 @@ export function buildNeuralStub(rraCfg = {}, opts = {}) {
     fullNeuralRra: false,
     adapter,
     message: probed.ok
-      ? `神经 RRA 未实现；已探测 rra-proto@${probed.proto?.version || '?'}（仍不启用）。`
+      ? `神经 RRA 未实现；已探测 rra-proto@${probed.proto?.version || '?'}${cfg.sketch ? ' · sketch 可挂' : ''}（仍不启用完整神经）。`
       : `神经 RRA 未实现；探测失败：${probed.error || 'unknown'}`,
   }
 }

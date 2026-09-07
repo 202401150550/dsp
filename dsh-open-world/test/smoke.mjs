@@ -99,19 +99,22 @@ assertEq(fw.version, '2.46', 'framework.version')
   assert(existsSync(join(root, '../rra-proto/src/l4-longctx.mjs')), 'rra-proto l4-longctx.mjs')
   const neural = __test.describeNeuralRra()
   assertEq(neural.implemented, false, 'neural still unimplemented')
-  assertEq(neural.stage, 'L6-M2', 'neural stage L6-M2')
+  assertEq(neural.stage, 'L6-M4', 'neural stage L6-M4')
   assertEq(neural.fullNeuralRra, false, 'fullNeuralRra false')
   assert(typeof __test.buildNeuralStub === 'function', 'buildNeuralStub exported')
   assert(typeof __test.probeRraProtoSync === 'function', 'probeRraProtoSync exported')
+  assert(typeof __test.tryApplyRraSketch === 'function', 'tryApplyRraSketch exported')
   const off = __test.buildNeuralStub({ probe: false })
   assert(off.adapter && off.adapter.probe === false, 'adapter probe default off')
+  assert(off.adapter.sketch === false, 'adapter sketch default off')
   assert(off.adapter.neuralEnabled === false, 'adapter neuralEnabled false')
   const on = __test.buildNeuralStub({ probe: true })
   assert(on.adapter && on.adapter.probe === true && on.adapter.probed === true, 'adapter probe on')
   assertEq(on.implemented, false, 'probe does not set implemented')
   assertEq(on.fullNeuralRra, false, 'probe does not set fullNeuralRra')
-  const parsed = __test.parseOpenWorldConfig('rra:\n  probe: true\n')
+  const parsed = __test.parseOpenWorldConfig('rra:\n  probe: true\n  sketch: true\n')
   assertEq(parsed.rra.probe, true, 'parse rra.probe true')
+  assertEq(parsed.rra.sketch, true, 'parse rra.sketch true')
   assert(typeof __test.assertShellDoesNotClaimNeural === 'function', 'assertShellDoesNotClaimNeural exported')
 }
 assert(fw.snapshotSchema === 8, 'framework.snapshotSchema')
@@ -376,6 +379,31 @@ const fleetSample = __test.buildFleetView({
 })
 assert(fleetSample.counts.sessions === 1, 'fleet sessions')
 assert(fleetSample.counts.tasks === 1, 'fleet tasks')
+
+// M4：sketch 默认关；显式开可跑草图且不宣称 implemented
+{
+  const skipped = await __test.tryApplyRraSketch({
+    q: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    queryPos: 3,
+    causal: true,
+    k_layers: { exact: [] },
+  }, { sketch: false })
+  assert(skipped.skipped === true && skipped.ok === false, 'M4 sketch default-off skips')
+  const ran = await __test.tryApplyRraSketch({
+    q: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    queryPos: 0,
+    causal: true,
+    k_layers: {
+      exact: [{
+        vec: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+        pos: 0,
+      }],
+    },
+  }, { sketch: true })
+  assert(ran.ok === true && ran.sketch === true, 'M4 sketch opt-in runs')
+  assert(ran.implemented === false && ran.fullNeuralRra === false, 'M4 sketch stays honest')
+  assert(ran.output && ran.output.meta && ran.output.meta.sketch === true, 'M4 sketch meta tag')
+}
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`)
 process.exit(failed > 0 ? 1 : 0)

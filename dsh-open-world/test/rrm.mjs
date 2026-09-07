@@ -70,7 +70,7 @@ rmSync(dir, { recursive: true, force: true })
 
 const neural = describeNeuralRra()
 ok(neural.implemented === false, 'neural RRA stub not implemented')
-ok(neural.stage === 'L6-M2', 'neural stage L6-M2')
+ok(neural.stage === 'L6-M4' || neural.stage === 'L6-M2', `neural stage ${neural.stage}`)
 ok(neural.protocol === 'rra/0.0-stub', 'neural protocol stub')
 ok(neural.protoPackage && String(neural.protoPackage).includes('rra-proto'), 'protoPackage pointed')
 ok(neural.fullNeuralRra === false, 'fullNeuralRra false')

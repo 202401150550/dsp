@@ -49,6 +49,7 @@ import {
   buildNeuralStub,
   probeRraProtoSync,
   probeRraProtoDeep,
+  tryApplyRraSketch,
 } from './bridge/rra-adapter.mjs'
 import {
   loadWorldState,
@@ -1995,6 +1996,7 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader) {
       },
       rra: {
         probe: config.rra?.probe === true,
+        sketch: config.rra?.sketch === true,
       },
     },
     framework: buildFramework(config),
@@ -2596,16 +2598,20 @@ export async function apply(ctx) {
         const homeRra = dshHome()
         const configRra = loadOpenWorldConfig(homeRra)
         const wantProbe = url.searchParams.get('probe') === '1' || configRra.rra?.probe === true
+        const wantSketch = url.searchParams.get('sketch') === '1' || configRra.rra?.sketch === true
         const stub = wantProbe
-          ? buildNeuralStub({ probe: true }, { deepResult: await probeRraProtoDeep() })
-          : buildNeuralStub({ probe: false })
+          ? buildNeuralStub({ probe: true, sketch: wantSketch }, { deepResult: await probeRraProtoDeep() })
+          : buildNeuralStub({ probe: false, sketch: wantSketch })
         sendJson(res, 200, {
           ok: true,
           neural: false,
           implemented: false,
           stub,
-          config: { probe: configRra.rra?.probe === true },
-          note: 'L5 probe-only · never enables neural path',
+          config: {
+            probe: configRra.rra?.probe === true,
+            sketch: configRra.rra?.sketch === true,
+          },
+          note: 'L5/M4 probe+optional sketch · never enables full neural path',
         })
         return
       }
@@ -2698,6 +2704,7 @@ export const __test = {
   mergeRraConfig,
   buildNeuralStub,
   probeRraProtoSync,
+  tryApplyRraSketch,
   attachNeuralStubToMemory,
   defaultRrmConfig,
   reconcileMailbox,

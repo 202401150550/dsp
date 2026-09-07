@@ -81,8 +81,11 @@ ApplyRraOutput
 | **L6** | 可持久压缩 KV 银行脚手架 | ✅ `rra-proto` `kv-bank` · [`PRODUCTION.md`](../rra-proto/PRODUCTION.md) |
 | **M1** | raw/pooled 快照 + 断点续训 | ✅ `npm run gate:m1` |
 | **M2** | 长上下文热读 + 字节对照（≥L4 门禁） | ✅ `npm run gate:m2` |
+| **S1** | 冻结骨干适配训练（玩具尺度） | ✅ `npm run gate:s1` |
+| **M3** | 严格在线因果 + RoPE 一致 apply 草图 | ✅ `npm run gate:m3`（正式 apply 仍抛错） |
+| **M4** | OW 可选 `rra.sketch` 挂载草图（默认关） | ✅ `tryApplyRraSketch` · 仍非完整 RRA |
 
-未显式打开且未完成生产级实现前，禁止在 OW 界面暗示「神经记忆已启用」。L5 探测 ≠ 启用。L6/M2 脚手架 ≠ 完整 RRA。
+未显式打开且未完成生产级实现前，禁止在 OW 界面暗示「神经记忆已启用」。L5 探测 ≠ 启用。L6/M4 脚手架 ≠ 完整 RRA。
 
 ---
 
@@ -91,7 +94,7 @@ ApplyRraOutput
 ```text
 主人可见世界记忆 ──► ow-rrm/0.1（已实现）
 模型内部 KV 降分辨率 ──► 神经 RRA（大行李，未实现完整版）
-L1–L6/M2 原型 ──► dsp/rra-proto + OW 可选探测适配器
+L1–L6/M4 原型 ──► dsp/rra-proto + OW 可选探测/草图适配器
 ```
 
 二者可共享「距离 → 分辨率」叙事，**数字不可直接等价**。
@@ -100,5 +103,5 @@ L1–L6/M2 原型 ──► dsp/rra-proto + OW 可选探测适配器
 
 ## 7. 下一刀（生产）
 
-仓外 `rra-proto`：**M2 已开**。下一里程碑 **M3**：严格在线因果 + RoPE 一致的 apply 草图（完成前仍抛错）。  
-OW 保持 probe-only。
+仓外 `rra-proto`：**M4 已开**（OW `rra.sketch` 默认关）。玩具对打：`gate:beat`、`gate:beat-eq`、`gate:beat-eq-noslot`（=no-slotMod+imitate；旧名 content）、`gate:true-random-ceiling`、`gate:s1-weight`、`gate:m5-rope`（RoPE 银行→readAt）；详见 [`PRODUCTION.md`](../rra-proto/PRODUCTION.md)。下一刀是**更大 dim / 真解码器权重**；完成前 `applyReciprocalResolutionAttention` 仍抛错。  
+OW 保持 probe-only；sketch ≠ 启用神经记忆。
