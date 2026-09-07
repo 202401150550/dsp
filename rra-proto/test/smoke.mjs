@@ -265,6 +265,14 @@ ok(existsSync(join(root, 'src/l6-m2-hotread.mjs')), 'l6-m2-hotread.mjs present')
     ok(m5.ok === true, `M5-R rope bridge (compressed=${m5.compressedTokens}, Δpooled=${m5.pathDiff})`)
     ok(m5.implemented === false && m5.fullNeuralRra === false, 'M5-R stays honest')
   }
+  {
+    const m = createCompressModel({ dim: 8, compressedDim: 2, seedScale: 0.1 })
+    trainToySteps(m, { steps: 5, lr: 0.05, blockSize: 2, batchBlocks: 2 })
+    const snap = snapshotCompressModel(m)
+    const r = restoreCompressModel(snap)
+    ok(snap.protocol === 'rra/0.10-compress-weights', 'M5 compress weight protocol')
+    ok(maxAbsCompressWeightDiff(m, r) === 0, 'M5 compress restore exact')
+  }
   ok(existsSync(join(root, 'src/m5-dim-contract.mjs')), 'm5-dim-contract.mjs present')
   ok(existsSync(join(root, 'bench/m5-dim-contract-gate.mjs')), 'm5-dim-contract-gate.mjs present')
   {
