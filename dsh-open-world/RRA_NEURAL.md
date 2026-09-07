@@ -103,5 +103,5 @@ L1–L6/M4 原型 ──► dsp/rra-proto + OW 可选探测/草图适配器
 
 ## 7. 下一刀（生产）
 
-仓外 `rra-proto`：**M4 已开**（OW `rra.sketch` 默认关）。玩具对打：`gate:beat`、`gate:beat-eq`、`gate:beat-eq-noslot`、`gate:true-random-ceiling`、`gate:s1-weight`、`gate:m5-rope`（RoPE→readAt + 权重闭环 + dim32/64/128）。OW 可选 `rra.compress_weights` 注入同一快照（dim 不符必拒；仍 `implemented:false`）。详见 [`PRODUCTION.md`](../rra-proto/PRODUCTION.md)。下一刀是**真解码器权重 / 更大真实 dim**；完成前 `applyReciprocalResolutionAttention` 仍抛错。  
+仓外 `rra-proto`：**M4 已开**（OW `rra.sketch` 默认关）。玩具对打含 `gate:m5-rope` / `gate:m5-dim`（dim·协议护栏）。OW 可选 `rra.compress_weights`（契约校验 + dim 不符必拒；仍 `implemented:false`）。详见 [`PRODUCTION.md`](../rra-proto/PRODUCTION.md)。下一刀是**真解码器权重**；完成前 `applyReciprocalResolutionAttention` 仍抛错。  
 OW 保持 probe-only；sketch / compress_weights ≠ 启用神经记忆。

@@ -19,7 +19,7 @@ export const RRA_STATUS = {
     'production-scale neural apply (real decoder + trained weights)',
   ],
   nextStage: 'production-apply',
-  nextCut: '真实尺度 apply；OW 默认仍关；sketch≠完整 RRA',
+  nextCut: '真解码器权重；M5-D dim/协议护栏已开；sketch≠完整 RRA',
   repoBoundary: 'dsh-open-world stub+adapter; prototype in dsp/rra-proto',
   protoPackage: 'rra-proto@0.10.0',
   protoPath: '../rra-proto',

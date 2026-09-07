@@ -21,6 +21,7 @@
 | **S1-W** | S1 适配器权重训→存→载→评闭环 | ✅（玩具尺度；`gate:s1-weight`） |
 | **S1-B** | S1 权重条目 → `applyRraSketch`（pooled 桥） | ✅（玩具；非 RoPE 互通；`gate:s1-sketch-bridge`） |
 | **M5-R** | RoPE rope-then-pool 银行 → `applyRraSketch(readAt)` + 权重闭环 + dim32→64→128 阶梯 | ✅（玩具；`gate:m5-rope`；≠ 真实解码器） |
+| **M5-D** | 压缩权重 dim/协议契约护栏 | ✅（`gate:m5-dim`；拒假生产协议；≠ 真解码器） |
 
 ## M4 是什么、不是什么
 
@@ -54,6 +55,7 @@ npm run gate:true-random-ceiling
 npm run gate:s1-weight
 npm run gate:s1-sketch-bridge
 npm run gate:m5-rope
+npm run gate:m5-dim
 npm run gate:m3
 ```
 
@@ -101,7 +103,15 @@ npm run gate:m5-rope
 
 与 S1 **pooled** 桥不同：压缩走 `compress.mjs` rope-then-pool，apply 带 `model` 走 **readAt**；须与 pooled-only 路径数值有差。门禁另含 **压缩权重存取闭环** 与 **尺度阶梯 dim32→64→128**（冒烟，仍玩具）。**不是**生产 apply / 真解码器。
 
-OW 侧可选：`rra.compress_weights`（或 `tryApplyRraSketch` 的 `compressWeights`）加载同一快照；**dim 必须与 `q.length` 一致**，否则拒绝。默认仍不加载；加载 ≠ 启用神经记忆。
+OW 侧可选：`rra.compress_weights`（或 `tryApplyRraSketch` 的 `compressWeights`）加载同一快照；**dim 必须与 `q.length` 一致**，否则拒绝。加载前走 **M5-D 契约**（协议/形状/禁假生产标签）。默认仍不加载；加载 ≠ 启用神经记忆。
+
+### M5-D：dim / 协议契约（护栏）
+
+```powershell
+npm run gate:m5-dim
+```
+
+钉死：合法玩具协议、形状、`q.dim` 对齐；拒绝奇数 dim、假 `rra/1.*` / `implemented:true` 快照。**不是**真解码器，只是通向真实尺度时的护栏。
 
 ## 禁区
 

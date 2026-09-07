@@ -459,6 +459,24 @@ assert(fleetSample.counts.tasks === 1, 'fleet tasks')
   }, { sketch: true, compressWeights: join(tmp, 'no-such.json') })
   assert(missing.ok === false && String(missing.error || '').includes('not found'), 'M5 missing weights rejects')
 
+  const fakePath = join(tmp, 'fake-prod.json')
+  writeFileSync(fakePath, JSON.stringify({
+    protocol: 'rra/1.0-full-neural',
+    dim: 16,
+    compressedDim: 4,
+    implemented: true,
+    fullNeuralRra: true,
+    Wdown: Array(4 * 16).fill(0),
+    Wup: Array(16 * 4).fill(0),
+  }))
+  const fake = await __test.tryApplyRraSketch({
+    q: q16,
+    queryPos: 1,
+    causal: true,
+    k_layers: { exact: [] },
+  }, { sketch: true, compressWeights: fakePath })
+  assert(fake.ok === false && String(fake.error || '').includes('contract'), `M5-D rejects fake prod (${fake.error})`)
+
   rmSync(tmp, { recursive: true, force: true })
 }
 

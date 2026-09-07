@@ -149,6 +149,20 @@ async function loadCompressWeights(dir, compressWeightsPath) {
   }
   try {
     const snap = JSON.parse(readFileSync(resolved, 'utf8'))
+    const contractPath = join(dir, 'src', 'm5-dim-contract.mjs')
+    if (existsSync(contractPath)) {
+      const contract = await import(pathToFileURL(contractPath).href)
+      if (typeof contract.validateCompressWeightSnap === 'function') {
+        const v = contract.validateCompressWeightSnap(snap)
+        if (!v.ok) {
+          return {
+            model: null,
+            path: resolved,
+            error: `compress weight contract: ${v.errors.join('; ')}`,
+          }
+        }
+      }
+    }
     const mod = await import(pathToFileURL(compressPath).href)
     if (typeof mod.restoreCompressModel !== 'function') {
       return { model: null, path: resolved, error: 'restoreCompressModel export missing' }

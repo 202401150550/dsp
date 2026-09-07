@@ -30,6 +30,7 @@ npm run gate:true-random-ceiling
 npm run gate:s1-weight
 npm run gate:s1-sketch-bridge
 npm run gate:m5-rope
+npm run gate:m5-dim
 npm run gate:m3
 ```
 
@@ -51,5 +52,6 @@ npm run gate:m3
 - **`gate:s1-weight`**：适配器训→存→载→评闭环（玩具权重，非生产）
 - **`gate:s1-sketch-bridge`**：权重条目 → `applyRraSketch`（pooled；非 RoPE 互通）
 - **`gate:m5-rope`**：RoPE 银行 → `readAt` + 权重闭环 + dim32→64→128 阶梯（玩具）
+- **`gate:m5-dim`**：压缩权重 dim/协议契约护栏（拒假生产；≠ 真解码器）
 
 均非开放域 / 真实模型 SOTA。OW：`rra.probe` / `rra.sketch` 默认关；探测 ≠ 启用。
