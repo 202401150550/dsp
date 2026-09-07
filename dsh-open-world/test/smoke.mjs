@@ -112,9 +112,10 @@ assertEq(fw.version, '2.46', 'framework.version')
   assert(on.adapter && on.adapter.probe === true && on.adapter.probed === true, 'adapter probe on')
   assertEq(on.implemented, false, 'probe does not set implemented')
   assertEq(on.fullNeuralRra, false, 'probe does not set fullNeuralRra')
-  const parsed = __test.parseOpenWorldConfig('rra:\n  probe: true\n  sketch: true\n')
+  const parsed = __test.parseOpenWorldConfig('rra:\n  probe: true\n  sketch: true\n  compress_weights: reports/m5-compress-weights-latest.json\n')
   assertEq(parsed.rra.probe, true, 'parse rra.probe true')
   assertEq(parsed.rra.sketch, true, 'parse rra.sketch true')
+  assertEq(parsed.rra.compressWeights, 'reports/m5-compress-weights-latest.json', 'parse rra.compress_weights → compressWeights')
   assert(typeof __test.assertShellDoesNotClaimNeural === 'function', 'assertShellDoesNotClaimNeural exported')
 }
 assert(fw.snapshotSchema === 8, 'framework.snapshotSchema')
@@ -403,6 +404,62 @@ assert(fleetSample.counts.tasks === 1, 'fleet tasks')
   assert(ran.ok === true && ran.sketch === true, 'M4 sketch opt-in runs')
   assert(ran.implemented === false && ran.fullNeuralRra === false, 'M4 sketch stays honest')
   assert(ran.output && ran.output.meta && ran.output.meta.sketch === true, 'M4 sketch meta tag')
+  assert(ran.output.meta.compressWeightsLoaded !== true, 'M4 sketch without weights flag')
+}
+
+// M5：可选 compressWeights → readAt；dim 不符必拒
+{
+  const { writeFileSync, mkdtempSync, rmSync } = await import('node:fs')
+  const { join } = await import('node:path')
+  const { tmpdir } = await import('node:os')
+  const { pathToFileURL } = await import('node:url')
+  const dir = __test.resolveRraProtoDir()
+  assert(!!dir, 'rra-proto dir for compress weights')
+  const compressUrl = pathToFileURL(join(dir, 'src', 'compress.mjs')).href
+  const { createCompressModel, snapshotCompressModel, trainToySteps } = await import(compressUrl)
+  const model = createCompressModel({ dim: 16, compressedDim: 4, seedScale: 0.05 })
+  trainToySteps(model, { steps: 8, lr: 0.08, blockSize: 4, batchBlocks: 2 })
+  const tmp = mkdtempSync(join(tmpdir(), 'ow-m5w-'))
+  const wpath = join(tmp, 'compress-weights.json')
+  writeFileSync(wpath, JSON.stringify(snapshotCompressModel(model)))
+  const q16 = Array.from({ length: 16 }, (_, i) => 0.01 * (i + 1))
+  const withW = await __test.tryApplyRraSketch({
+    q: q16,
+    queryPos: 4,
+    causal: true,
+    k_layers: {
+      exact: [{ vec: q16, pos: 4 }],
+      compressed: [{
+        code: Array.from({ length: 4 }, () => 0.1),
+        pooled: q16,
+        meanPos: 1,
+        count: 4,
+      }],
+    },
+  }, { sketch: true, compressWeights: wpath })
+  assert(withW.ok === true, 'M5 compressWeights sketch ok')
+  assert(withW.weights && withW.weights.dim === 16, 'M5 weights meta dim')
+  assert(withW.output?.meta?.compressWeightsLoaded === true, 'M5 compressWeightsLoaded meta')
+  assert(withW.implemented === false && withW.fullNeuralRra === false, 'M5 weights stay honest')
+
+  const badDim = await __test.tryApplyRraSketch({
+    q: Array.from({ length: 8 }, (_, i) => 0.01 * (i + 1)),
+    queryPos: 2,
+    causal: true,
+    k_layers: { exact: [] },
+  }, { sketch: true, compressWeights: wpath })
+  assert(badDim.ok === false, 'M5 dim mismatch rejects')
+  assert(String(badDim.error || '').includes('dim'), `M5 dim mismatch message (${badDim.error})`)
+
+  const missing = await __test.tryApplyRraSketch({
+    q: q16,
+    queryPos: 1,
+    causal: true,
+    k_layers: { exact: [] },
+  }, { sketch: true, compressWeights: join(tmp, 'no-such.json') })
+  assert(missing.ok === false && String(missing.error || '').includes('not found'), 'M5 missing weights rejects')
+
+  rmSync(tmp, { recursive: true, force: true })
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`)

@@ -101,6 +101,8 @@ npm run gate:m5-rope
 
 与 S1 **pooled** 桥不同：压缩走 `compress.mjs` rope-then-pool，apply 带 `model` 走 **readAt**；须与 pooled-only 路径数值有差。门禁另含 **压缩权重存取闭环** 与 **尺度阶梯 dim32→64→128**（冒烟，仍玩具）。**不是**生产 apply / 真解码器。
 
+OW 侧可选：`rra.compress_weights`（或 `tryApplyRraSketch` 的 `compressWeights`）加载同一快照；**dim 必须与 `q.length` 一致**，否则拒绝。默认仍不加载；加载 ≠ 启用神经记忆。
+
 ## 禁区
 
 - 不在 OW 界面暗示「神经记忆已启用」

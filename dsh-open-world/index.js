@@ -50,6 +50,7 @@ import {
   probeRraProtoSync,
   probeRraProtoDeep,
   tryApplyRraSketch,
+  resolveRraProtoDir,
 } from './bridge/rra-adapter.mjs'
 import {
   loadWorldState,
@@ -2705,6 +2706,7 @@ export const __test = {
   buildNeuralStub,
   probeRraProtoSync,
   tryApplyRraSketch,
+  resolveRraProtoDir,
   attachNeuralStubToMemory,
   defaultRrmConfig,
   reconcileMailbox,

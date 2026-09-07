@@ -20,11 +20,24 @@ export function defaultRraConfig() {
     probe: false,
     /** M4：允许跑 applyRraSketch；默认 false；≠ 完整神经 RRA */
     sketch: false,
+    /**
+     * 可选：rope-then-pool 压缩权重 JSON 路径（M5 snapshot）。
+     * 默认 null；加载后仍 implemented:false / fullNeuralRra:false。
+     * YAML 亦接受 compress_weights。
+     */
+    compressWeights: null,
   }
 }
 
 export function mergeRraConfig(partial) {
-  return { ...defaultRraConfig(), ...(partial || {}) }
+  const base = defaultRraConfig()
+  const p = partial || {}
+  const compressWeights = p.compressWeights ?? p.compress_weights ?? base.compressWeights
+  return {
+    ...base,
+    ...p,
+    compressWeights: compressWeights ? String(compressWeights) : null,
+  }
 }
 
 function adapterRoot() {
@@ -114,7 +127,49 @@ export async function probeRraProtoDeep() {
 }
 
 /**
+ * 解析并加载 M5 compress 权重；路径相对 rra-proto 根或绝对路径。
+ */
+async function loadCompressWeights(dir, compressWeightsPath) {
+  if (!compressWeightsPath) return { model: null, path: null, error: null }
+  const candidates = [
+    compressWeightsPath,
+    join(dir, compressWeightsPath),
+    join(dir, 'reports', compressWeightsPath),
+  ]
+  let resolved = null
+  for (const c of candidates) {
+    if (c && existsSync(c)) { resolved = c; break }
+  }
+  if (!resolved) {
+    return { model: null, path: null, error: `compressWeights not found: ${compressWeightsPath}` }
+  }
+  const compressPath = join(dir, 'src', 'compress.mjs')
+  if (!existsSync(compressPath)) {
+    return { model: null, path: resolved, error: 'compress.mjs missing' }
+  }
+  try {
+    const snap = JSON.parse(readFileSync(resolved, 'utf8'))
+    const mod = await import(pathToFileURL(compressPath).href)
+    if (typeof mod.restoreCompressModel !== 'function') {
+      return { model: null, path: resolved, error: 'restoreCompressModel export missing' }
+    }
+    const model = mod.restoreCompressModel(snap)
+    return {
+      model,
+      path: resolved,
+      error: null,
+      protocol: snap.protocol || null,
+      dim: model.dim,
+      compressedDim: model.compressedDim,
+    }
+  } catch (err) {
+    return { model: null, path: resolved, error: String(err.message || err) }
+  }
+}
+
+/**
  * M4：在 sketch=true 时动态加载 applyRraSketch。
+ * 可选 compressWeights：注入 rope-then-pool model（readAt 路径）；dim 必须与 q 一致。
  * sketch=false → 拒绝。正式 applyReciprocalResolutionAttention 仍抛错。
  */
 export async function tryApplyRraSketch(input, rraCfg = {}) {
@@ -145,18 +200,59 @@ export async function tryApplyRraSketch(input, rraCfg = {}) {
   if (!existsSync(applyPath)) {
     return { ok: false, skipped: false, error: 'm3-apply.mjs missing', implemented: false, fullNeuralRra: false }
   }
+
+  let model = input?.model ?? null
+  let weightsInfo = null
+  const weightsPath = input?.compressWeightsPath
+    ?? input?.compress_weights
+    ?? cfg.compressWeights
+  if (!model && weightsPath) {
+    const loaded = await loadCompressWeights(dir, weightsPath)
+    if (loaded.error) {
+      return {
+        ok: false,
+        skipped: false,
+        error: loaded.error,
+        implemented: false,
+        fullNeuralRra: false,
+      }
+    }
+    model = loaded.model
+    weightsInfo = {
+      path: loaded.path,
+      protocol: loaded.protocol,
+      dim: loaded.dim,
+      compressedDim: loaded.compressedDim,
+    }
+  }
+
+  if (model && input?.q != null) {
+    const qLen = input.q.length
+    if (qLen !== model.dim) {
+      return {
+        ok: false,
+        skipped: false,
+        error: `compress weight dim ${model.dim} != q.length ${qLen}`,
+        implemented: false,
+        fullNeuralRra: false,
+        weights: weightsInfo,
+      }
+    }
+  }
+
   try {
     const mod = await import(pathToFileURL(applyPath).href)
     if (typeof mod.applyRraSketch !== 'function') {
       return { ok: false, error: 'applyRraSketch export missing', implemented: false, fullNeuralRra: false }
     }
-    const out = mod.applyRraSketch({ ...input, causal: true })
+    const out = mod.applyRraSketch({ ...input, causal: true, model })
     return {
       ok: true,
       skipped: false,
       sketch: true,
       implemented: false,
       fullNeuralRra: false,
+      weights: weightsInfo,
       output: {
         context: out.context,
         meta: {
@@ -164,11 +260,14 @@ export async function tryApplyRraSketch(input, rraCfg = {}) {
           sketch: true,
           implemented: false,
           fullNeuralRra: false,
+          compressWeightsLoaded: !!weightsInfo,
           via: 'dsh-open-world/rra-adapter tryApplyRraSketch',
         },
         falsify: out.falsify ?? null,
       },
-      note: 'M4 sketch mount · not full neural RRA',
+      note: weightsInfo
+        ? 'M4 sketch + M5 compressWeights · not full neural RRA'
+        : 'M4 sketch mount · not full neural RRA',
     }
   } catch (err) {
     return {
@@ -199,8 +298,11 @@ export function buildNeuralStub(rraCfg = {}, opts = {}) {
     protoDir: null,
     proto: null,
     error: null,
+    compressWeights: cfg.compressWeights || null,
     note: cfg.sketch
-      ? 'M4 sketch 开关开：可 tryApplyRraSketch；neuralEnabled 仍 false'
+      ? (cfg.compressWeights
+        ? 'M4 sketch 开 + compressWeights 可加载；neuralEnabled 仍 false'
+        : 'M4 sketch 开关开：可 tryApplyRraSketch；neuralEnabled 仍 false')
       : '薄适配器默认关；probe/sketch 显式开才探测/跑草图，不启用神经路径',
   }
 
