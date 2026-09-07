@@ -1,8 +1,8 @@
 {
   "name": "rra-proto",
-  "version": "0.8.0",
+  "version": "0.10.0",
   "private": true,
-  "description": "Neural RRA prototype L6/M2 — hot-read longctx; not full RRA",
+  "description": "Neural RRA prototype L6/M3 — online causal + RoPE apply sketch; not full RRA",
   "license": "MIT",
   "type": "module",
   "main": "./src/status.mjs",
@@ -15,7 +15,15 @@
     "./l4-longctx": "./src/l4-longctx.mjs",
     "./kv-bank": "./src/kv-bank.mjs",
     "./l6-m2-hotread": "./src/l6-m2-hotread.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./s1-backbone": "./src/s1-backbone.mjs",
+    "./s1-adapter": "./src/s1-adapter.mjs",
+    "./s1-train": "./src/s1-train.mjs",
+    "./s1-beat": "./src/s1-beat.mjs",
+    "./s1-sketch-bridge": "./src/s1-sketch-bridge.mjs",
+    "./m5-rope-bridge": "./src/m5-rope-bridge.mjs",
+    "./m3-online": "./src/m3-online.mjs",
+    "./m3-apply": "./src/m3-apply.mjs"
   },
   "scripts": {
     "bench": "node bench/byte-matched-baseline.mjs",
@@ -24,6 +32,17 @@
     "gate:l6": "node bench/l6-gate.mjs",
     "gate:m1": "node bench/l6-m1-gate.mjs",
     "gate:m2": "node bench/l6-m2-gate.mjs",
+    "gate:s1": "node bench/s1-gate.mjs",
+    "gate:m3": "node bench/m3-gate.mjs",
+    "gate:m4": "node bench/m4-gate.mjs",
+    "gate:beat": "node bench/s1-beat-gate.mjs",
+    "gate:beat-eq": "node bench/s1-beat-eq-gate.mjs",
+    "gate:beat-eq-content": "node bench/s1-beat-eq-content-gate.mjs",
+    "gate:beat-eq-noslot": "node bench/s1-beat-eq-content-gate.mjs",
+    "gate:true-random-ceiling": "node bench/s1-true-random-ceiling.mjs",
+    "gate:s1-weight": "node bench/s1-weight-gate.mjs",
+    "gate:s1-sketch-bridge": "node bench/s1-sketch-bridge-gate.mjs",
+    "gate:m5-rope": "node bench/m5-rope-bridge-gate.mjs",
     "test": "node test/smoke.mjs"
   },
   "engines": {

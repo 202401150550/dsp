@@ -123,11 +123,17 @@ export function trainToySteps(model, { steps = 40, lr = 0.05, blockSize = 4, bat
     sgdStep(model.Wup, model.dWup, lr / batchBlocks, 1e-4)
     losses.push(lossSum / batchBlocks)
   }
+  const head = Math.max(1, Math.floor(steps / 5))
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length
+  const firstMean = mean(losses.slice(0, head))
+  const lastMean = mean(losses.slice(-head))
   return {
     losses,
     first: losses[0],
     last: losses[losses.length - 1],
-    improved: losses[losses.length - 1] < losses[0],
+    firstMean,
+    lastMean,
+    improved: lastMean < firstMean,
   }
 }
 
