@@ -1,5 +1,6 @@
-# dsh-open-world 框架配置 v2.12
+# dsh-open-world 框架配置 v2.47
 # 用户覆盖：~/.dsh/open-world.yml
+# 产品定位：DSH 系统壳 / 控制台（见 SHELL_PLAN.md）
 # 协议：space.enabled 时 framework.protocol = owip/0.2-draft，否则 owip/0.1
 
 default_view: ati

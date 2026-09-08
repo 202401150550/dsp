@@ -6,10 +6,11 @@ window.__ModuleLoader__.load({
     const exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
 
-    exports.SNAPSHOT_URL = '/api/open-world/snapshot'
+    exports.SNAPSHOT_URL = '/api/open-world/snapshot?view=shell'
+    exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.46'
+    exports.CLIENT_VER = 'v2.51'
     /** compose 时写入内容哈希；源码里占位为 dev */
     exports.CLIENT_BUILD = 'dev'
     exports.CLIENT_BUILT_AT = ''
@@ -118,12 +119,12 @@ window.__ModuleLoader__.load({
 
     exports.QUICK_ACTIONS = [
       { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世界 · 新任务' } },
-      { icon: 'diagnosis', label: '进程舰队', action: { type: 'embed', label: '进程舰队', panel: 'fleet' } },
-      { icon: 'scan', label: '安全扫描', action: { type: 'agent-prompt', prompt: '请检查 ~/.dsh 配置与 loopback API 暴露面，给出安全建议。' } },
-      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '内嵌任务看板', panel: 'task-board' } },
-      { icon: 'network', label: 'SSH 远程', action: { type: 'embed', label: '进入 SSH', panel: 'ssh' } },
-      { icon: 'config', label: '插件市场', action: { type: 'embed', label: '进入插件市场', panel: 'market' } },
+      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '任务看板', panel: 'task-board' } },
+      { icon: 'diagnosis', label: '回退', action: { type: 'embed', label: '回退时间轴', panel: 'rewind' } },
     ]
+
+    /** 壳顶用法条：关闭后写入 localStorage */
+    exports.SHELL_GUIDE_KEY = 'dsh-open-world-shell-guide-dismissed'
 
     return module.exports
   },

@@ -430,7 +430,7 @@ export function createBridge(deps) {
         break
       case 'idea-panel':
         setView('idea')
-        setToast('IDEA Lab · 调试人格沙箱')
+        setToast('IDEA · 人格前缀试玩')
         break
       case 'panel': {
         const embedable = new Set(['task-board', 'rewind', 'market', 'memory', 'ssh', 'remote', 'analytics', 'monitor', 'fleet', 'sidebar'])

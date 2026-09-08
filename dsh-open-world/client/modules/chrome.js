@@ -188,7 +188,7 @@ window.__ModuleLoader__.load({
       if (node && node.status === 'offline' && node.howToEnable) return '如何启用'
       if (!action) return '进入'
       if (action.type === 'close') return action.label || '返回会话'
-      if (action.type === 'idea-panel') return '进入 · IDEA Lab'
+      if (action.type === 'idea-panel') return '打开 IDEA'
       const title = (action.panel && APP_SURFACES[action.panel] && APP_SURFACES[action.panel].title)
         || String(action.label || '').replace(/^进入\s*/, '')
       return `进入 · ${title}`

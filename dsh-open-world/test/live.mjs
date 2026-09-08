@@ -1,8 +1,30 @@
 #!/usr/bin/env node
-/** Live DSH API verification — requires running DSH Desktop */
+/** Live DSH API verification — requires running DSH Desktop
+ *
+ * Desktop 进程外常 403：探测失败时自动回退 CDP（需 --remote-debugging-port=9333）
+ *   npm run test:live-cdp
+ */
 import { connect } from 'node:net'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 let BASE = process.env.OW_LIVE_URL?.replace(/\/$/, '') || ''
+const CDP = process.env.OW_CDP_URL?.replace(/\/$/, '') || ''
+const __dir = dirname(fileURLToPath(import.meta.url))
+
+function tryCdpFallback(reason) {
+  const cdp = CDP || 'http://127.0.0.1:9333'
+  console.error(`⚠ ${reason}`)
+  console.error(`  → 尝试 CDP 页内联调 ${cdp}`)
+  const script = join(__dir, 'live-cdp.mjs')
+  const r = spawnSync(process.execPath, [script], {
+    env: { ...process.env, OW_CDP_URL: cdp },
+    stdio: 'inherit',
+    windowsHide: true,
+  })
+  process.exit(r.status == null ? 2 : r.status)
+}
 
 async function probeOpenWorld(port) {
   const okTcp = await new Promise((resolve) => {
@@ -83,11 +105,18 @@ console.log('\n=== Open World LIVE API tests ===\n')
 
 const found = await findPort()
 if (!found) {
-  console.error('✗ DSH not reachable — start DSH Desktop and retry')
-  process.exit(2)
+  tryCdpFallback('DSH HTTP 不可达（未启动或进程外围栏）')
 }
 baseUrl = found
 console.log(`Base: ${baseUrl}\n`)
+
+// 进程外 Desktop 常恒 403：能连上端口但 API 全拒时改走 CDP
+{
+  const probe = await get('/api/open-world/snapshot')
+  if (!probe.res.ok) {
+    tryCdpFallback(`snapshot HTTP ${probe.res.status}（进程外常 403）`)
+  }
+}
 
 // ── snapshot ──
 console.log('GET /api/open-world/snapshot')

@@ -16,13 +16,13 @@ window.__ModuleLoader__.load({
 
     const { NODE_ZH, NODE_LAYOUT, EVENT_COLORS, QUICK_ACTIONS } = C
     const {
-      BridgeHealthBar, StatusSummaryChips, LeftSidebarTabs,
+      BridgeHealthBar, ShellGuide, ActionsEmptyState, EventsEmptyState, MemoryHub, StatusSummaryChips, LeftSidebarTabs,
       SocialPanel, IntegrationsPanel, pluginAction, socialChannelAction,
-      MemoryBrief, tierBadge, FleetPanel, sourceTag,
+      tierBadge, FleetPanel, sourceTag,
     } = Shell
     const { IdeaLabWorkspace } = Idea
     const { MessageHub, IntegrationsHub, RewindTimelinePanel } = Hubs
-    const { Sparkline, SectorRadar, ArchifyEmbed, AtiCortex, ResourceDonut } = AtiView
+    const { Sparkline, ArchifyEmbed, AtiCortex, ResourceDonut } = AtiView
     const {
       iconSvg, Panel, ViewportWrap, renderEmbedSurface, enterActionLabel, NodeDetailCard,
     } = Chrome
@@ -34,12 +34,12 @@ window.__ModuleLoader__.load({
       bridgeHealth, setBridgeHealth, checkBridgeCapabilities,
       runBridge, setEmbed, setToast,
       hub, handleEmbedArchify,
-      idea, handleIdeaInject, handleIdeaCompare,
       events, social,
       mailbox, handleSendMessage, handleMarkRead, handleShareSnapshot,
       handleInjectAgent, handleSearchMemory,
     }) {
       return React.createElement('div', { className: 'ow-side ow-side-left' },
+                    React.createElement(ShellGuide, null),
                     React.createElement(LeftSidebarTabs, { tab: leftTab, onTab: onLeftTab }),
                     leftTab === 'status' && React.createElement(React.Fragment, null,
                       React.createElement(Panel, { titleZh: '系统状态', titleEn: 'SYSTEM STATUS', icon: 'diagnosis' },
@@ -94,22 +94,21 @@ window.__ModuleLoader__.load({
                           onClick: () => setEmbed('fleet'),
                         }, '展开舰队'),
                       ),
-                      React.createElement(Panel, { titleZh: '实时负载', titleEn: 'REAL-TIME LOAD', icon: 'diagnosis' },
+                      React.createElement(Panel, { titleZh: '实时负载', titleEn: 'REAL-TIME LOAD', icon: 'diagnosis', last: true },
                         loadRows.map((row) => React.createElement('div', { key: row.key, className: 'ow-load-item' },
                           React.createElement('span', { className: 'ow-load-label' }, row.key),
                           React.createElement(Sparkline, { values: row.hist, color: row.color }),
                           React.createElement('span', { className: 'ow-load-val' }, row.val),
                         )),
                       ),
-                      React.createElement(Panel, { titleZh: '星域导航', titleEn: 'SECTOR NAV', icon: 'network', last: true },
-                        React.createElement(SectorRadar, { nodes }),
-                        React.createElement('div', { className: 'ow-sector-foot' },
-                          React.createElement('span', null, '点击中间 ATI 节点操作'),
-                          React.createElement('span', { className: 'ow-sector-arrow' }, '›'),
-                        ),
-                      ),
                     ),
                     leftTab === 'actions' && React.createElement(React.Fragment, null,
+                      React.createElement(ActionsEmptyState, {
+                        plugins,
+                        onIdea: () => runBridge({ type: 'idea-panel' }),
+                        onTasks: () => runBridge({ type: 'task-board', label: '任务看板' }),
+                        onRewind: () => runBridge({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+                      }),
                       React.createElement(Panel, { titleZh: '插件接入', titleEn: 'PLUGINS', icon: 'config' },
                         React.createElement(IntegrationsPanel, {
                           plugins,
@@ -132,23 +131,33 @@ window.__ModuleLoader__.load({
                           plugins,
                           onAction: runBridge,
                           onToast: setToast,
+                          compact: true,
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: 'IDEA Lab', titleEn: 'PERSONA', icon: 'config', last: true },
-                        React.createElement(IdeaLabWorkspace, {
-                          idea,
-                          compact: true,
-                          onInject: handleIdeaInject,
-                          onCompare: handleIdeaCompare,
-                          onAction: runBridge,
-                        }),
+                      React.createElement(Panel, { titleZh: 'IDEA', titleEn: 'PERSONA', icon: 'config', last: true },
+                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#94a3b8', lineHeight: 1.55 } },
+                          React.createElement('div', null, '用人格前缀试一句话，再投递到官方聊天。'),
+                          React.createElement('div', { style: { marginTop: 4, color: '#64748b' } },
+                            '不是切换 Agent 预设；完整面板只在中区打开一次。'),
+                          React.createElement('button', {
+                            type: 'button',
+                            className: 'ow-neural-btn',
+                            style: { marginTop: 10 },
+                            onClick: () => runBridge({ type: 'idea-panel' }),
+                          }, '打开 IDEA'),
+                        ),
                       ),
                     ),
                     leftTab === 'events' && React.createElement(React.Fragment, null,
-                      React.createElement(Panel, { titleZh: 'RRM 记忆', titleEn: 'MEMORY', icon: 'backup' },
-                        React.createElement(MemoryBrief, { memory: snapshot && snapshot.memory, onToast: setToast }),
+                      React.createElement(Panel, { titleZh: '记忆', titleEn: 'MEMORY', icon: 'backup' },
+                        React.createElement(MemoryHub, {
+                          memory: snapshot && snapshot.memory,
+                          onToast: setToast,
+                          onSearchMemory: handleSearchMemory,
+                        }),
                       ),
                       React.createElement(Panel, { titleZh: '系统事件', titleEn: 'EVENTS', icon: 'diagnosis' },
+                        React.createElement(EventsEmptyState, { events }),
                         React.createElement('div', { className: 'ow-event-list' },
                           events.slice(0, 10).map((ev, i) => React.createElement('div', { key: ev.id, className: 'ow-event-item' },
                             React.createElement('span', { className: `ow-event-dot ${EVENT_COLORS[i % EVENT_COLORS.length]}` }),
@@ -160,12 +169,17 @@ window.__ModuleLoader__.load({
                           )),
                         ),
                       ),
-                      React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
-                        React.createElement(SocialPanel, {
-                          social,
-                          onChannel: (id) => runBridge(socialChannelAction(id)),
-                          onSession: (p) => runBridge({ type: 'session-focus', sessionId: p.id, label: '切换会话' }),
-                        }),
+                      React.createElement('details', { className: 'ow-adv-fold', style: { margin: '0 0 8px' } },
+                        React.createElement('summary', {
+                          style: { fontSize: 11, color: '#7c8ea6', cursor: 'pointer', padding: '6px 0' },
+                        }, '高级 · 社交层'),
+                        React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
+                          React.createElement(SocialPanel, {
+                            social,
+                            onChannel: (id) => runBridge(socialChannelAction(id)),
+                            onSession: (p) => runBridge({ type: 'session-focus', sessionId: p.id, label: '切换会话' }),
+                          }),
+                        ),
                       ),
                       React.createElement(Panel, { titleZh: '消息总线', titleEn: 'MESSAGES', icon: 'network', last: true },
                         React.createElement(MessageHub, {

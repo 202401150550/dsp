@@ -13,6 +13,7 @@ import {
   actionLayersSummary,
   HOST_ACTION_IDS,
   BRIDGE_ACTION_TYPES,
+  CORE_SHELL_HOST_ACTIONS,
 } from './bridge/action-layers.mjs'
 import {
   mergeRrmConfig,
@@ -148,7 +149,7 @@ const NODE_ZH = {
 
 const NODE_ACTIONS = {
   core: { type: 'close', label: '返回会话', pluginId: null },
-  'ai-engine': { type: 'idea-panel', label: '进入 IDEA Lab', pluginId: null },
+  'ai-engine': { type: 'idea-panel', label: '打开 IDEA', pluginId: null },
   'task-board': { type: 'embed', label: '进入任务看板', pluginId: 'task-board', panel: 'task-board' },
   storage: { type: 'embed', label: '进入回退时间轴', pluginId: 'rewind', panel: 'rewind' },
   network: { type: 'embed', label: '进入 SSH', pluginId: 'ssh', panel: 'ssh' },
@@ -1465,7 +1466,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.46'
+    return '2.51'
   }
 }
 
@@ -1867,7 +1868,7 @@ function buildRrmReport(home, config, eventList) {
   }
 }
 
-async function buildSnapshot(ctx, pulseEdges = [], hostHeader) {
+async function buildSnapshot(ctx, pulseEdges = [], hostHeader, opts = {}) {
   const home = dshHome()
   const config = loadOpenWorldConfig(home)
   const world = loadWorldState(home)
@@ -1974,7 +1975,7 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader) {
     pluginCount: plugins.filter((p) => p.online).length,
   }, { emitEvents: true })
 
-  return {
+  const snap = {
     ok: true,
     product: 'NEXORA',
     version: SNAPSHOT_SCHEMA_VERSION,
@@ -2053,6 +2054,156 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader) {
     fleet,
     space: spaceStatus(home, config.space),
     events: events.slice(0, 16),
+  }
+  if (opts && opts.view === 'shell') return slimSnapshotForShell(snap)
+  return snap
+}
+
+/** 壳主路径轮询：去掉调试/重字段；Monitor / 调试用完整 snapshot */
+function slimSnapshotForShell(snap) {
+  if (!snap || snap.ok !== true) return snap
+  const mem = snap.memory || null
+  return {
+    ok: true,
+    view: 'shell',
+    product: snap.product,
+    version: snap.version,
+    capturedAt: snap.capturedAt,
+    uptimeSec: snap.uptimeSec,
+    framework: snap.framework
+      ? {
+          version: snap.framework.version,
+          protocol: snap.framework.protocol,
+          clientVer: snap.framework.clientVer,
+          clientBuild: snap.framework.clientBuild,
+          actionLayers: snap.framework.actionLayers
+            ? {
+                host: { coreShell: snap.framework.actionLayers.host?.coreShell || [] },
+                ideaInjectPath: snap.framework.actionLayers.ideaInjectPath,
+                productNote: snap.framework.actionLayers.productNote,
+              }
+            : undefined,
+        }
+      : undefined,
+    core: snap.core,
+    load: snap.load,
+    config: {
+      default_view: snap.config?.default_view,
+      rra: snap.config?.rra,
+      idea: snap.config?.idea,
+    },
+    integrations: snap.integrations,
+    plugins: (snap.plugins || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      online: p.online,
+      howToEnable: p.howToEnable,
+      hint: p.hint,
+      category: p.category,
+    })),
+    nodes: (snap.nodes || []).map((n) => ({
+      id: n.id,
+      label: n.label,
+      metric: n.metric,
+      status: n.status,
+      action: n.action,
+      howToEnable: n.howToEnable,
+    })),
+    synapses: (snap.synapses || []).map((s) => ({
+      id: s.id, from: s.from, to: s.to, pulse: s.pulse,
+    })),
+    taskBoard: snap.taskBoard
+      ? {
+          available: snap.taskBoard.available,
+          running: snap.taskBoard.running,
+          queued: snap.taskBoard.queued,
+          total: snap.taskBoard.total,
+          tasks: (snap.taskBoard.tasks || []).slice(0, 8),
+        }
+      : undefined,
+    rewind: snap.rewind
+      ? {
+          available: snap.rewind.available,
+          anchors: snap.rewind.anchors,
+          snapshots: snap.rewind.snapshots,
+          sessions: snap.rewind.sessions,
+          timeline: {
+            // embed 回退面需要完整点；左栏 compact 只读摘要数字
+            points: ((snap.rewind.timeline && snap.rewind.timeline.points) || []).slice(0, 24),
+          },
+        }
+      : undefined,
+    idea: snap.idea,
+    hub: snap.hub
+      ? {
+          pair: snap.hub.pair && {
+            available: snap.hub.pair.available,
+            paired: snap.hub.pair.paired,
+            deviceCount: snap.hub.pair.deviceCount,
+            onlineCount: snap.hub.pair.onlineCount,
+          },
+          notifications: snap.hub.notifications && {
+            available: snap.hub.notifications.available,
+            unreadCount: snap.hub.notifications.unreadCount,
+            notifications: (snap.hub.notifications.notifications || []).slice(0, 3),
+          },
+          archify: snap.hub.archify && {
+            count: snap.hub.archify.count,
+            items: (snap.hub.archify.items || []).slice(0, 4),
+          },
+          hindsight: snap.hub.hindsight && {
+            available: snap.hub.hindsight.available,
+            daemon: snap.hub.hindsight.daemon,
+          },
+        }
+      : undefined,
+    social: snap.social
+      ? {
+          tagline: snap.social.tagline,
+          presenceCount: snap.social.presenceCount,
+          channelCount: snap.social.channelCount,
+          feed: (snap.social.feed || []).slice(0, 6),
+          presence: (snap.social.presence || []).slice(0, 6),
+          channels: (snap.social.channels || []).slice(0, 6),
+        }
+      : undefined,
+    mailbox: snap.mailbox
+      ? {
+          unread: snap.mailbox.unread,
+          total: snap.mailbox.total,
+          messages: (snap.mailbox.messages || []).slice(0, 12),
+        }
+      : undefined,
+    fleet: snap.fleet
+      ? {
+          counts: snap.fleet.counts,
+          taskBoardAvailable: snap.fleet.taskBoardAvailable,
+          ventusAvailable: snap.fleet.ventusAvailable,
+          // embed 舰队面需要列表；左栏 compact 不渲染行
+          processes: (snap.fleet.processes || []).slice(0, 24),
+        }
+      : undefined,
+    space: snap.space,
+    events: (snap.events || []).slice(0, 12),
+    memory: mem
+      ? {
+          hint: mem.hint,
+          meta: mem.meta,
+          active: mem.active,
+          neural: mem.neural,
+          neuralStub: mem.neuralStub
+            ? {
+                implemented: mem.neuralStub.implemented,
+                fullNeuralRra: mem.neuralStub.fullNeuralRra,
+                stage: mem.neuralStub.stage,
+                adapter: mem.neuralStub.adapter,
+              }
+            : undefined,
+        }
+      : undefined,
+    ati: snap.ati,
+    lab: snap.lab,
+    world: snap.world,
   }
 }
 
@@ -2372,7 +2523,8 @@ export async function apply(ctx) {
           sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
           return
         }
-        const data = await buildSnapshot(ctx, pulseEdges, hostHeader)
+        const view = url.searchParams.get('view') === 'shell' ? 'shell' : 'full'
+        const data = await buildSnapshot(ctx, pulseEdges, hostHeader, { view })
         pulseEdges = []
         // SSE delta 推送
         if (_lastChangedFields.length > 0) {
@@ -2659,7 +2811,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.46 online', `${SPACE_PROTOCOL} · RRA L5 probe-only adapter (neural still off)`)
+  pushEvent('system', 'Open World v2.51 online', `${SPACE_PROTOCOL} · DSH 系统壳 · RRA 适配器默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)
@@ -2670,6 +2822,7 @@ export async function apply(ctx) {
 export const __test = {
   parseOpenWorldConfig,
   buildSnapshot,
+  slimSnapshotForShell,
   buildIdeaLab,
   buildFramework,
   readClientBuildMeta,
@@ -2695,6 +2848,7 @@ export const __test = {
   actionLayersSummary,
   HOST_ACTION_IDS,
   BRIDGE_ACTION_TYPES,
+  CORE_SHELL_HOST_ACTIONS,
   taskBoardMetrics,
   projectLiveMemory,
   mergeRrmConfig,

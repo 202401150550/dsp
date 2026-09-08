@@ -1,9 +1,10 @@
 # Open World 系统规划 · SYSOP v0.1
 
-> 状态：规划 + 实现对照 · 2026-09-03  
-> 运行时：**v2.12** · 协议默认 **owip/0.2-draft** · 配套：[OWIP_v0.1.md](./OWIP_v0.1.md) · [CHECKLIST.md](./CHECKLIST.md) · [QUICKSTART.md](./QUICKSTART.md)  
-> 一句话定位：**Open World 是 DSH 这台机器上的「系统壳」——不是聊天替代品，也不是第二套 DSH。**  
-> A→B→C 计划切片已落地（WM / 舰队 / 第二屏观察）；神经 RRA 大行李 **L0–L6**（L6=kv-bank 脚手架；OW 适配器默认关）；完整 apply 仍后置。
+> 状态：规划 + 实现对照 · 2026-09-08  
+> 运行时：**v2.51** · 协议默认 **owip/0.2-draft** · **产品定稿**：[SHELL_PLAN.md](./SHELL_PLAN.md) · **开发者**：[DEVELOPER.md](./DEVELOPER.md)  
+> 配套：[OWIP_v0.1.md](./OWIP_v0.1.md) · [CHECKLIST.md](./CHECKLIST.md) · [QUICKSTART.md](./QUICKSTART.md)  
+> 一句话定位：**Open World 是 DSH 这台机器上的「系统壳 / 控制台」——不是聊天替代品，也不是第二套 DSH。**  
+> A→B→C 计划切片已落地（WM / 舰队 / 第二屏观察）；神经 RRA 大行李后置（无真实 checkpoint 不开）。
 
 ---
 
@@ -235,7 +236,7 @@
 
 **S1–S3 / A–C / RRA L0–L6 脚手架已齐（2026-09）**。后续仅在主人点名时做：
 
-1. **冷启验收**：Desktop 开着跑 `npm run test:live`，水印对齐 `CLIENT_VER`
+1. **冷启验收**：~~Desktop 开着跑 `npm run test:live`~~ **已绿 2026-09-08**（`desktop:cdp` + CDP 回退；fw/clientVer **v2.51**）
 2. **生产神经 RRA M1+**：`rra-proto` pooled/raw 快照与续训（见 `PRODUCTION.md`）
 3. **真跨机双向世界**：第二屏目前只读观察
 4. **S4（默认不做）**：新 ATI 整页主题 / 第二套对话 UI

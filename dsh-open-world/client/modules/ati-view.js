@@ -237,12 +237,26 @@ window.__ModuleLoader__.load({
           ),
         ),
         React.createElement('div', { className: 'ow-ati-preset-bar' },
-          ATI_PRESETS.map((p) => React.createElement('button', {
-            key: p.id, type: 'button',
-            className: `ow-ati-preset ${groupClassForPreset(p)} ${preset === p.id ? 'on' : ''}`,
-            onClick: () => onPresetChange(p.id),
-            title: `${p.group} · ${p.sub}`,
-          }, p.label)),
+          React.createElement('button', {
+            type: 'button',
+            className: `ow-ati-preset ${(!preset || preset === 'ati-unified') ? 'on' : ''}`,
+            onClick: () => onPresetChange('ati-unified'),
+            title: '主视图 · 点节点干活',
+          }, '统一场'),
+          React.createElement('details', { className: 'ow-ati-lab-details' },
+            React.createElement('summary', {
+              className: 'ow-ati-preset',
+              title: '隐喻实验室 · 可选壁纸式预设',
+            }, '实验室'),
+            React.createElement('div', { className: 'ow-ati-lab-presets' },
+              ATI_PRESETS.filter((p) => p.id !== 'ati-unified').map((p) => React.createElement('button', {
+                key: p.id, type: 'button',
+                className: `ow-ati-preset ${groupClassForPreset(p)} ${preset === p.id ? 'on' : ''}`,
+                onClick: () => onPresetChange(p.id),
+                title: `${p.group} · ${p.sub}（隐喻）`,
+              }, p.label)),
+            ),
+          ),
         ),
       )
     }

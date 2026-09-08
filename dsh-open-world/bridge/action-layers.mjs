@@ -12,7 +12,7 @@ export const SNAPSHOT_SCHEMA_NOTES = {
   7: 'space · fleet · world-state · rrm 三通道初版',
 }
 
-/** Host registry 动作（HTTP） */
+/** Host registry 动作（HTTP）——完整表 */
 export const HOST_ACTION_IDS = Object.freeze([
   'send-message',
   'mark-read',
@@ -32,6 +32,17 @@ export const HOST_ACTION_IDS = Object.freeze([
   'space-token-revoke',
   'rrm-session-apply',
   'rrm-session-clear',
+])
+
+/** 壳日常推荐（对外文档 / UI 置顶）；其余视为高级 */
+export const CORE_SHELL_HOST_ACTIONS = Object.freeze([
+  'send-message',
+  'idea-inject',
+  'memory-search',
+  'world-state-save',
+  'world-state-get',
+  'space-token-issue',
+  'space-token-status',
 ])
 
 /** Bridge Client 动作（不经 Host /action） */
@@ -72,12 +83,15 @@ export function actionLayersSummary() {
       transport: 'POST /api/open-world/action',
       note: 'OW Host 进程内 registry；含 idea-inject 包装、信箱、space-token、world-state',
       actions: [...HOST_ACTION_IDS],
+      coreShell: [...CORE_SHELL_HOST_ACTIONS],
+      advanced: HOST_ACTION_IDS.filter((id) => !CORE_SHELL_HOST_ACTIONS.includes(id)),
     },
     bridge: {
       transport: 'Client bridgeExecute',
       note: '调 DSH session / task-board / DOM；不经 OW Host HTTP',
       actions: [...BRIDGE_ACTION_TYPES],
     },
-    ideaInjectPath: 'Host idea-inject（包装）→ Bridge inject-message（投递聊天）',
+    ideaInjectPath: 'Host idea-inject（包装）→ Bridge inject-message（投递到官方聊天）',
+    productNote: 'DSH 系统壳：日常只强调 coreShell；其余为高级',
   }
 }

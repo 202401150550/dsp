@@ -56,10 +56,10 @@ window.__ModuleLoader__.load({
           className: 'ow-hub-stat',
           style: { marginBottom: compact ? 6 : 10, color: '#f5d67a', lineHeight: 1.5 },
         },
-          '诚实说明：注入 = Host 包装人格前缀 + Bridge 投递官方聊天（两条通路）。',
-          ' 不是切换 DSH Agent 预设；要换真预设请点「DSH 预设」。',
-          !compact && ' 成功后会自动收起指挥舱，请看聊天窗里的回复。'),
-        compact && React.createElement('div', { className: 'ow-hub-stat' }, overview.subtitle || '调试人格 · Treat me like'),
+          '把人格前缀包进消息，再投递到官方聊天。',
+          ' 不是切换 Agent；要换真预设请点「真换 Agent 预设」。',
+          !compact && ' 成功后会收起指挥舱，请看聊天窗回复。'),
+        compact && React.createElement('div', { className: 'ow-hub-stat' }, overview.subtitle || '人格试玩 · Treat me like'),
         React.createElement('div', { className: 'ow-hub-title' }, `人格 · ${presets.length} 种${compareIds.length ? ` · 已选对比 ${compareIds.length}` : ''}`),
         React.createElement('div', { className: 'ow-idea-grid' },
           presets.map((p) => React.createElement('div', {
@@ -102,7 +102,7 @@ window.__ModuleLoader__.load({
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn primary',
             disabled: !body.trim() || injecting,
-            title: 'Host idea-inject 包装 → Bridge inject-message 投递',
+            title: '包装人格前缀后投递到官方聊天',
             onClick: () => {
               if (!onInject || !body.trim() || injecting) return
               setInjecting(true)
@@ -114,7 +114,7 @@ window.__ModuleLoader__.load({
                   setInjecting(false)
                 })
             },
-          }, injecting ? '注入中…' : '注入消息（前缀）'),
+          }, injecting ? '投递中…' : '投递到官方聊天'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             disabled: !body.trim(),

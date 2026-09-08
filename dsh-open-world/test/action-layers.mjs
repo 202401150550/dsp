@@ -6,6 +6,7 @@ import {
   actionLayersSummary,
   HOST_ACTION_IDS,
   BRIDGE_ACTION_TYPES,
+  CORE_SHELL_HOST_ACTIONS,
 } from '../bridge/action-layers.mjs'
 
 let passed = 0
@@ -32,6 +33,9 @@ const summary = actionLayersSummary()
 ok(summary.ideaInjectPath.includes('Host') && summary.ideaInjectPath.includes('Bridge'), 'idea path documents both layers')
 ok(summary.host.actions.length >= 10, 'host action list non-empty')
 ok(summary.bridge.actions.length >= 10, 'bridge action list non-empty')
+ok(CORE_SHELL_HOST_ACTIONS.includes('idea-inject'), 'core shell has idea-inject')
+ok(summary.host.coreShell && summary.host.coreShell.includes('send-message'), 'summary.coreShell present')
+ok(Array.isArray(summary.host.advanced) && summary.host.advanced.includes('rrm-session-apply'), 'advanced lists rrm apply')
 
 console.log(`\n=== action-layers: ${passed} passed, ${failed} failed ===\n`)
 process.exit(failed > 0 ? 1 : 0)

@@ -8,7 +8,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const { useState, useEffect } = React
     const C = require('dsh-open-world/constants')
-    const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, OW_ACTION_URL } = C
+    const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, MEMORY_SEARCH_URL, OW_ACTION_URL, SHELL_GUIDE_KEY } = C
 
     async function postOwAction(payload) {
       const res = await fetch(OW_ACTION_URL, {
@@ -21,6 +21,143 @@ window.__ModuleLoader__.load({
       return { ok: res.ok && data.ok !== false, status: res.status, data }
     }
 
+    function ShellGuide() {
+      const [dismissed, setDismissed] = useState(() => {
+        try { return localStorage.getItem(SHELL_GUIDE_KEY) === '1' } catch { return false }
+      })
+      if (dismissed) return null
+      return React.createElement('div', { className: 'ow-shell-guide' },
+        React.createElement('div', { className: 'ow-shell-guide-text' },
+          React.createElement('strong', null, '系统壳用法'),
+          ' · ① 状态看稳不稳 · ② 动作或中间节点干活 · ③ 事件看刚才发生了什么',
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ow-shell-guide-x',
+          title: '关闭后不再显示',
+          onClick: () => {
+            try { localStorage.setItem(SHELL_GUIDE_KEY, '1') } catch { /* ignore */ }
+            setDismissed(true)
+          },
+        }, '知道了'),
+      )
+    }
+
+    /** 无在线插件时：教人用动作 / 中区节点（首启空状态） */
+    function ActionsEmptyState({ plugins, onIdea, onTasks, onRewind }) {
+      const list = plugins || []
+      const online = list.filter((p) => p && p.online).length
+      if (online > 0) return null
+      const scanned = list.length > 0
+      return React.createElement('div', { className: 'ow-empty-cue', role: 'status' },
+        React.createElement('div', { className: 'ow-empty-cue-art', 'aria-hidden': true },
+          React.createElement('span', { className: 'ow-empty-cue-ring' }),
+          React.createElement('span', { className: 'ow-empty-cue-dot' }),
+          React.createElement('span', { className: 'ow-empty-cue-ray' }),
+        ),
+        React.createElement('div', { className: 'ow-empty-cue-title' },
+          scanned ? '插件都未在线' : '还没有可点的插件'),
+        React.createElement('div', { className: 'ow-empty-cue-body' },
+          '日常三步：中间主视图点节点 · 或用下方动作 · 事件栏看结果。',
+          scanned
+            ? ' 离线项会提示如何启用（plugins.yml → apply.cmd → 重启）。'
+            : ' 装好 task-board / rewind 等后会出现在上方列表。'),
+        React.createElement('div', { className: 'ow-empty-cue-actions' },
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn primary',
+            onClick: () => onIdea && onIdea(),
+          }, '打开 IDEA'),
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn',
+            onClick: () => onTasks && onTasks(),
+          }, '任务看板'),
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn',
+            onClick: () => onRewind && onRewind(),
+          }, '回退'),
+        ),
+      )
+    }
+
+    function EventsEmptyState({ events }) {
+      if (events && events.length > 0) return null
+      return React.createElement('div', { className: 'ow-empty-cue ow-empty-cue-slim', role: 'status' },
+        React.createElement('div', { className: 'ow-empty-cue-title' }, '事件还是空的'),
+        React.createElement('div', { className: 'ow-empty-cue-body' },
+          '点动作或中间节点干一件事后，这里会出现最近日志。'),
+      )
+    }
+
+    function MemoryHub({ memory, onToast, onSearchMemory }) {
+      const [tab, setTab] = useState('local')
+      const [q, setQ] = useState('')
+      const [hits, setHits] = useState([])
+      const [source, setSource] = useState('')
+      const [busy, setBusy] = useState(false)
+
+      const search = async () => {
+        const query = String(q || '').trim()
+        if (!query) {
+          onToast && onToast('输入关键词再搜 Hindsight')
+          return
+        }
+        setBusy(true)
+        try {
+          let data
+          if (typeof onSearchMemory === 'function') {
+            data = await onSearchMemory(query)
+          } else {
+            const res = await fetch(`${MEMORY_SEARCH_URL}?q=${encodeURIComponent(query)}`, { credentials: 'same-origin' })
+            data = await res.json().catch(() => ({}))
+          }
+          const items = (data && (data.items || data.hits || data.results)) || []
+          setHits(Array.isArray(items) ? items : [])
+          setSource((data && data.source) || (data && data.ok === false ? 'offline' : 'hindsight'))
+          if (!items.length) onToast && onToast('Hindsight 无结果（需 daemon 或缓存）')
+        } catch (err) {
+          onToast && onToast(String(err.message || err))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      return React.createElement('div', { className: 'ow-memory-hub' },
+        React.createElement('div', { className: 'ow-side-tabs ow-memory-tabs' },
+          React.createElement('button', {
+            type: 'button',
+            className: tab === 'local' ? 'on' : '',
+            onClick: () => setTab('local'),
+          }, '本地 RRM'),
+          React.createElement('button', {
+            type: 'button',
+            className: tab === 'hindsight' ? 'on' : '',
+            onClick: () => setTab('hindsight'),
+          }, 'Hindsight'),
+        ),
+        tab === 'local' && React.createElement(MemoryBrief, { memory, onToast }),
+        tab === 'hindsight' && React.createElement('div', { className: 'ow-hub' },
+          React.createElement('div', { style: { fontSize: 10, color: '#64748b', marginBottom: 6 } },
+            '长期记忆搜索 · 需本机 Hindsight；与本地 RRM 归档不是同一条路'),
+          React.createElement('div', { className: 'ow-msg-row' },
+            React.createElement('input', {
+              className: 'ow-msg-select', style: { flex: 1 },
+              placeholder: '搜 Hindsight…', value: q,
+              onChange: (ev) => setQ(ev.target.value),
+              onKeyDown: (ev) => { if (ev.key === 'Enter') search() },
+            }),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn primary', disabled: busy, onClick: search,
+            }, busy ? '…' : '搜索'),
+          ),
+          source && React.createElement('div', { style: { fontSize: 9, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
+          hits.slice(0, 5).map((m, i) => React.createElement('div', {
+            key: (m && m.id) || i,
+            style: { fontSize: 11, color: '#cbd5e1', marginTop: 6, lineHeight: 1.4 },
+          }, `· ${String((m && (m.text || m.body || m.title)) || '').slice(0, 100)}`)),
+        ),
+      )
+    }
+
     function BridgeHealthBar({ health, onRefresh }) {
       if (!health) return null
       const BridgeLib = require('dsh-open-world/bridge')
@@ -30,7 +167,7 @@ window.__ModuleLoader__.load({
         degraded: s === 'dom' || s === 'event+dom' || s === 'unavailable',
       }))
       const items = [
-        { id: 'inject-message', label: '注入' },
+        { id: 'inject-message', label: '聊天投递' },
         { id: 'rewind-exec', label: '回退' },
         { id: 'task-run', label: '任务' },
         { id: 'settings', label: '设置' },
@@ -73,8 +210,8 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-bridge-health' },
         React.createElement('span', {
           className: 'ow-bridge-label',
-          title: 'Bridge 层：Client 调 DSH（不经 Host /action）· 芯片优先看实跑 outcome，其次探针',
-        }, 'BRIDGE·DSH'),
+          title: '通路健康（诊断）：绿=API 可用 · 黄=降级 · 红=失败。不是功能按钮，点中间节点或动作页才干活。',
+        }, '通路健康'),
         items.map(({ id, label }) => {
           const cap = health[id]
           const meta = describe(cap && cap.strategy)
@@ -538,9 +675,9 @@ window.__ModuleLoader__.load({
         { id: 'events', label: '事件' },
       ]
       const hints = {
-        status: '健康度 · 负载 · Bridge · 进程舰队 · 星域导航 · RRM',
-        actions: '插件 · 集成 · 回退 · IDEA · 点中间节点也可操作',
-        events: '近史精确 · 远史压缩/地标 · 归档见 memory',
+        status: '看现在稳不稳：健康度 · 通路 · 舰队 · 负载',
+        actions: '干活入口：插件 · 集成 · 回退 · 打开 IDEA',
+        events: '刚才发生了什么：记忆（本地/Hindsight）· 事件 · 消息',
       }
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'ow-side-tabs' },
@@ -734,41 +871,44 @@ window.__ModuleLoader__.load({
           key: h,
           className: 'ow-fleet-hint',
         }, h)),
-        list.length === 0
-          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
-          : list.slice(0, compact ? 6 : 24).map((p) => {
-            const clickable = (p.kind === 'session' && p.sessionId)
-              || (p.kind === 'task' && p.taskId)
-            const stageLabels = (Array.isArray(p.stages) ? p.stages : [])
-              .map(fleetStageLabel)
-              .filter(Boolean)
-              .slice(0, compact ? 3 : 6)
-            const tip = [p.detail, stageLabels.length ? `阶段: ${stageLabels.join(' · ')}` : '']
-              .filter(Boolean).join('\n') || p.title
-            return React.createElement('div', {
-              key: p.id,
-              className: `ow-fleet-row status-${p.status || 'idle'}${clickable ? ' ow-clickable' : ' ow-fleet-row-static'}`,
-              title: tip,
-              onClick: clickable ? () => {
-                if (!onAction) return
-                if (p.kind === 'session') onAction({ type: 'session-focus', sessionId: p.sessionId, label: '切换会话' })
-                else if (p.kind === 'task') onAction({ type: 'task-run', taskId: p.taskId, inline: true })
-              } : undefined,
-            },
-              React.createElement('span', { className: 'ow-fleet-kind' }, kindZh[p.kind] || p.kind),
-              React.createElement('div', { className: 'ow-fleet-main' },
-                React.createElement('span', { className: 'ow-fleet-title' }, p.title),
-                stageLabels.length > 0 && React.createElement('div', { className: 'ow-fleet-stages' },
-                  stageLabels.map((lab) => React.createElement('span', {
-                    key: lab,
-                    className: 'ow-fleet-stage',
-                  }, lab)),
+        compact
+          ? React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 6 } },
+            '摘要 · 点「展开舰队」看进程列表与操作')
+          : (list.length === 0
+            ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
+            : list.slice(0, 24).map((p) => {
+              const clickable = (p.kind === 'session' && p.sessionId)
+                || (p.kind === 'task' && p.taskId)
+              const stageLabels = (Array.isArray(p.stages) ? p.stages : [])
+                .map(fleetStageLabel)
+                .filter(Boolean)
+                .slice(0, 6)
+              const tip = [p.detail, stageLabels.length ? `阶段: ${stageLabels.join(' · ')}` : '']
+                .filter(Boolean).join('\n') || p.title
+              return React.createElement('div', {
+                key: p.id,
+                className: `ow-fleet-row status-${p.status || 'idle'}${clickable ? ' ow-clickable' : ' ow-fleet-row-static'}`,
+                title: tip,
+                onClick: clickable ? () => {
+                  if (!onAction) return
+                  if (p.kind === 'session') onAction({ type: 'session-focus', sessionId: p.sessionId, label: '切换会话' })
+                  else if (p.kind === 'task') onAction({ type: 'task-run', taskId: p.taskId, inline: true })
+                } : undefined,
+              },
+                React.createElement('span', { className: 'ow-fleet-kind' }, kindZh[p.kind] || p.kind),
+                React.createElement('div', { className: 'ow-fleet-main' },
+                  React.createElement('span', { className: 'ow-fleet-title' }, p.title),
+                  stageLabels.length > 0 && React.createElement('div', { className: 'ow-fleet-stages' },
+                    stageLabels.map((lab) => React.createElement('span', {
+                      key: lab,
+                      className: 'ow-fleet-stage',
+                    }, lab)),
+                  ),
                 ),
-              ),
-              p.percent != null && React.createElement('span', { className: 'ow-fleet-pct' }, `${Math.round(p.percent)}%`),
-              React.createElement('span', { className: 'ow-fleet-status' }, statusZh[p.status] || p.status),
-            )
-          }),
+                p.percent != null && React.createElement('span', { className: 'ow-fleet-pct' }, `${Math.round(p.percent)}%`),
+                React.createElement('span', { className: 'ow-fleet-status' }, statusZh[p.status] || p.status),
+              )
+            })),
         !compact && React.createElement('div', { className: 'ow-fleet-hint', style: { marginTop: 8 } },
           '点击：会话切换 · 任务运行 · 子代理只读（无假入口）'),
       )
@@ -1021,6 +1161,10 @@ window.__ModuleLoader__.load({
 
     module.exports = {
       BridgeHealthBar,
+      ShellGuide,
+      ActionsEmptyState,
+      EventsEmptyState,
+      MemoryHub,
       sourceTag,
       StatusSummaryChips,
       LeftSidebarTabs,

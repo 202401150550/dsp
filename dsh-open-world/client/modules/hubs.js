@@ -81,7 +81,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } },
           `信箱 · ${messages.length} 条 · 未读 ${unread}${remoteReady ? ' · 跨机就绪' : ''}`),
         React.createElement('textarea', {
-          placeholder: '输入消息… 可广播、跨机、注入 AI、附记忆/拓扑',
+          placeholder: '输入消息… 可广播、跨机、投递到官方聊天、附记忆/拓扑',
           value: body,
           onChange: (ev) => setBody(ev.target.value),
         }),
@@ -114,7 +114,7 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'broadcast' }, '全体广播'),
             React.createElement('option', { value: 'sessions' }, '全部会话'),
             remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发'),
-            React.createElement('option', { value: 'agent' }, '注入 AI 对话'),
+            React.createElement('option', { value: 'agent' }, '投递到官方聊天'),
             React.createElement('option', { value: 'clipboard' }, '复制分享包'),
             React.createElement('option', { value: 'external' }, '导出外发文件'),
           ),
@@ -285,8 +285,11 @@ window.__ModuleLoader__.load({
       const spaceOff = sp.enabled === false
 
       return React.createElement('div', { className: 'ow-hub' },
-        React.createElement('div', { className: 'ow-hub-sec' },
-          React.createElement('div', { className: 'ow-hub-title' }, '空间 · 第二屏 (OWIP 0.2)'),
+        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
+          React.createElement('summary', {
+            className: 'ow-hub-title',
+            style: { cursor: 'pointer', listStyle: 'none' },
+          }, '高级 · 空间 · 第二屏 (OWIP 0.2)'),
           React.createElement('div', { className: 'ow-hub-stat' },
             spaceOff
               ? 'space 未启用（open-world.yml → space.enabled）· 只读观察面关闭，下方签发已禁用'
@@ -345,8 +348,11 @@ window.__ModuleLoader__.load({
             sp.expired ? ' · 已过期请轮换' : null,
           ].filter(Boolean).join('')),
         ),
-        React.createElement('div', { className: 'ow-hub-sec' },
-          React.createElement('div', { className: 'ow-hub-title' }, '跨机远程 · REMOTE PAIR'),
+        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
+          React.createElement('summary', {
+            className: 'ow-hub-title',
+            style: { cursor: 'pointer', listStyle: 'none' },
+          }, '高级 · 跨机远程 · REMOTE PAIR'),
           React.createElement('div', { className: 'ow-hub-stat' },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
@@ -415,7 +421,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function RewindTimelinePanel({ rewind, plugins, onAction, onToast }) {
+    function RewindTimelinePanel({ rewind, plugins, onAction, onToast, compact }) {
       const plug = (plugins || []).find((p) => p.id === 'rewind')
       const stats = rewind || {}
       const available = !!(stats.available || (plug && plug.online))
@@ -444,9 +450,24 @@ window.__ModuleLoader__.load({
               onClick: () => onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
             }, '打开设置'),
           ),
-          React.createElement('div', {
-            style: { marginTop: 8, fontSize: 10, color: '#64748b' },
-          }, '未安装时时间轴留空属预期，不会假装有快照'),
+        )
+      }
+      if (compact) {
+        return React.createElement('div', { className: 'ow-hub' },
+          React.createElement('div', { className: 'ow-hub-stat' },
+            `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 快照 · ${stats.sessions || 0} 会话`),
+          React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } },
+            '摘要 · 完整时间轴只在壳内展开一处'),
+          React.createElement('div', { className: 'ow-rewind-actions', style: { marginTop: 8 } },
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn primary',
+              onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+            }, '展开回退'),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn',
+              onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
+            }, '聊天里 /rewind'),
+          ),
         )
       }
       return React.createElement('div', { className: 'ow-hub' },

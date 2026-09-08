@@ -1,4 +1,4 @@
-// CLIENT_BUILD 4a11481ed7 2026-09-06T18:06:22.114Z v2.46
+// CLIENT_BUILD 1a9d9f3acc 2026-09-08T07:19:48.015Z v2.51
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -441,7 +441,7 @@ window.__ModuleLoader__.load({
             break
           case 'idea-panel':
             setView('idea')
-            setToast('IDEA Lab · 调试人格沙箱')
+            setToast('IDEA · 人格前缀试玩')
             break
           case 'panel': {
             const embedable = new Set(['task-board', 'rewind', 'market', 'memory', 'ssh', 'remote', 'analytics', 'monitor', 'fleet', 'sidebar'])
@@ -782,13 +782,14 @@ window.__ModuleLoader__.load({
     const exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
 
-    exports.SNAPSHOT_URL = '/api/open-world/snapshot'
+    exports.SNAPSHOT_URL = '/api/open-world/snapshot?view=shell'
+    exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.46'
+    exports.CLIENT_VER = 'v2.51'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '4a11481ed7'
-    exports.CLIENT_BUILT_AT = '2026-09-06T18:06:22.114Z'
+    exports.CLIENT_BUILD = '1a9d9f3acc'
+    exports.CLIENT_BUILT_AT = '2026-09-08T07:19:48.015Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -894,12 +895,12 @@ window.__ModuleLoader__.load({
 
     exports.QUICK_ACTIONS = [
       { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世界 · 新任务' } },
-      { icon: 'diagnosis', label: '进程舰队', action: { type: 'embed', label: '进程舰队', panel: 'fleet' } },
-      { icon: 'scan', label: '安全扫描', action: { type: 'agent-prompt', prompt: '请检查 ~/.dsh 配置与 loopback API 暴露面，给出安全建议。' } },
-      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '内嵌任务看板', panel: 'task-board' } },
-      { icon: 'network', label: 'SSH 远程', action: { type: 'embed', label: '进入 SSH', panel: 'ssh' } },
-      { icon: 'config', label: '插件市场', action: { type: 'embed', label: '进入插件市场', panel: 'market' } },
+      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '任务看板', panel: 'task-board' } },
+      { icon: 'diagnosis', label: '回退', action: { type: 'embed', label: '回退时间轴', panel: 'rewind' } },
     ]
+
+    /** 壳顶用法条：关闭后写入 localStorage */
+    exports.SHELL_GUIDE_KEY = 'dsh-open-world-shell-guide-dismissed'
 
     return module.exports
   },
@@ -1221,13 +1222,34 @@ window.__ModuleLoader__.load({
 .ow-ati-bar{fill:rgba(94,234,212,.25)}
 .ow-ati-singularity{filter:url(#owAtiGlow)}
 .ow-ati-metric{font-family:var(--ow-mono);font-size:8px;fill:#a78bfa}
-.ow-ati-preset-bar{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;z-index:3;max-width:640px}
+.ow-ati-preset-bar{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px;z-index:3;max-width:640px}
 .ow-ati-preset{font-size:8px;padding:3px 7px;border:1px solid rgba(167,139,250,.3);background:rgba(8,14,24,.82);color:#9ca3af;cursor:pointer;border-radius:3px;font-family:var(--ow-mono);letter-spacing:.5px;transition:all .18s}
 .ow-ati-preset:hover{border-color:#5eead4;color:#c4f5ef}
 .ow-ati-preset.on{border-color:#a78bfa;color:#e9d5ff;box-shadow:0 0 14px rgba(167,139,250,.4),inset 0 0 8px rgba(167,139,250,.15)}
 .ow-ati-preset.g-top.on{border-color:#5eead4;color:#c4f5ef;box-shadow:0 0 14px rgba(94,234,212,.4)}
 .ow-ati-preset.g-ml.on{border-color:#f5d67a;color:#fdf0c2;box-shadow:0 0 14px rgba(245,214,122,.4)}
 .ow-ati-preset.g-chem.on{border-color:#34d399;color:#c8f7e3;box-shadow:0 0 14px rgba(52,211,153,.4)}
+.ow-ati-lab-details{position:relative}
+.ow-ati-lab-details>summary{list-style:none}
+.ow-ati-lab-details>summary::-webkit-details-marker{display:none}
+.ow-ati-lab-presets{position:absolute;bottom:120%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:4px;width:max-content;max-width:360px;padding:6px;background:rgba(8,14,24,.94);border:1px solid rgba(167,139,250,.25);border-radius:6px}
+.ow-shell-guide{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(94,234,212,.25);background:rgba(94,234,212,.06);border-radius:6px}
+.ow-shell-guide-text{flex:1;font-size:11px;line-height:1.45;color:#94a3b8}
+.ow-shell-guide-text strong{color:#5eead4;font-weight:600}
+.ow-shell-guide-x{flex-shrink:0;font-size:10px;padding:4px 8px;border:1px solid rgba(148,163,184,.35);background:transparent;color:#94a3b8;border-radius:4px;cursor:pointer}
+.ow-shell-guide-x:hover{border-color:#5eead4;color:#c4f5ef}
+.ow-empty-cue{margin:0 0 10px;padding:12px 12px 10px;border:1px dashed rgba(94,234,212,.28);border-radius:8px;background:linear-gradient(160deg,rgba(94,234,212,.07),rgba(8,14,24,.4))}
+.ow-empty-cue-slim{padding:8px 10px;margin-bottom:8px}
+.ow-empty-cue-art{position:relative;width:44px;height:44px;margin:0 0 8px}
+.ow-empty-cue-ring{position:absolute;inset:4px;border:1.5px solid rgba(94,234,212,.35);border-radius:50%}
+.ow-empty-cue-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#5eead4;box-shadow:0 0 10px rgba(94,234,212,.45)}
+.ow-empty-cue-ray{position:absolute;left:50%;top:2px;width:1.5px;height:12px;margin-left:-0.75px;background:rgba(94,234,212,.55);transform-origin:bottom center;animation:ow-empty-pulse 2.4s ease-in-out infinite}
+@keyframes ow-empty-pulse{0%,100%{opacity:.35;transform:scaleY(.7)}50%{opacity:1;transform:scaleY(1)}}
+.ow-empty-cue-title{font-size:12px;color:#e2e8f0;font-weight:600;margin-bottom:4px}
+.ow-empty-cue-body{font-size:11px;line-height:1.5;color:#94a3b8;margin-bottom:8px}
+.ow-empty-cue-actions{display:flex;flex-wrap:wrap;gap:6px}
+.ow-memory-tabs{margin-bottom:8px}
+.ow-adv-fold{border-top:1px solid rgba(148,163,184,.12)}
 .ow-ati-hud{position:absolute;top:10%;left:2.5%;font-family:var(--ow-mono);font-size:8px;color:#6d8eb0;line-height:1.7;z-index:2;max-width:300px}
 .ow-ati-hud b{color:#c4b5fd;font-weight:500}
 .ow-ati-stage-tag{position:absolute;top:9%;right:2.5%;z-index:2;font-family:var(--ow-mono);font-size:8px;color:#7c8ea6;text-align:right;line-height:1.8}
@@ -1296,6 +1318,10 @@ window.__ModuleLoader__.load({
 .ow-msg-attach{font-size:10px;color:#a78bfa;margin-top:4px}
 .ow-hub{display:flex;flex-direction:column;gap:10px}
 .ow-hub-sec{border:1px solid rgba(94,234,212,.12);border-radius:4px;padding:8px;background:rgba(8,14,24,.55)}
+.ow-hub-fold>summary{list-style:none;outline:none}
+.ow-hub-fold>summary::-webkit-details-marker{display:none}
+.ow-hub-fold>summary::before{content:'▸ ';color:#64748b;font-size:10px}
+.ow-hub-fold[open]>summary::before{content:'▾ '}
 .ow-hub-title{font-size:9px;color:#4a5a70;letter-spacing:1px;margin-bottom:6px}
 .ow-hub-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .ow-hub-stat{font-size:11px;color:#e6f1ff}
@@ -1526,7 +1552,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const { useState, useEffect } = React
     const C = require('dsh-open-world/constants')
-    const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, OW_ACTION_URL } = C
+    const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, MEMORY_SEARCH_URL, OW_ACTION_URL, SHELL_GUIDE_KEY } = C
 
     async function postOwAction(payload) {
       const res = await fetch(OW_ACTION_URL, {
@@ -1539,6 +1565,143 @@ window.__ModuleLoader__.load({
       return { ok: res.ok && data.ok !== false, status: res.status, data }
     }
 
+    function ShellGuide() {
+      const [dismissed, setDismissed] = useState(() => {
+        try { return localStorage.getItem(SHELL_GUIDE_KEY) === '1' } catch { return false }
+      })
+      if (dismissed) return null
+      return React.createElement('div', { className: 'ow-shell-guide' },
+        React.createElement('div', { className: 'ow-shell-guide-text' },
+          React.createElement('strong', null, '系统壳用法'),
+          ' · ① 状态看稳不稳 · ② 动作或中间节点干活 · ③ 事件看刚才发生了什么',
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ow-shell-guide-x',
+          title: '关闭后不再显示',
+          onClick: () => {
+            try { localStorage.setItem(SHELL_GUIDE_KEY, '1') } catch { /* ignore */ }
+            setDismissed(true)
+          },
+        }, '知道了'),
+      )
+    }
+
+    /** 无在线插件时：教人用动作 / 中区节点（首启空状态） */
+    function ActionsEmptyState({ plugins, onIdea, onTasks, onRewind }) {
+      const list = plugins || []
+      const online = list.filter((p) => p && p.online).length
+      if (online > 0) return null
+      const scanned = list.length > 0
+      return React.createElement('div', { className: 'ow-empty-cue', role: 'status' },
+        React.createElement('div', { className: 'ow-empty-cue-art', 'aria-hidden': true },
+          React.createElement('span', { className: 'ow-empty-cue-ring' }),
+          React.createElement('span', { className: 'ow-empty-cue-dot' }),
+          React.createElement('span', { className: 'ow-empty-cue-ray' }),
+        ),
+        React.createElement('div', { className: 'ow-empty-cue-title' },
+          scanned ? '插件都未在线' : '还没有可点的插件'),
+        React.createElement('div', { className: 'ow-empty-cue-body' },
+          '日常三步：中间主视图点节点 · 或用下方动作 · 事件栏看结果。',
+          scanned
+            ? ' 离线项会提示如何启用（plugins.yml → apply.cmd → 重启）。'
+            : ' 装好 task-board / rewind 等后会出现在上方列表。'),
+        React.createElement('div', { className: 'ow-empty-cue-actions' },
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn primary',
+            onClick: () => onIdea && onIdea(),
+          }, '打开 IDEA'),
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn',
+            onClick: () => onTasks && onTasks(),
+          }, '任务看板'),
+          React.createElement('button', {
+            type: 'button', className: 'ow-msg-btn',
+            onClick: () => onRewind && onRewind(),
+          }, '回退'),
+        ),
+      )
+    }
+
+    function EventsEmptyState({ events }) {
+      if (events && events.length > 0) return null
+      return React.createElement('div', { className: 'ow-empty-cue ow-empty-cue-slim', role: 'status' },
+        React.createElement('div', { className: 'ow-empty-cue-title' }, '事件还是空的'),
+        React.createElement('div', { className: 'ow-empty-cue-body' },
+          '点动作或中间节点干一件事后，这里会出现最近日志。'),
+      )
+    }
+
+    function MemoryHub({ memory, onToast, onSearchMemory }) {
+      const [tab, setTab] = useState('local')
+      const [q, setQ] = useState('')
+      const [hits, setHits] = useState([])
+      const [source, setSource] = useState('')
+      const [busy, setBusy] = useState(false)
+
+      const search = async () => {
+        const query = String(q || '').trim()
+        if (!query) {
+          onToast && onToast('输入关键词再搜 Hindsight')
+          return
+        }
+        setBusy(true)
+        try {
+          let data
+          if (typeof onSearchMemory === 'function') {
+            data = await onSearchMemory(query)
+          } else {
+            const res = await fetch(`${MEMORY_SEARCH_URL}?q=${encodeURIComponent(query)}`, { credentials: 'same-origin' })
+            data = await res.json().catch(() => ({}))
+          }
+          const items = (data && (data.items || data.hits || data.results)) || []
+          setHits(Array.isArray(items) ? items : [])
+          setSource((data && data.source) || (data && data.ok === false ? 'offline' : 'hindsight'))
+          if (!items.length) onToast && onToast('Hindsight 无结果（需 daemon 或缓存）')
+        } catch (err) {
+          onToast && onToast(String(err.message || err))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      return React.createElement('div', { className: 'ow-memory-hub' },
+        React.createElement('div', { className: 'ow-side-tabs ow-memory-tabs' },
+          React.createElement('button', {
+            type: 'button',
+            className: tab === 'local' ? 'on' : '',
+            onClick: () => setTab('local'),
+          }, '本地 RRM'),
+          React.createElement('button', {
+            type: 'button',
+            className: tab === 'hindsight' ? 'on' : '',
+            onClick: () => setTab('hindsight'),
+          }, 'Hindsight'),
+        ),
+        tab === 'local' && React.createElement(MemoryBrief, { memory, onToast }),
+        tab === 'hindsight' && React.createElement('div', { className: 'ow-hub' },
+          React.createElement('div', { style: { fontSize: 10, color: '#64748b', marginBottom: 6 } },
+            '长期记忆搜索 · 需本机 Hindsight；与本地 RRM 归档不是同一条路'),
+          React.createElement('div', { className: 'ow-msg-row' },
+            React.createElement('input', {
+              className: 'ow-msg-select', style: { flex: 1 },
+              placeholder: '搜 Hindsight…', value: q,
+              onChange: (ev) => setQ(ev.target.value),
+              onKeyDown: (ev) => { if (ev.key === 'Enter') search() },
+            }),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn primary', disabled: busy, onClick: search,
+            }, busy ? '…' : '搜索'),
+          ),
+          source && React.createElement('div', { style: { fontSize: 9, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
+          hits.slice(0, 5).map((m, i) => React.createElement('div', {
+            key: (m && m.id) || i,
+            style: { fontSize: 11, color: '#cbd5e1', marginTop: 6, lineHeight: 1.4 },
+          }, `· ${String((m && (m.text || m.body || m.title)) || '').slice(0, 100)}`)),
+        ),
+      )
+    }
+
     function BridgeHealthBar({ health, onRefresh }) {
       if (!health) return null
       const BridgeLib = require('dsh-open-world/bridge')
@@ -1548,7 +1711,7 @@ window.__ModuleLoader__.load({
         degraded: s === 'dom' || s === 'event+dom' || s === 'unavailable',
       }))
       const items = [
-        { id: 'inject-message', label: '注入' },
+        { id: 'inject-message', label: '聊天投递' },
         { id: 'rewind-exec', label: '回退' },
         { id: 'task-run', label: '任务' },
         { id: 'settings', label: '设置' },
@@ -1591,8 +1754,8 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-bridge-health' },
         React.createElement('span', {
           className: 'ow-bridge-label',
-          title: 'Bridge 层：Client 调 DSH（不经 Host /action）· 芯片优先看实跑 outcome，其次探针',
-        }, 'BRIDGE·DSH'),
+          title: '通路健康（诊断）：绿=API 可用 · 黄=降级 · 红=失败。不是功能按钮，点中间节点或动作页才干活。',
+        }, '通路健康'),
         items.map(({ id, label }) => {
           const cap = health[id]
           const meta = describe(cap && cap.strategy)
@@ -2056,9 +2219,9 @@ window.__ModuleLoader__.load({
         { id: 'events', label: '事件' },
       ]
       const hints = {
-        status: '健康度 · 负载 · Bridge · 进程舰队 · 星域导航 · RRM',
-        actions: '插件 · 集成 · 回退 · IDEA · 点中间节点也可操作',
-        events: '近史精确 · 远史压缩/地标 · 归档见 memory',
+        status: '看现在稳不稳：健康度 · 通路 · 舰队 · 负载',
+        actions: '干活入口：插件 · 集成 · 回退 · 打开 IDEA',
+        events: '刚才发生了什么：记忆（本地/Hindsight）· 事件 · 消息',
       }
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'ow-side-tabs' },
@@ -2252,41 +2415,44 @@ window.__ModuleLoader__.load({
           key: h,
           className: 'ow-fleet-hint',
         }, h)),
-        list.length === 0
-          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
-          : list.slice(0, compact ? 6 : 24).map((p) => {
-            const clickable = (p.kind === 'session' && p.sessionId)
-              || (p.kind === 'task' && p.taskId)
-            const stageLabels = (Array.isArray(p.stages) ? p.stages : [])
-              .map(fleetStageLabel)
-              .filter(Boolean)
-              .slice(0, compact ? 3 : 6)
-            const tip = [p.detail, stageLabels.length ? `阶段: ${stageLabels.join(' · ')}` : '']
-              .filter(Boolean).join('\n') || p.title
-            return React.createElement('div', {
-              key: p.id,
-              className: `ow-fleet-row status-${p.status || 'idle'}${clickable ? ' ow-clickable' : ' ow-fleet-row-static'}`,
-              title: tip,
-              onClick: clickable ? () => {
-                if (!onAction) return
-                if (p.kind === 'session') onAction({ type: 'session-focus', sessionId: p.sessionId, label: '切换会话' })
-                else if (p.kind === 'task') onAction({ type: 'task-run', taskId: p.taskId, inline: true })
-              } : undefined,
-            },
-              React.createElement('span', { className: 'ow-fleet-kind' }, kindZh[p.kind] || p.kind),
-              React.createElement('div', { className: 'ow-fleet-main' },
-                React.createElement('span', { className: 'ow-fleet-title' }, p.title),
-                stageLabels.length > 0 && React.createElement('div', { className: 'ow-fleet-stages' },
-                  stageLabels.map((lab) => React.createElement('span', {
-                    key: lab,
-                    className: 'ow-fleet-stage',
-                  }, lab)),
+        compact
+          ? React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 6 } },
+            '摘要 · 点「展开舰队」看进程列表与操作')
+          : (list.length === 0
+            ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
+            : list.slice(0, 24).map((p) => {
+              const clickable = (p.kind === 'session' && p.sessionId)
+                || (p.kind === 'task' && p.taskId)
+              const stageLabels = (Array.isArray(p.stages) ? p.stages : [])
+                .map(fleetStageLabel)
+                .filter(Boolean)
+                .slice(0, 6)
+              const tip = [p.detail, stageLabels.length ? `阶段: ${stageLabels.join(' · ')}` : '']
+                .filter(Boolean).join('\n') || p.title
+              return React.createElement('div', {
+                key: p.id,
+                className: `ow-fleet-row status-${p.status || 'idle'}${clickable ? ' ow-clickable' : ' ow-fleet-row-static'}`,
+                title: tip,
+                onClick: clickable ? () => {
+                  if (!onAction) return
+                  if (p.kind === 'session') onAction({ type: 'session-focus', sessionId: p.sessionId, label: '切换会话' })
+                  else if (p.kind === 'task') onAction({ type: 'task-run', taskId: p.taskId, inline: true })
+                } : undefined,
+              },
+                React.createElement('span', { className: 'ow-fleet-kind' }, kindZh[p.kind] || p.kind),
+                React.createElement('div', { className: 'ow-fleet-main' },
+                  React.createElement('span', { className: 'ow-fleet-title' }, p.title),
+                  stageLabels.length > 0 && React.createElement('div', { className: 'ow-fleet-stages' },
+                    stageLabels.map((lab) => React.createElement('span', {
+                      key: lab,
+                      className: 'ow-fleet-stage',
+                    }, lab)),
+                  ),
                 ),
-              ),
-              p.percent != null && React.createElement('span', { className: 'ow-fleet-pct' }, `${Math.round(p.percent)}%`),
-              React.createElement('span', { className: 'ow-fleet-status' }, statusZh[p.status] || p.status),
-            )
-          }),
+                p.percent != null && React.createElement('span', { className: 'ow-fleet-pct' }, `${Math.round(p.percent)}%`),
+                React.createElement('span', { className: 'ow-fleet-status' }, statusZh[p.status] || p.status),
+              )
+            })),
         !compact && React.createElement('div', { className: 'ow-fleet-hint', style: { marginTop: 8 } },
           '点击：会话切换 · 任务运行 · 子代理只读（无假入口）'),
       )
@@ -2539,6 +2705,10 @@ window.__ModuleLoader__.load({
 
     module.exports = {
       BridgeHealthBar,
+      ShellGuide,
+      ActionsEmptyState,
+      EventsEmptyState,
+      MemoryHub,
       sourceTag,
       StatusSummaryChips,
       LeftSidebarTabs,
@@ -2618,10 +2788,10 @@ window.__ModuleLoader__.load({
           className: 'ow-hub-stat',
           style: { marginBottom: compact ? 6 : 10, color: '#f5d67a', lineHeight: 1.5 },
         },
-          '诚实说明：注入 = Host 包装人格前缀 + Bridge 投递官方聊天（两条通路）。',
-          ' 不是切换 DSH Agent 预设；要换真预设请点「DSH 预设」。',
-          !compact && ' 成功后会自动收起指挥舱，请看聊天窗里的回复。'),
-        compact && React.createElement('div', { className: 'ow-hub-stat' }, overview.subtitle || '调试人格 · Treat me like'),
+          '把人格前缀包进消息，再投递到官方聊天。',
+          ' 不是切换 Agent；要换真预设请点「真换 Agent 预设」。',
+          !compact && ' 成功后会收起指挥舱，请看聊天窗回复。'),
+        compact && React.createElement('div', { className: 'ow-hub-stat' }, overview.subtitle || '人格试玩 · Treat me like'),
         React.createElement('div', { className: 'ow-hub-title' }, `人格 · ${presets.length} 种${compareIds.length ? ` · 已选对比 ${compareIds.length}` : ''}`),
         React.createElement('div', { className: 'ow-idea-grid' },
           presets.map((p) => React.createElement('div', {
@@ -2664,7 +2834,7 @@ window.__ModuleLoader__.load({
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn primary',
             disabled: !body.trim() || injecting,
-            title: 'Host idea-inject 包装 → Bridge inject-message 投递',
+            title: '包装人格前缀后投递到官方聊天',
             onClick: () => {
               if (!onInject || !body.trim() || injecting) return
               setInjecting(true)
@@ -2676,7 +2846,7 @@ window.__ModuleLoader__.load({
                   setInjecting(false)
                 })
             },
-          }, injecting ? '注入中…' : '注入消息（前缀）'),
+          }, injecting ? '投递中…' : '投递到官方聊天'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             disabled: !body.trim(),
@@ -3444,7 +3614,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } },
           `信箱 · ${messages.length} 条 · 未读 ${unread}${remoteReady ? ' · 跨机就绪' : ''}`),
         React.createElement('textarea', {
-          placeholder: '输入消息… 可广播、跨机、注入 AI、附记忆/拓扑',
+          placeholder: '输入消息… 可广播、跨机、投递到官方聊天、附记忆/拓扑',
           value: body,
           onChange: (ev) => setBody(ev.target.value),
         }),
@@ -3477,7 +3647,7 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'broadcast' }, '全体广播'),
             React.createElement('option', { value: 'sessions' }, '全部会话'),
             remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发'),
-            React.createElement('option', { value: 'agent' }, '注入 AI 对话'),
+            React.createElement('option', { value: 'agent' }, '投递到官方聊天'),
             React.createElement('option', { value: 'clipboard' }, '复制分享包'),
             React.createElement('option', { value: 'external' }, '导出外发文件'),
           ),
@@ -3648,8 +3818,11 @@ window.__ModuleLoader__.load({
       const spaceOff = sp.enabled === false
 
       return React.createElement('div', { className: 'ow-hub' },
-        React.createElement('div', { className: 'ow-hub-sec' },
-          React.createElement('div', { className: 'ow-hub-title' }, '空间 · 第二屏 (OWIP 0.2)'),
+        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
+          React.createElement('summary', {
+            className: 'ow-hub-title',
+            style: { cursor: 'pointer', listStyle: 'none' },
+          }, '高级 · 空间 · 第二屏 (OWIP 0.2)'),
           React.createElement('div', { className: 'ow-hub-stat' },
             spaceOff
               ? 'space 未启用（open-world.yml → space.enabled）· 只读观察面关闭，下方签发已禁用'
@@ -3708,8 +3881,11 @@ window.__ModuleLoader__.load({
             sp.expired ? ' · 已过期请轮换' : null,
           ].filter(Boolean).join('')),
         ),
-        React.createElement('div', { className: 'ow-hub-sec' },
-          React.createElement('div', { className: 'ow-hub-title' }, '跨机远程 · REMOTE PAIR'),
+        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
+          React.createElement('summary', {
+            className: 'ow-hub-title',
+            style: { cursor: 'pointer', listStyle: 'none' },
+          }, '高级 · 跨机远程 · REMOTE PAIR'),
           React.createElement('div', { className: 'ow-hub-stat' },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
@@ -3778,7 +3954,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function RewindTimelinePanel({ rewind, plugins, onAction, onToast }) {
+    function RewindTimelinePanel({ rewind, plugins, onAction, onToast, compact }) {
       const plug = (plugins || []).find((p) => p.id === 'rewind')
       const stats = rewind || {}
       const available = !!(stats.available || (plug && plug.online))
@@ -3807,9 +3983,24 @@ window.__ModuleLoader__.load({
               onClick: () => onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
             }, '打开设置'),
           ),
-          React.createElement('div', {
-            style: { marginTop: 8, fontSize: 10, color: '#64748b' },
-          }, '未安装时时间轴留空属预期，不会假装有快照'),
+        )
+      }
+      if (compact) {
+        return React.createElement('div', { className: 'ow-hub' },
+          React.createElement('div', { className: 'ow-hub-stat' },
+            `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 快照 · ${stats.sessions || 0} 会话`),
+          React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } },
+            '摘要 · 完整时间轴只在壳内展开一处'),
+          React.createElement('div', { className: 'ow-rewind-actions', style: { marginTop: 8 } },
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn primary',
+              onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+            }, '展开回退'),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn',
+              onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
+            }, '聊天里 /rewind'),
+          ),
         )
       }
       return React.createElement('div', { className: 'ow-hub' },
@@ -4205,12 +4396,26 @@ window.__ModuleLoader__.load({
           ),
         ),
         React.createElement('div', { className: 'ow-ati-preset-bar' },
-          ATI_PRESETS.map((p) => React.createElement('button', {
-            key: p.id, type: 'button',
-            className: `ow-ati-preset ${groupClassForPreset(p)} ${preset === p.id ? 'on' : ''}`,
-            onClick: () => onPresetChange(p.id),
-            title: `${p.group} · ${p.sub}`,
-          }, p.label)),
+          React.createElement('button', {
+            type: 'button',
+            className: `ow-ati-preset ${(!preset || preset === 'ati-unified') ? 'on' : ''}`,
+            onClick: () => onPresetChange('ati-unified'),
+            title: '主视图 · 点节点干活',
+          }, '统一场'),
+          React.createElement('details', { className: 'ow-ati-lab-details' },
+            React.createElement('summary', {
+              className: 'ow-ati-preset',
+              title: '隐喻实验室 · 可选壁纸式预设',
+            }, '实验室'),
+            React.createElement('div', { className: 'ow-ati-lab-presets' },
+              ATI_PRESETS.filter((p) => p.id !== 'ati-unified').map((p) => React.createElement('button', {
+                key: p.id, type: 'button',
+                className: `ow-ati-preset ${groupClassForPreset(p)} ${preset === p.id ? 'on' : ''}`,
+                onClick: () => onPresetChange(p.id),
+                title: `${p.group} · ${p.sub}（隐喻）`,
+              }, p.label)),
+            ),
+          ),
         ),
       )
     }
@@ -4467,7 +4672,7 @@ window.__ModuleLoader__.load({
       if (node && node.status === 'offline' && node.howToEnable) return '如何启用'
       if (!action) return '进入'
       if (action.type === 'close') return action.label || '返回会话'
-      if (action.type === 'idea-panel') return '进入 · IDEA Lab'
+      if (action.type === 'idea-panel') return '打开 IDEA'
       const title = (action.panel && APP_SURFACES[action.panel] && APP_SURFACES[action.panel].title)
         || String(action.label || '').replace(/^进入\s*/, '')
       return `进入 · ${title}`
@@ -4572,13 +4777,13 @@ window.__ModuleLoader__.load({
 
     const { NODE_ZH, NODE_LAYOUT, EVENT_COLORS, QUICK_ACTIONS } = C
     const {
-      BridgeHealthBar, StatusSummaryChips, LeftSidebarTabs,
+      BridgeHealthBar, ShellGuide, ActionsEmptyState, EventsEmptyState, MemoryHub, StatusSummaryChips, LeftSidebarTabs,
       SocialPanel, IntegrationsPanel, pluginAction, socialChannelAction,
-      MemoryBrief, tierBadge, FleetPanel, sourceTag,
+      tierBadge, FleetPanel, sourceTag,
     } = Shell
     const { IdeaLabWorkspace } = Idea
     const { MessageHub, IntegrationsHub, RewindTimelinePanel } = Hubs
-    const { Sparkline, SectorRadar, ArchifyEmbed, AtiCortex, ResourceDonut } = AtiView
+    const { Sparkline, ArchifyEmbed, AtiCortex, ResourceDonut } = AtiView
     const {
       iconSvg, Panel, ViewportWrap, renderEmbedSurface, enterActionLabel, NodeDetailCard,
     } = Chrome
@@ -4590,12 +4795,12 @@ window.__ModuleLoader__.load({
       bridgeHealth, setBridgeHealth, checkBridgeCapabilities,
       runBridge, setEmbed, setToast,
       hub, handleEmbedArchify,
-      idea, handleIdeaInject, handleIdeaCompare,
       events, social,
       mailbox, handleSendMessage, handleMarkRead, handleShareSnapshot,
       handleInjectAgent, handleSearchMemory,
     }) {
       return React.createElement('div', { className: 'ow-side ow-side-left' },
+                    React.createElement(ShellGuide, null),
                     React.createElement(LeftSidebarTabs, { tab: leftTab, onTab: onLeftTab }),
                     leftTab === 'status' && React.createElement(React.Fragment, null,
                       React.createElement(Panel, { titleZh: '系统状态', titleEn: 'SYSTEM STATUS', icon: 'diagnosis' },
@@ -4650,22 +4855,21 @@ window.__ModuleLoader__.load({
                           onClick: () => setEmbed('fleet'),
                         }, '展开舰队'),
                       ),
-                      React.createElement(Panel, { titleZh: '实时负载', titleEn: 'REAL-TIME LOAD', icon: 'diagnosis' },
+                      React.createElement(Panel, { titleZh: '实时负载', titleEn: 'REAL-TIME LOAD', icon: 'diagnosis', last: true },
                         loadRows.map((row) => React.createElement('div', { key: row.key, className: 'ow-load-item' },
                           React.createElement('span', { className: 'ow-load-label' }, row.key),
                           React.createElement(Sparkline, { values: row.hist, color: row.color }),
                           React.createElement('span', { className: 'ow-load-val' }, row.val),
                         )),
                       ),
-                      React.createElement(Panel, { titleZh: '星域导航', titleEn: 'SECTOR NAV', icon: 'network', last: true },
-                        React.createElement(SectorRadar, { nodes }),
-                        React.createElement('div', { className: 'ow-sector-foot' },
-                          React.createElement('span', null, '点击中间 ATI 节点操作'),
-                          React.createElement('span', { className: 'ow-sector-arrow' }, '›'),
-                        ),
-                      ),
                     ),
                     leftTab === 'actions' && React.createElement(React.Fragment, null,
+                      React.createElement(ActionsEmptyState, {
+                        plugins,
+                        onIdea: () => runBridge({ type: 'idea-panel' }),
+                        onTasks: () => runBridge({ type: 'task-board', label: '任务看板' }),
+                        onRewind: () => runBridge({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+                      }),
                       React.createElement(Panel, { titleZh: '插件接入', titleEn: 'PLUGINS', icon: 'config' },
                         React.createElement(IntegrationsPanel, {
                           plugins,
@@ -4688,23 +4892,33 @@ window.__ModuleLoader__.load({
                           plugins,
                           onAction: runBridge,
                           onToast: setToast,
+                          compact: true,
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: 'IDEA Lab', titleEn: 'PERSONA', icon: 'config', last: true },
-                        React.createElement(IdeaLabWorkspace, {
-                          idea,
-                          compact: true,
-                          onInject: handleIdeaInject,
-                          onCompare: handleIdeaCompare,
-                          onAction: runBridge,
-                        }),
+                      React.createElement(Panel, { titleZh: 'IDEA', titleEn: 'PERSONA', icon: 'config', last: true },
+                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#94a3b8', lineHeight: 1.55 } },
+                          React.createElement('div', null, '用人格前缀试一句话，再投递到官方聊天。'),
+                          React.createElement('div', { style: { marginTop: 4, color: '#64748b' } },
+                            '不是切换 Agent 预设；完整面板只在中区打开一次。'),
+                          React.createElement('button', {
+                            type: 'button',
+                            className: 'ow-neural-btn',
+                            style: { marginTop: 10 },
+                            onClick: () => runBridge({ type: 'idea-panel' }),
+                          }, '打开 IDEA'),
+                        ),
                       ),
                     ),
                     leftTab === 'events' && React.createElement(React.Fragment, null,
-                      React.createElement(Panel, { titleZh: 'RRM 记忆', titleEn: 'MEMORY', icon: 'backup' },
-                        React.createElement(MemoryBrief, { memory: snapshot && snapshot.memory, onToast: setToast }),
+                      React.createElement(Panel, { titleZh: '记忆', titleEn: 'MEMORY', icon: 'backup' },
+                        React.createElement(MemoryHub, {
+                          memory: snapshot && snapshot.memory,
+                          onToast: setToast,
+                          onSearchMemory: handleSearchMemory,
+                        }),
                       ),
                       React.createElement(Panel, { titleZh: '系统事件', titleEn: 'EVENTS', icon: 'diagnosis' },
+                        React.createElement(EventsEmptyState, { events }),
                         React.createElement('div', { className: 'ow-event-list' },
                           events.slice(0, 10).map((ev, i) => React.createElement('div', { key: ev.id, className: 'ow-event-item' },
                             React.createElement('span', { className: `ow-event-dot ${EVENT_COLORS[i % EVENT_COLORS.length]}` }),
@@ -4716,12 +4930,17 @@ window.__ModuleLoader__.load({
                           )),
                         ),
                       ),
-                      React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
-                        React.createElement(SocialPanel, {
-                          social,
-                          onChannel: (id) => runBridge(socialChannelAction(id)),
-                          onSession: (p) => runBridge({ type: 'session-focus', sessionId: p.id, label: '切换会话' }),
-                        }),
+                      React.createElement('details', { className: 'ow-adv-fold', style: { margin: '0 0 8px' } },
+                        React.createElement('summary', {
+                          style: { fontSize: 11, color: '#7c8ea6', cursor: 'pointer', padding: '6px 0' },
+                        }, '高级 · 社交层'),
+                        React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
+                          React.createElement(SocialPanel, {
+                            social,
+                            onChannel: (id) => runBridge(socialChannelAction(id)),
+                            onSession: (p) => runBridge({ type: 'session-focus', sessionId: p.id, label: '切换会话' }),
+                          }),
+                        ),
                       ),
                       React.createElement(Panel, { titleZh: '消息总线', titleEn: 'MESSAGES', icon: 'network', last: true },
                         React.createElement(MessageHub, {
@@ -4940,40 +5159,40 @@ window.__ModuleLoader__.load({
           )),
         ),
         React.createElement('div', { className: 'ow-bottom-right' },
-          React.createElement('div', { className: 'ow-metric' },
+          React.createElement('div', { className: 'ow-metric', title: '进程堆内存（真实指标）' },
             React.createElement('div', { className: 'ow-metric-label' },
-              React.createElement('span', { className: 'ow-metric-zh' }, '系统温度'),
-              React.createElement('span', { className: 'ow-metric-en' }, 'SYSTEM TEMP'),
+              React.createElement('span', { className: 'ow-metric-zh' }, '堆内存'),
+              React.createElement('span', { className: 'ow-metric-en' }, 'HEAP'),
             ),
             React.createElement('div', { className: 'ow-metric-val' },
-              Math.round(38 + ((load && load.heapUsedMb) || 0) / 10),
-              React.createElement('span', { className: 'u' }, '°C'),
+              Math.round((load && load.heapUsedMb) || 0),
+              React.createElement('span', { className: 'u' }, 'MB'),
             ),
             React.createElement('div', { className: 'ow-metric-bar' },
               React.createElement('div', {
                 className: 'ow-metric-fill',
                 style: {
-                  width: `${Math.min(90, 30 + ((load && load.heapUsedMb) || 0) / 2)}%`,
+                  width: `${Math.min(95, ((load && load.heapUsedMb) || 0) / 4)}%`,
                   background: 'linear-gradient(to right,#5eead4,#bfe38e)',
                   boxShadow: '0 0 4px rgba(94,234,212,.4)',
                 },
               }),
             ),
           ),
-          React.createElement('div', { className: 'ow-metric' },
+          React.createElement('div', { className: 'ow-metric', title: '进程常驻内存 RSS（真实指标）' },
             React.createElement('div', { className: 'ow-metric-label' },
-              React.createElement('span', { className: 'ow-metric-zh' }, '能耗'),
-              React.createElement('span', { className: 'ow-metric-en' }, 'POWER USAGE'),
+              React.createElement('span', { className: 'ow-metric-zh' }, '常驻内存'),
+              React.createElement('span', { className: 'ow-metric-en' }, 'RSS'),
             ),
             React.createElement('div', { className: 'ow-metric-val' },
-              Math.round(120 + ((load && load.rssMb) || 0) / 5),
-              React.createElement('span', { className: 'u' }, 'W'),
+              Math.round((load && load.rssMb) || 0),
+              React.createElement('span', { className: 'u' }, 'MB'),
             ),
             React.createElement('div', { className: 'ow-metric-bar' },
               React.createElement('div', {
                 className: 'ow-metric-fill',
                 style: {
-                  width: `${Math.min(85, 25 + ((load && load.rssMb) || 0) / 8)}%`,
+                  width: `${Math.min(95, ((load && load.rssMb) || 0) / 8)}%`,
                   background: 'linear-gradient(to right,#f5d67a,#f4a261)',
                   boxShadow: '0 0 4px rgba(245,214,122,.4)',
                 },
@@ -5341,7 +5560,7 @@ window.__ModuleLoader__.load({
       }, [])
 
       const handleIdeaInject = useCallback(async (presetId, body, treatAs) => {
-        setToast('正在注入对话…')
+        setToast('正在投递到官方聊天…')
         try {
           const data = await postOpenWorldAction({
             action: 'idea-inject',
@@ -5354,7 +5573,7 @@ window.__ModuleLoader__.load({
           await runBridge({ type: 'inject-message', body: data.wrapped })
           const title = (data.preset && data.preset.title) || presetId
           setMode('minimized')
-          setToast(`已注入「${title}」· 看聊天窗回复（前缀包装，非真换 Agent）`)
+          setToast(`已投递「${title}」· 看聊天窗回复（前缀包装，非真换 Agent）`)
           notifyPulse(['ai-engine->analytics', 'user-hub->ai-engine'])
           try {
             const mb = await fetchMessages()
@@ -5394,18 +5613,18 @@ window.__ModuleLoader__.load({
       }
     }
 
+    // 底栏只保留主路径；拓扑卡片仍可走 Ctrl+K「拓扑视图」
     const VIEW_MODES = [
-      { id: 'ati', label: 'ATI 统一场', sub: 'ATI CORTEX', icon: 'ati' },
-      { id: 'idea', label: 'IDEA Lab', sub: 'PERSONA SANDBOX', icon: 'config' },
-      { id: 'monitor', label: '监控视图', sub: 'MONITOR', icon: 'monitor' },
-      { id: 'topology', label: '拓扑视图', sub: 'TOPOLOGY', icon: 'topology' },
+      { id: 'ati', label: '主视图', sub: 'COMMAND', icon: 'ati' },
+      { id: 'idea', label: 'IDEA', sub: 'PERSONA', icon: 'config' },
+      { id: 'monitor', label: '调试 JSON', sub: 'DEBUG', icon: 'monitor' },
     ]
 
     function useToast() {
       const [toast, setToast] = useState('')
       useEffect(() => {
         if (!toast) return undefined
-        if (String(toast).includes('正在注入') || String(toast).includes('生成中')) return undefined
+        if (String(toast).includes('正在注入') || String(toast).includes('正在投递') || String(toast).includes('生成中')) return undefined
         const t = setTimeout(() => setToast(''), 3200)
         return () => clearTimeout(t)
       }, [toast])
@@ -5540,12 +5759,20 @@ window.__ModuleLoader__.load({
         action: () => { close() },
       }))
       items.push({
-        id: 'view-ati', kind: '视图', label: '切换到 ATI 统一场',
+        id: 'view-ati', kind: '视图', label: '切换到主视图',
         action: () => { setView('ati'); close() },
       })
       items.push({
-        id: 'view-idea', kind: '视图', label: 'IDEA Lab 人格沙箱',
+        id: 'view-idea', kind: '视图', label: 'IDEA 人格试玩',
         action: () => { setView('idea'); close() },
+      })
+      items.push({
+        id: 'view-topology', kind: '视图', label: '拓扑卡片（高级）',
+        action: () => { setView('topology'); close() },
+      })
+      items.push({
+        id: 'view-monitor', kind: '视图', label: '调试 JSON',
+        action: () => { setView('monitor'); close() },
       })
       ATI_PRESETS.forEach((p) => {
         if (p.id === 'ati-unified') return
@@ -5869,7 +6096,6 @@ window.__ModuleLoader__.load({
               bridgeHealth, setBridgeHealth, checkBridgeCapabilities,
               runBridge, setEmbed, setToast,
               hub, handleEmbedArchify,
-              idea, handleIdeaInject, handleIdeaCompare,
               events, social,
               mailbox, handleSendMessage, handleMarkRead, handleShareSnapshot,
               handleInjectAgent, handleSearchMemory,

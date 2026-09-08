@@ -1,7 +1,7 @@
 {
   "name": "dsh-open-world",
-  "version": "2.46.0",
-  "description": "DSH 开放世界指挥舱：OWIP 0.2-draft · 模块化壳",
+  "version": "2.51.0",
+  "description": "DSH 系统壳 / 控制台：状态·动作·事件",
   "license": "MIT",
   "type": "module",
   "main": "./index.js",
@@ -62,10 +62,12 @@
     "test:space": "node test/space-auth.mjs",
     "test:layers": "node test/action-layers.mjs",
     "test:live": "node test/live.mjs",
+    "test:live-cdp": "node test/live-cdp.mjs",
     "test:live-rra": "node test/live-rra.mjs",
     "test:live-rra-cdp": "node test/live-rra-cdp.mjs",
     "build:client": "node scripts/compose-client.mjs",
-    "check:client": "node scripts/check-client-fresh.mjs"
+    "check:client": "node scripts/check-client-fresh.mjs",
+    "desktop:cdp": "node scripts/launch-desktop-cdp.mjs"
   },
   "engines": {
     "node": ">=22"

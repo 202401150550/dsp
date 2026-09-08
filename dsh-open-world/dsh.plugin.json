@@ -1,10 +1,13 @@
 {
   "name": "dsh-open-world",
-  "version": "2.46.0",
-  "description": "DSH 系统壳：SYSOP + OWIP 0.2-draft · 模块化客户端",
+  "version": "2.51.0",
+  "description": "DSH 系统壳：状态 · 动作 · 事件",
   "entry": {
     "name": "dsh-open-world",
-    "inject": ["webServer", "sessions"]
+    "inject": [
+      "webServer",
+      "sessions"
+    ]
   },
   "openWorld": {
     "node": {
@@ -17,7 +20,10 @@
       {
         "id": "open-world.panel",
         "label": "打开指挥舱",
-        "bridge": { "type": "embed", "panel": "open-world" }
+        "bridge": {
+          "type": "embed",
+          "panel": "open-world"
+        }
       }
     ]
   },

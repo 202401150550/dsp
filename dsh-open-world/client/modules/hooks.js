@@ -233,7 +233,7 @@ window.__ModuleLoader__.load({
       }, [])
 
       const handleIdeaInject = useCallback(async (presetId, body, treatAs) => {
-        setToast('正在注入对话…')
+        setToast('正在投递到官方聊天…')
         try {
           const data = await postOpenWorldAction({
             action: 'idea-inject',
@@ -246,7 +246,7 @@ window.__ModuleLoader__.load({
           await runBridge({ type: 'inject-message', body: data.wrapped })
           const title = (data.preset && data.preset.title) || presetId
           setMode('minimized')
-          setToast(`已注入「${title}」· 看聊天窗回复（前缀包装，非真换 Agent）`)
+          setToast(`已投递「${title}」· 看聊天窗回复（前缀包装，非真换 Agent）`)
           notifyPulse(['ai-engine->analytics', 'user-hub->ai-engine'])
           try {
             const mb = await fetchMessages()
@@ -286,18 +286,18 @@ window.__ModuleLoader__.load({
       }
     }
 
+    // 底栏只保留主路径；拓扑卡片仍可走 Ctrl+K「拓扑视图」
     const VIEW_MODES = [
-      { id: 'ati', label: 'ATI 统一场', sub: 'ATI CORTEX', icon: 'ati' },
-      { id: 'idea', label: 'IDEA Lab', sub: 'PERSONA SANDBOX', icon: 'config' },
-      { id: 'monitor', label: '监控视图', sub: 'MONITOR', icon: 'monitor' },
-      { id: 'topology', label: '拓扑视图', sub: 'TOPOLOGY', icon: 'topology' },
+      { id: 'ati', label: '主视图', sub: 'COMMAND', icon: 'ati' },
+      { id: 'idea', label: 'IDEA', sub: 'PERSONA', icon: 'config' },
+      { id: 'monitor', label: '调试 JSON', sub: 'DEBUG', icon: 'monitor' },
     ]
 
     function useToast() {
       const [toast, setToast] = useState('')
       useEffect(() => {
         if (!toast) return undefined
-        if (String(toast).includes('正在注入') || String(toast).includes('生成中')) return undefined
+        if (String(toast).includes('正在注入') || String(toast).includes('正在投递') || String(toast).includes('生成中')) return undefined
         const t = setTimeout(() => setToast(''), 3200)
         return () => clearTimeout(t)
       }, [toast])
@@ -432,12 +432,20 @@ window.__ModuleLoader__.load({
         action: () => { close() },
       }))
       items.push({
-        id: 'view-ati', kind: '视图', label: '切换到 ATI 统一场',
+        id: 'view-ati', kind: '视图', label: '切换到主视图',
         action: () => { setView('ati'); close() },
       })
       items.push({
-        id: 'view-idea', kind: '视图', label: 'IDEA Lab 人格沙箱',
+        id: 'view-idea', kind: '视图', label: 'IDEA 人格试玩',
         action: () => { setView('idea'); close() },
+      })
+      items.push({
+        id: 'view-topology', kind: '视图', label: '拓扑卡片（高级）',
+        action: () => { setView('topology'); close() },
+      })
+      items.push({
+        id: 'view-monitor', kind: '视图', label: '调试 JSON',
+        action: () => { setView('monitor'); close() },
       })
       ATI_PRESETS.forEach((p) => {
         if (p.id === 'ati-unified') return

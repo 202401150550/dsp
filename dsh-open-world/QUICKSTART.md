@@ -9,7 +9,7 @@
 1. `plugins.yml` 里 `dsh-open-world: enabled: true`
 2. 跑过 `dsh-desktop-toggle/apply.mjs`（若你用 profile 链接）
 3. **完全退出 DSH → 重开 → Ctrl+Shift+R**
-4. 侧栏底部或输入框旁点 **✦**，水印应为 `OPEN-WORLD v2.46`（须与 `framework.version` 一致）
+4. 侧栏底部或输入框旁点 **✦**，水印应为 `OPEN-WORLD v2.51`（须与 `framework.version` 一致）
 
 ---
 
@@ -36,6 +36,8 @@
 | 带 **隐喻** 标签 | ATI 实验室子页 | 动画叙事，**不是**真实 ML 训练 |
 
 窗口模式：fullscreen / split / float / minimized（存 `world-state`）。
+
+**日常三步**：左栏看状态 → 动作页点插件/回退，或点中间节点 → 事件页看发生了什么。IDEA / 调试 JSON 在底栏；不必一次全点开。
 
 ---
 
@@ -110,8 +112,9 @@
 cd D:\dsp\dsh-open-world
 npm test                 # smoke + bridge + … 
 npm run build:client     # 改 client/ 后必跑
-npm run test:live        # 需 DSH Desktop 已启动
-npm run test:live-rra    # RRA 真机；外网 403 时自动 CDP（Desktop 需 --remote-debugging-port=9333）
+npm run test:live        # 需 DSH Desktop；HTTP 403 时自动 CDP（需 --remote-debugging-port=9333）
+npm run test:live-cdp    # 直接 CDP 冷启验收
+npm run test:live-rra    # RRA 真机；外网 403 时自动 CDP
 ```
 
-更多协议见 [OWIP_v0.1.md](./OWIP_v0.1.md)；神经契约见 [RRA_NEURAL.md](./RRA_NEURAL.md)。
+更多协议见 [OWIP_v0.1.md](./OWIP_v0.1.md)；神经契约见 [RRA_NEURAL.md](./RRA_NEURAL.md)；**联调 / action 表**见 [DEVELOPER.md](./DEVELOPER.md)。

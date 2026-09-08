@@ -250,7 +250,6 @@ window.__ModuleLoader__.load({
               bridgeHealth, setBridgeHealth, checkBridgeCapabilities,
               runBridge, setEmbed, setToast,
               hub, handleEmbedArchify,
-              idea, handleIdeaInject, handleIdeaCompare,
               events, social,
               mailbox, handleSendMessage, handleMarkRead, handleShareSnapshot,
               handleInjectAgent, handleSearchMemory,
