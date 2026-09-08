@@ -1,7 +1,7 @@
 # Open World 系统规划 · SYSOP v0.1
 
 > 状态：规划 + 实现对照 · 2026-09-08  
-> 运行时：**v2.51** · 协议默认 **owip/0.2-draft** · **产品定稿**：[SHELL_PLAN.md](./SHELL_PLAN.md) · **开发者**：[DEVELOPER.md](./DEVELOPER.md)  
+> 运行时：**v2.52** · 协议默认 **owip/0.2-draft** · **产品定稿**：[SHELL_PLAN.md](./SHELL_PLAN.md) · **开发者**：[DEVELOPER.md](./DEVELOPER.md)  
 > 配套：[OWIP_v0.1.md](./OWIP_v0.1.md) · [CHECKLIST.md](./CHECKLIST.md) · [QUICKSTART.md](./QUICKSTART.md)  
 > 一句话定位：**Open World 是 DSH 这台机器上的「系统壳 / 控制台」——不是聊天替代品，也不是第二套 DSH。**  
 > A→B→C 计划切片已落地（WM / 舰队 / 第二屏观察）；神经 RRA 大行李后置（无真实 checkpoint 不开）。

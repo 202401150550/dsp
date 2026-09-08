@@ -289,7 +289,7 @@ window.__ModuleLoader__.load({
           React.createElement('summary', {
             className: 'ow-hub-title',
             style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 空间 · 第二屏 (OWIP 0.2)'),
+          }, '高级 · 第二屏（只读）'),
           React.createElement('div', { className: 'ow-hub-stat' },
             spaceOff
               ? 'space 未启用（open-world.yml → space.enabled）· 只读观察面关闭，下方签发已禁用'
@@ -352,7 +352,7 @@ window.__ModuleLoader__.load({
           React.createElement('summary', {
             className: 'ow-hub-title',
             style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 跨机远程 · REMOTE PAIR'),
+          }, '高级 · 跨机配对'),
           React.createElement('div', { className: 'ow-hub-stat' },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`

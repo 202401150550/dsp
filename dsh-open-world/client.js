@@ -1,4 +1,4 @@
-// CLIENT_BUILD 1a9d9f3acc 2026-09-08T07:19:48.015Z v2.51
+// CLIENT_BUILD 966229dc46 2026-09-08T07:55:29.951Z v2.52
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -786,10 +786,10 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.51'
+    exports.CLIENT_VER = 'v2.52'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '1a9d9f3acc'
-    exports.CLIENT_BUILT_AT = '2026-09-08T07:19:48.015Z'
+    exports.CLIENT_BUILD = '966229dc46'
+    exports.CLIENT_BUILT_AT = '2026-09-08T07:55:29.951Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -1572,8 +1572,8 @@ window.__ModuleLoader__.load({
       if (dismissed) return null
       return React.createElement('div', { className: 'ow-shell-guide' },
         React.createElement('div', { className: 'ow-shell-guide-text' },
-          React.createElement('strong', null, '系统壳用法'),
-          ' · ① 状态看稳不稳 · ② 动作或中间节点干活 · ③ 事件看刚才发生了什么',
+          React.createElement('strong', null, '三步上手'),
+          ' · ① 看稳不稳 · ② 点动作或中间圆点干活 · ③ 回来看刚才发生了什么',
         ),
         React.createElement('button', {
           type: 'button',
@@ -1600,17 +1600,17 @@ window.__ModuleLoader__.load({
           React.createElement('span', { className: 'ow-empty-cue-ray' }),
         ),
         React.createElement('div', { className: 'ow-empty-cue-title' },
-          scanned ? '插件都未在线' : '还没有可点的插件'),
+          scanned ? '还没有可用的扩展' : '还没有可点的扩展'),
         React.createElement('div', { className: 'ow-empty-cue-body' },
-          '日常三步：中间主视图点节点 · 或用下方动作 · 事件栏看结果。',
+          '先点中间的圆点，或用下面三个按钮。扩展离线时点它会提示怎么打开。',
           scanned
-            ? ' 离线项会提示如何启用（plugins.yml → apply.cmd → 重启）。'
-            : ' 装好 task-board / rewind 等后会出现在上方列表。'),
+            ? ' 一般要在插件设置里启用后，完全退出再开桌面。'
+            : ' 装好任务看板、对话回退等扩展后，会出现在上方。'),
         React.createElement('div', { className: 'ow-empty-cue-actions' },
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn primary',
             onClick: () => onIdea && onIdea(),
-          }, '打开 IDEA'),
+          }, '试一句话风格'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             onClick: () => onTasks && onTasks(),
@@ -1618,7 +1618,7 @@ window.__ModuleLoader__.load({
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             onClick: () => onRewind && onRewind(),
-          }, '回退'),
+          }, '对话回退'),
         ),
       )
     }
@@ -1754,8 +1754,8 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-bridge-health' },
         React.createElement('span', {
           className: 'ow-bridge-label',
-          title: '通路健康（诊断）：绿=API 可用 · 黄=降级 · 红=失败。不是功能按钮，点中间节点或动作页才干活。',
-        }, '通路健康'),
+          title: '连接诊断：绿=正常 · 黄=凑合 · 红=不通。这是状态灯，不是按钮；干活请点中间圆点或「动作」。',
+        }, '连接'),
         items.map(({ id, label }) => {
           const cap = health[id]
           const meta = describe(cap && cap.strategy)
@@ -1769,15 +1769,15 @@ window.__ModuleLoader__.load({
             key: id,
             className: `ow-bridge-chip ${cls}`,
             title: cap
-              ? `Bridge · ${id} · 探针 ${meta.labelZh}（${cap.strategy}）${outcomeHint}`
-              : `Bridge · ${id}`,
+              ? `${label} · ${meta.labelZh}（${cap.strategy}）${outcomeHint}`
+              : label,
           }, `${label}${suffix}`)
         }),
         React.createElement('span', {
           className: 'ow-bridge-summary',
           style: { fontSize: 9, color: '#94a3b8', marginLeft: 4, fontFamily: 'var(--ow-mono)' },
           title: surfaceTitle,
-        }, `${apiN}API · ${degN}降级 · ${badN}无`),
+        }, `${apiN}通 · ${degN}弱 · ${badN}无`),
         lastText && React.createElement('span', {
           className: 'ow-bridge-last',
           style: {
@@ -1824,16 +1824,16 @@ window.__ModuleLoader__.load({
         className: `ow-status-chip ${on ? 'ok' : 'off'}`,
       }, label)
       const chips = [
-        chip(`任务看板 ${integ.taskBoard ? 'ON' : 'OFF'}`, integ.taskBoard),
-        chip(`Rewind ${integ.rewind ? 'ON' : 'OFF'}`, integ.rewind),
-        chip(`记忆 ${integ.hindsightDaemon ? 'DAEMON' : (integ.hindsight ? 'ON' : 'OFF')}`, integ.hindsight),
-        chip(`插件 ${plug.filter((p) => p.online).length}/${plug.length}`, plug.some((p) => p.online)),
+        chip(`任务 ${integ.taskBoard ? '开' : '关'}`, integ.taskBoard),
+        chip(`回退 ${integ.rewind ? '开' : '关'}`, integ.rewind),
+        chip(`长期记忆 ${integ.hindsightDaemon ? '在线' : (integ.hindsight ? '开' : '关')}`, integ.hindsight),
+        chip(`扩展 ${plug.filter((p) => p.online).length}/${plug.length}`, plug.some((p) => p.online)),
       ]
       const core = (snapshot && snapshot.core) || {}
       if (core.sessionCount != null) chips.push(chip(`会话 ${core.sessionCount}`, core.sessionCount > 0))
       const fleet = (snapshot && snapshot.fleet && snapshot.fleet.counts) || null
       if (fleet) {
-        chips.push(chip(`舰队 ${fleet.running || 0} 运行`, (fleet.running || 0) > 0))
+        chips.push(chip(`进行中 ${fleet.running || 0}`, (fleet.running || 0) > 0))
       }
       if (mem.hint) {
         chips.push(chip(mem.hint, mem.meta && mem.meta.exact > 0))
@@ -2219,9 +2219,9 @@ window.__ModuleLoader__.load({
         { id: 'events', label: '事件' },
       ]
       const hints = {
-        status: '看现在稳不稳：健康度 · 通路 · 舰队 · 负载',
-        actions: '干活入口：插件 · 集成 · 回退 · 打开 IDEA',
-        events: '刚才发生了什么：记忆（本地/Hindsight）· 事件 · 消息',
+        status: '看现在稳不稳：健康 · 连接 · 进程 · 负载',
+        actions: '干活入口：扩展 · 更多 · 回退 · 试风格',
+        events: '刚才发生了什么：记忆 · 日志 · 消息',
       }
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'ow-side-tabs' },
@@ -3822,7 +3822,7 @@ window.__ModuleLoader__.load({
           React.createElement('summary', {
             className: 'ow-hub-title',
             style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 空间 · 第二屏 (OWIP 0.2)'),
+          }, '高级 · 第二屏（只读）'),
           React.createElement('div', { className: 'ow-hub-stat' },
             spaceOff
               ? 'space 未启用（open-world.yml → space.enabled）· 只读观察面关闭，下方签发已禁用'
@@ -3885,7 +3885,7 @@ window.__ModuleLoader__.load({
           React.createElement('summary', {
             className: 'ow-hub-title',
             style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 跨机远程 · REMOTE PAIR'),
+          }, '高级 · 跨机配对'),
           React.createElement('div', { className: 'ow-hub-stat' },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
@@ -4803,7 +4803,7 @@ window.__ModuleLoader__.load({
                     React.createElement(ShellGuide, null),
                     React.createElement(LeftSidebarTabs, { tab: leftTab, onTab: onLeftTab }),
                     leftTab === 'status' && React.createElement(React.Fragment, null,
-                      React.createElement(Panel, { titleZh: '系统状态', titleEn: 'SYSTEM STATUS', icon: 'diagnosis' },
+                      React.createElement(Panel, { titleZh: '现在怎样', titleEn: 'STATUS', icon: 'diagnosis' },
                         React.createElement('div', { className: 'ow-health-wrap' },
                           React.createElement('div', { className: 'ow-health-ring' },
                             React.createElement('svg', { viewBox: '0 0 120 120' },
@@ -4842,7 +4842,7 @@ window.__ModuleLoader__.load({
                           },
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: '进程舰队', titleEn: 'AGENT FLEET', icon: 'network' },
+                      React.createElement(Panel, { titleZh: '进行中', titleEn: 'RUNNING', icon: 'network' },
                         React.createElement(FleetPanel, {
                           fleet: snapshot && snapshot.fleet,
                           onAction: runBridge,
@@ -4853,7 +4853,7 @@ window.__ModuleLoader__.load({
                           className: 'ow-neural-btn',
                           style: { marginTop: 8 },
                           onClick: () => setEmbed('fleet'),
-                        }, '展开舰队'),
+                        }, '展开列表'),
                       ),
                       React.createElement(Panel, { titleZh: '实时负载', titleEn: 'REAL-TIME LOAD', icon: 'diagnosis', last: true },
                         loadRows.map((row) => React.createElement('div', { key: row.key, className: 'ow-load-item' },
@@ -4870,14 +4870,14 @@ window.__ModuleLoader__.load({
                         onTasks: () => runBridge({ type: 'task-board', label: '任务看板' }),
                         onRewind: () => runBridge({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
                       }),
-                      React.createElement(Panel, { titleZh: '插件接入', titleEn: 'PLUGINS', icon: 'config' },
+                      React.createElement(Panel, { titleZh: '扩展', titleEn: 'EXTENSIONS', icon: 'config' },
                         React.createElement(IntegrationsPanel, {
                           plugins,
                           onActivate: (p) => runBridge(pluginAction(p)),
                           onOffline: (p) => setToast(p.howToEnable || p.hint || `${p.title} 未在线`),
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: '集成枢纽', titleEn: 'INTEGRATIONS', icon: 'network' },
+                      React.createElement(Panel, { titleZh: '更多', titleEn: 'MORE', icon: 'network' },
                         React.createElement(IntegrationsHub, {
                           hub,
                           space: snapshot && snapshot.space,
@@ -4886,7 +4886,7 @@ window.__ModuleLoader__.load({
                           onToast: setToast,
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: '回退时间轴', titleEn: 'REWIND', icon: 'backup' },
+                      React.createElement(Panel, { titleZh: '对话回退', titleEn: 'REWIND', icon: 'backup' },
                         React.createElement(RewindTimelinePanel, {
                           rewind: snapshot && snapshot.rewind,
                           plugins,
@@ -4895,17 +4895,17 @@ window.__ModuleLoader__.load({
                           compact: true,
                         }),
                       ),
-                      React.createElement(Panel, { titleZh: 'IDEA', titleEn: 'PERSONA', icon: 'config', last: true },
+                      React.createElement(Panel, { titleZh: '说话风格', titleEn: 'PERSONA', icon: 'config', last: true },
                         React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#94a3b8', lineHeight: 1.55 } },
-                          React.createElement('div', null, '用人格前缀试一句话，再投递到官方聊天。'),
+                          React.createElement('div', null, '加一段人格前缀，再发到官方聊天里试一句。'),
                           React.createElement('div', { style: { marginTop: 4, color: '#64748b' } },
-                            '不是切换 Agent 预设；完整面板只在中区打开一次。'),
+                            '不会真的换掉 Agent；完整面板只在中间打开一次。'),
                           React.createElement('button', {
                             type: 'button',
                             className: 'ow-neural-btn',
                             style: { marginTop: 10 },
                             onClick: () => runBridge({ type: 'idea-panel' }),
-                          }, '打开 IDEA'),
+                          }, '打开风格面板'),
                         ),
                       ),
                     ),
@@ -5110,8 +5110,8 @@ window.__ModuleLoader__.load({
     function TriggerButton({ onOpen, unread }) {
       return React.createElement('div', { className: 'ow-trigger-wrap' },
         React.createElement('button', {
-          type: 'button', className: 'ow-trigger', title: `NEXORA · 开放世界 ${CLIENT_VER}`,
-          'aria-label': `Open World Command Center ${CLIENT_VER}`, onClick: onOpen,
+          type: 'button', className: 'ow-trigger', title: `开放世界 ${CLIENT_VER}`,
+          'aria-label': `开放世界控制台 ${CLIENT_VER}`, onClick: onOpen,
         }, '✦'),
         unread > 0 && React.createElement('span', { className: 'ow-unread-badge' }, unread > 9 ? '9+' : unread),
       )

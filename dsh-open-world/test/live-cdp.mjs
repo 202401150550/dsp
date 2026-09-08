@@ -94,7 +94,7 @@ const snap = snapPack.json || {}
   const ver = String(snap.framework?.version || '')
   const maj = Number((ver.match(/^(\d+)\./) || [])[1] || 0)
   const min = Number((ver.match(/^\d+\.(\d+)/) || [])[1] || 0)
-  ok(maj > 2 || (maj === 2 && min >= 51), `framework.version=${ver} (≥2.51)`)
+  ok(maj > 2 || (maj === 2 && min >= 52), `framework.version=${ver} (≥2.52)`)
 }
 ok(snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft',
   `framework.protocol=${snap.framework?.protocol}`)
@@ -179,7 +179,7 @@ const wmOk = /OPEN-WORLD\s+v2\.(5\d|[6-9]\d|\d{3,})/.test(ui.text)
 ok(wmOk || String(snap.framework?.version || '').startsWith('2.5'),
   `watermark/clientVer aligned (fw=${snap.framework?.version} clientVer=${snap.framework?.clientVer || '?'})`)
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.51；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.52；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

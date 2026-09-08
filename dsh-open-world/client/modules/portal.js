@@ -23,8 +23,8 @@ window.__ModuleLoader__.load({
     function TriggerButton({ onOpen, unread }) {
       return React.createElement('div', { className: 'ow-trigger-wrap' },
         React.createElement('button', {
-          type: 'button', className: 'ow-trigger', title: `NEXORA · 开放世界 ${CLIENT_VER}`,
-          'aria-label': `Open World Command Center ${CLIENT_VER}`, onClick: onOpen,
+          type: 'button', className: 'ow-trigger', title: `开放世界 ${CLIENT_VER}`,
+          'aria-label': `开放世界控制台 ${CLIENT_VER}`, onClick: onOpen,
         }, '✦'),
         unread > 0 && React.createElement('span', { className: 'ow-unread-badge' }, unread > 9 ? '9+' : unread),
       )

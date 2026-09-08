@@ -1,7 +1,7 @@
 # Open World 验收清单（CHECKLIST）
 
 > 配套 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · [SHELL_PLAN.md](./SHELL_PLAN.md) · [DEVELOPER.md](./DEVELOPER.md) · [OWIP_v0.1.md](./OWIP_v0.1.md)  
-> 最后更新：2026-09-08 · **运行时真源 v2.51 / owip/0.2-draft** · schema **8** · 神经 RRA **脚手架冻结（OW 适配器默认关）**
+> 最后更新：2026-09-08 · **运行时真源 v2.52 / owip/0.2-draft** · schema **8** · 神经 RRA **脚手架冻结（OW 适配器默认关）**
 
 ---
 
@@ -14,7 +14,7 @@ npm run desktop:cdp      # 完全退出 Desktop 后：带 --remote-debugging-por
 npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-cdp
 ```
 
-**冷启（2026-09-08 已绿）**：profile 包 **v2.51** · CDP live **19/19** · 水印/clientVer 对齐。
+**冷启（2026-09-08 已绿）**：profile 包对齐水印 · CDP live · 水印/clientVer 对齐。首屏文案 v2.52 再白话一轮。
 
 ---
 
@@ -120,11 +120,11 @@ C       token · 密封 outbox · SSE 第二屏   ✅（只读观察）
 
 | 文件 | 字段 | 应为 |
 |------|------|------|
-| dsh.plugin.json | version | `"2.51.0"` |
-| package.json | version | `"2.51.0"` |
-| index.js `buildFramework()` | version | `"2.51"` |
+| dsh.plugin.json | version | `"2.52.0"` |
+| package.json | version | `"2.52.0"` |
+| index.js `buildFramework()` | version | `"2.52"` |
 | index.js framework | protocol | `"owip/0.2-draft"`（space 开）或 `"owip/0.1"`（关） |
 | snapshot schema | `version` / `snapshotSchema` | `8` |
-| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.51'` + compose 哈希；源码占位 `dev` |
-| 界面水印 | — | `OPEN-WORLD v2.51 · <build>` |
+| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.52'` + compose 哈希；源码占位 `dev` |
+| 界面水印 | — | `OPEN-WORLD v2.52 · <build>` |
 | 大行李 | RRA | `rra-proto` 脚手架冻结；OW `rra.probe` 默认关；`implemented:false` |

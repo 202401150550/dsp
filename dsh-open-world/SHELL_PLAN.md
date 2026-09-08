@@ -1,6 +1,6 @@
 # Open World · 系统壳 / 控制台规划（v1）
 
-> 状态：**产品定稿方向** · 2026-09-08 · 运行时目标 **v2.51**  
+> 状态：**产品定稿方向** · 2026-09-08 · 运行时目标 **v2.52**  
 > 定位一句话：**DSH 的系统壳 / 控制台**——状态 · 动作 · 事件；不是聊天替代品，不是第二套 Agent，不是神经记忆产品。  
 > 配套：[SYSOP_v0.1.md](./SYSOP_v0.1.md) · [QUICKSTART.md](./QUICKSTART.md) · [OWIP_v0.1.md](./OWIP_v0.1.md) · [DEVELOPER.md](./DEVELOPER.md)
 
@@ -132,7 +132,7 @@ L1 宿主（只桥接）               DSH Harness / 各插件 API
 
 ## 7. 版本与验收
 
-- 版本水印 / `framework.version` / package：**2.51**  
+- 版本水印 / `framework.version` / package：**2.52**  
 - 验收：QUICKSTART 日常三步 + 本文件 §1  
 - 联调：[DEVELOPER.md](./DEVELOPER.md) · `npm run test:live` / `test:live-cdp`  
 - 回归：`npm test` · `npm run build:client`  
