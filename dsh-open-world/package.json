@@ -67,7 +67,8 @@
     "test:live-rra-cdp": "node test/live-rra-cdp.mjs",
     "build:client": "node scripts/compose-client.mjs",
     "check:client": "node scripts/check-client-fresh.mjs",
-    "desktop:cdp": "node scripts/launch-desktop-cdp.mjs"
+    "desktop:cdp": "node scripts/launch-desktop-cdp.mjs",
+    "test:plain-copy": "node test/verify-plain-copy-cdp.mjs"
   },
   "engines": {
     "node": ">=22"

@@ -46,7 +46,7 @@ window.__ModuleLoader__.load({
       analytics: { title: '工作区分析', titleEn: 'ANALYTICS' },
       monitor: { title: '系统监视', titleEn: 'MONITOR' },
       fleet: { title: '进程舰队', titleEn: 'FLEET' },
-      sidebar: { title: '侧栏 NEXORA', titleEn: 'SIDEBAR' },
+      sidebar: { title: '侧栏开放世界', titleEn: 'SIDEBAR' },
     }
 
     exports.ATI_PRESETS = [

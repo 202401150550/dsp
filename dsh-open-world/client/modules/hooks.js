@@ -216,7 +216,7 @@ window.__ModuleLoader__.load({
         const data = await postOpenWorldAction({
           action: 'share-snapshot',
           to: 'external',
-          body: 'NEXORA 拓扑快照',
+          body: '开放世界拓扑快照',
         })
         setToast(data.outboxFile ? `已导出到 outbox` : '快照已分享')
         const mb = await fetchMessages()

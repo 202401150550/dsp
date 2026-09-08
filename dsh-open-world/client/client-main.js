@@ -228,7 +228,7 @@ window.__ModuleLoader__.load({
             React.createElement('div', { className: 'ow-topbar-left' },
               React.createElement('div', { className: 'ow-brand' },
                 React.createElement('div', { className: 'ow-brand-logo' }),
-                React.createElement('span', { className: 'ow-brand-name' }, 'NEXORA'),
+                React.createElement('span', { className: 'ow-brand-name' }, '开放世界'),
                 social && React.createElement('span', { className: 'ow-social-tag' },
                   (snapshot && snapshot.framework && snapshot.framework.motto) || 'Open World · 指挥舱'),
               ),
@@ -310,7 +310,7 @@ window.__ModuleLoader__.load({
       if (ctx.betterSidebar && typeof ctx.betterSidebar.registerTab === 'function') {
         ctx.effect(() => ctx.betterSidebar.registerTab({
           id: 'open-world-summary',
-          title: 'NEXORA',
+          title: '开放世界',
           single: true,
           component: () => React.createElement(OpenWorldSummaryTab),
         }), 'dsh-open-world: better-sidebar-tab')

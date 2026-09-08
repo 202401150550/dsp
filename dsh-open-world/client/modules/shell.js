@@ -813,7 +813,7 @@ window.__ModuleLoader__.load({
     function SidebarSummaryView({ snapshot }) {
       const s = buildSidebarSummary(snapshot)
       return React.createElement('div', { className: 'ow-sidebar-summary', style: { padding: 12, fontSize: 12, color: '#7c8ea6' } },
-        React.createElement('div', { style: { color: '#5eead4', marginBottom: 8, letterSpacing: 1 } }, 'NEXORA 摘要'),
+        React.createElement('div', { style: { color: '#5eead4', marginBottom: 8, letterSpacing: 1 } }, '开放世界摘要'),
         React.createElement('div', null, `健康 ${s.health} · 会话 ${s.sessions}`),
         React.createElement('div', { style: { marginTop: 4 } }, `插件在线 ${s.plugins}`),
       )
@@ -839,7 +839,7 @@ window.__ModuleLoader__.load({
         React.createElement('button', {
           type: 'button',
           className: 'ow-close',
-          title: '关闭指挥舱',
+          title: '关闭开放世界',
           onClick: onClose,
         }, '返回聊天'),
       )
@@ -919,11 +919,11 @@ window.__ModuleLoader__.load({
         React.createElement('button', {
           type: 'button',
           className: 'ow-dock-chip',
-          title: '恢复 NEXORA 指挥舱',
+          title: '恢复开放世界',
           onClick: onRestore,
         },
           React.createElement('span', { className: 'ow-dock-mark' }, '✦'),
-          React.createElement('span', null, 'NEXORA'),
+          React.createElement('span', null, '开放世界'),
           unread > 0 && React.createElement('span', { className: 'ow-dock-unread' }, unread > 9 ? '9+' : unread),
         ),
         React.createElement('button', {
@@ -945,7 +945,7 @@ window.__ModuleLoader__.load({
       analytics: { title: '工作区分析 · 内嵌', en: 'ANALYTICS' },
       monitor: { title: '系统监视 · 内嵌', en: 'MONITOR' },
       fleet: { title: '进程舰队 · 内嵌', en: 'FLEET' },
-      sidebar: { title: '侧栏 NEXORA · 内嵌', en: 'SIDEBAR' },
+      sidebar: { title: '侧栏开放世界 · 内嵌', en: 'SIDEBAR' },
     }
 
     /** 壳内应用表面：ATI 节点 / 插件进入，不退出指挥舱 */
@@ -1143,7 +1143,7 @@ window.__ModuleLoader__.load({
         body = React.createElement(React.Fragment, null,
           React.createElement(SidebarSummaryView, { snapshot }),
           React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
-            'better-sidebar 的 NEXORA Tab 也可看摘要。'),
+            'better-sidebar 的开放世界 Tab 也可看摘要。'),
         )
       }
 
