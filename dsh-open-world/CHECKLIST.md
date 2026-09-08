@@ -14,7 +14,7 @@ npm run desktop:cdp      # 完全退出 Desktop 后：带 --remote-debugging-por
 npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-cdp
 ```
 
-**冷启（2026-09-08 已绿）**：profile 包对齐水印 · CDP live · 水印/clientVer 对齐。首屏文案 v2.52 再白话一轮。
+**冷启（2026-09-08 已绿）**：v2.52 profile + CDP live **19/19** · 水印/clientVer 对齐 · 首屏白话一轮。
 
 ---
 
