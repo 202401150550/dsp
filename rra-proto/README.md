@@ -1,8 +1,9 @@
 # rra-proto — 神经 RRA 原型（大行李）
 
-> **阶段：L6 / M4** · OW 可选 sketch 挂载（默认关）  
+> **阶段：脚手架冻结点（玩具已绿）** · OW 可选 sketch 挂载（默认关）  
 > **完整神经 RRA：`implemented: false` / `fullNeuralRra: false`**  
-> 契约：[`../dsh-open-world/RRA_NEURAL.md`](../dsh-open-world/RRA_NEURAL.md) · [`PRODUCTION.md`](./PRODUCTION.md)
+> **下一刀：真实解码器 checkpoint**；无则停新功能。  
+> 契约：[`../dsh-open-world/RRA_NEURAL.md`](../dsh-open-world/RRA_NEURAL.md) · **已绿表** [`PRODUCTION.md`](./PRODUCTION.md)
 
 ## 阶段
 
@@ -13,7 +14,8 @@
 | L6 / S1 冻结骨干适配（玩具尺度） | ✅ |
 | **L6 / M3 在线因果 + RoPE apply 草图** | ✅（正式 apply 仍抛错） |
 | **L6 / M4 OW 可选 sketch 挂载（默认关）** | **✅** |
-| 生产级真实 apply | 未开 |
+| M5-R / M5-D / M6-P / Desktop Live(CDP) | ✅（玩具 / 护栏 / 页内联调） |
+| 生产级真实 apply | **阻塞：checkpoint** |
 
 ## 命令
 

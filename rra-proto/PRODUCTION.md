@@ -1,12 +1,49 @@
 # 生产神经 RRA · L6 起（仓外）
 
-> 状态：**L6 / M4** · `implemented: false` · `fullNeuralRra: false`  
-> OW 仍 **probe-only**（可选 `rra.sketch`，默认关），禁止 `memory.neural=true`。
+> 状态：**脚手架冻结点（玩具尺度已绿）** · `implemented: false` · `fullNeuralRra: false`  
+> OW 仍 **probe-only**（可选 `rra.sketch`，默认关），禁止 `memory.neural=true`。  
+> **下一刀只接受：真实解码器 checkpoint（包 B）**；无 checkpoint 不再加玩具门禁 / 超参扫。
 
-## 目标
+## 已绿门禁表（验收一张）
 
-可训、可持久的压缩 KV 银行，最终支撑因果在线的 Reciprocal-Resolution Attention。  
-本阶段只交付**可证伪脚手架**，不宣称生产完成。
+| 命令 | 证明什么 | 诚实上限 |
+|------|----------|----------|
+| `npm test` | 原型回归 | 玩具 |
+| `gate:l6` / `m1` / `m2` | KV 银行存训载 / 热读 | ≠ 完整 RRA |
+| `gate:s1` | 冻结骨干适配形状 | dim=32 玩具 |
+| `gate:beat` | e1+范数差，召回≥0.80 vs 旧办法 | 合成任务，非 SOTA |
+| `gate:beat-eq` | 等范数+slotMod≥0.80 | 学的是 `trueEvery` 周期 |
+| `gate:beat-eq-noslot` | no-slotMod+imitate（别名 `beat-eq-content`） | e8 软顶~0.78；仍周期 |
+| `gate:true-random-ceiling` | `trueRandom` 后召回&lt;0.70 | 负结果：非任意位置检索 |
+| `gate:s1-weight` / `s1-sketch-bridge` | 权重闭环 / pooled 桥 | 非 RoPE 互通 |
+| `gate:m5-rope` / `m5-dim` | RoPE→readAt + dim 契约 | ≠ 真解码器 |
+| `gate:decoder-pack` | 权重包结构可开 | `activateProductionApply` 恒拒 |
+| `gate:m3` / `m4` | 在线因果草图 / OW 可选挂载 | 正式 apply 仍抛错 |
+| OW `npm test` | 壳层 + 适配器诚实 | — |
+| OW `test:live-rra` | Desktop 页内联调（CDP） | 进程外 HTTP 常 403 |
+
+复跑（原型）：
+
+```powershell
+cd D:\dsp\rra-proto
+npm test
+npm run gate:beat
+npm run gate:beat-eq
+npm run gate:beat-eq-noslot
+npm run gate:true-random-ceiling
+npm run gate:m5-rope
+npm run gate:m5-dim
+npm run gate:decoder-pack
+```
+
+复跑（OW / 真机）：
+
+```powershell
+cd D:\dsp\dsh-open-world
+npm test
+# Desktop 加 --remote-debugging-port=9333
+npm run test:live-rra
+```
 
 ## 里程碑
 
@@ -23,6 +60,7 @@
 | **M5-R** | RoPE rope-then-pool 银行 → `applyRraSketch(readAt)` + 权重闭环 + dim32→64→128 阶梯 | ✅（玩具；`gate:m5-rope`；≠ 真实解码器） |
 | **M5-D** | 压缩权重 dim/协议契约护栏 | ✅（`gate:m5-dim`；拒假生产协议；≠ 真解码器） |
 | **M6-P** | 解码器权重包契约（结构可开 / apply 仍拒） | ✅（`gate:decoder-pack`；无真实 checkpoint） |
+| **Live** | Desktop+OW 真机联调（CDP 页内） | ✅（`dsh-open-world` `test:live-rra`；进程外 HTTP 常 403） |
 
 ## M4 是什么、不是什么
 
@@ -39,7 +77,7 @@
 - **是**：论文《面向因果 Transformer 的互易分辨率记忆》6.2「阶段 1：冻结骨干网络的适配」的**形状完整**脚手架。
 - **不是**：真实模型实验。骨干是 dim=32 的玩具。**S1 全绿 ≠ 神经 RRA 有效**。
 
-## 命令
+## 命令（全量）
 
 ```powershell
 cd D:\dsp\rra-proto
@@ -59,6 +97,7 @@ npm run gate:m5-rope
 npm run gate:m5-dim
 npm run gate:decoder-pack
 npm run gate:m3
+npm run gate:m4
 ```
 
 ## 对打（本机可证明的「超过旧办法」）
@@ -130,3 +169,4 @@ npm run gate:decoder-pack
 - 不把壳层 RRM `falsify` 说成神经质量
 - M2 热读有界 ≠ 胜过精确窗口 / 完整 RRA
 - S1/M3 玩具尺度结果**不得**表述为与真实模型 / SOTA 的比较
+- **冻结**：无真实 checkpoint 时，不新增玩具超参门禁 / dim 冒烟 / 假 decoder

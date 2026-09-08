@@ -101,7 +101,19 @@ L1–L6/M4 原型 ──► dsp/rra-proto + OW 可选探测/草图适配器
 
 ---
 
-## 7. 下一刀（生产）
+## 7. Desktop 真机联调（已通 · CDP）
 
-仓外 `rra-proto`：**M4 已开**。玩具对打 + `gate:m5-dim` + `gate:decoder-pack`（权重包结构可开、`activateProductionApply` 恒拒）。OW 可选 `rra.compress_weights`。详见 [`PRODUCTION.md`](../rra-proto/PRODUCTION.md)。**阻塞项：真实解码器 checkpoint**；完成前 `applyReciprocalResolutionAttention` 仍抛错。  
+进程外访问 Desktop `127.0.0.1:<port>` 常恒 **403**（连接/Host 围栏）；**Electron 页内同源 fetch 可用**。
+
+```powershell
+# Desktop 启动时加：--remote-debugging-port=9333
+npm run test:live-rra          # 外网失败则自动落到 CDP
+npm run test:live-rra-cdp      # 直接页内：snapshot / rra probe·sketch + DOM 诚实 + compress_weights 适配器
+```
+
+验收口径：`neural` / `implemented` / `fullNeuralRra` 非 true；DOM 无「神经记忆已启用」；toy `compress_weights` 可加载仍诚实。
+
+## 8. 下一刀（生产）
+
+仓外 `rra-proto`：**玩具脚手架已冻结**（见 [`PRODUCTION.md` 已绿门禁表](../rra-proto/PRODUCTION.md)）。`gate:m5-dim` + `gate:decoder-pack` 已钉护栏。OW 可选 `rra.compress_weights`。**阻塞项：真实解码器 checkpoint**；完成前 `applyReciprocalResolutionAttention` 仍抛错；无 checkpoint 不再加玩具门禁。  
 OW 保持 probe-only；sketch / compress_weights ≠ 启用神经记忆。

@@ -62,6 +62,8 @@
     "test:space": "node test/space-auth.mjs",
     "test:layers": "node test/action-layers.mjs",
     "test:live": "node test/live.mjs",
+    "test:live-rra": "node test/live-rra.mjs",
+    "test:live-rra-cdp": "node test/live-rra-cdp.mjs",
     "build:client": "node scripts/compose-client.mjs",
     "check:client": "node scripts/check-client-fresh.mjs"
   },

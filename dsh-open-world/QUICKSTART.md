@@ -111,6 +111,7 @@ cd D:\dsp\dsh-open-world
 npm test                 # smoke + bridge + … 
 npm run build:client     # 改 client/ 后必跑
 npm run test:live        # 需 DSH Desktop 已启动
+npm run test:live-rra    # RRA 真机；外网 403 时自动 CDP（Desktop 需 --remote-debugging-port=9333）
 ```
 
 更多协议见 [OWIP_v0.1.md](./OWIP_v0.1.md)；神经契约见 [RRA_NEURAL.md](./RRA_NEURAL.md)。

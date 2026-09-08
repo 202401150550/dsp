@@ -2,10 +2,20 @@
 /**
  * DSH Desktop 真实联调：Open World RRA 适配器（probe / sketch）
  * 需已启动 DSH Desktop，且 dsh-open-world 已挂载。
+ *
+ * Desktop 2.x 对进程外 HTTP 常恒 403（Host/连接围栏）；页内同源可用。
+ * 若本脚本找不到 OW 或全 403，改用：
+ *   Desktop 加 --remote-debugging-port=9333
+ *   OW_CDP_URL=http://127.0.0.1:9333 node test/live-rra-cdp.mjs
  */
 import { connect } from 'node:net'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 let BASE = process.env.OW_LIVE_URL?.replace(/\/$/, '') || ''
+const CDP = process.env.OW_CDP_URL?.replace(/\/$/, '') || ''
+const __dir = dirname(fileURLToPath(import.meta.url))
 
 async function probeOpenWorld(port) {
   const okTcp = await new Promise((resolve) => {
@@ -60,16 +70,42 @@ function ok(cond, msg) {
 
 async function get(path) {
   const res = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(8000) })
-  const json = await res.json().catch(() => ({}))
-  return { res, json }
+  const text = await res.text()
+  let json = {}
+  try { json = JSON.parse(text) } catch { /* plain text 403 etc */ }
+  return { res, json, text }
 }
 
 console.log('\n=== DSH LIVE · Open World RRA ===\n')
 
-const found = await findPort()
+async function tryCdpFallback(reason) {
+  const cdp = CDP || 'http://127.0.0.1:9333'
+  console.error(`⚠ ${reason}`)
+  console.error(`  → 尝试 CDP 页内联调 ${cdp}`)
+  const script = join(__dir, 'live-rra-cdp.mjs')
+  const r = spawnSync(process.execPath, [script], {
+    env: { ...process.env, OW_CDP_URL: cdp },
+    stdio: 'inherit',
+    windowsHide: true,
+  })
+  process.exit(r.status == null ? 2 : r.status)
+}
+
+let found = await findPort()
+if (found) {
+  // 校验：进程外 Desktop 常恒 403，不能只信端口探测/OW_LIVE_URL
+  try {
+    const probe = await fetch(`${found}/api/open-world/snapshot`, { signal: AbortSignal.timeout(2000) })
+    if (!probe.ok) {
+      found = null
+      await tryCdpFallback(`HTTP ${probe.status} from ${found}（进程外不可用）`)
+    }
+  } catch {
+    found = null
+  }
+}
 if (!found) {
-  console.error('✗ DSH Open World 不可达 — 请启动 DSH Desktop 并确认开放世界已加载')
-  process.exit(2)
+  await tryCdpFallback('DSH Open World 外网 HTTP 不可达（常见：Desktop 对进程外恒 403）')
 }
 BASE = found
 console.log(`Base: ${BASE}\n`)

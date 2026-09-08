@@ -29,6 +29,8 @@ DSH 上的 **系统壳**（SYSOP + OWIP）：像任务管理器 + 桌面，聚�
 - 侧栏 / 输入框 **✦** 按钮
 - 水印：`OPEN-WORLD v2.46`（须与 `framework.version` 一致）
 - 神经 RRA：L5 适配器默认关（`rra.probe: false`）；见 [RRA_NEURAL.md](./RRA_NEURAL.md) · [`../rra-proto`](../rra-proto)
+- 真机 RRA：`npm run test:live-rra`（Desktop 进程外常 403 → 自动 CDP；需 `--remote-debugging-port=9333`）
+- 已绿门禁总表：[`../rra-proto/PRODUCTION.md`](../rra-proto/PRODUCTION.md)（脚手架冻结；下一刀要真实 checkpoint）
 - Snapshot schema：`version: 8`；Host/Bridge 分层见 `framework.actionLayers`
 - Client 模块：`styles` / `runtime` / `app-layout`（左中右栏）已抽出；编排仍在 `client-main`
 - 视图：ATI 统一场 / IDEA Lab / Monitor JSON / 拓扑卡片 / 壳内应用表面（神经网络·星系整页已移除）
