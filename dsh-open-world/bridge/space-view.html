@@ -81,7 +81,7 @@
     </div>
     <section class="card" id="peerPanel" hidden>
       <h2>受限回写（peer）</h2>
-      <div class="sub">send-message / mark-read / memory-search · 禁止 pair / 令牌 / 注入</div>
+      <div class="sub">send-message / mark-read / memory-search / world-state-get · 禁止 pair / 令牌 / 注入</div>
       <div class="peer-row">
         <input id="peerMsg" maxlength="280" placeholder="短消息（≤280）…" />
         <button type="button" id="peerSend">发送</button>
@@ -90,6 +90,7 @@
       <div class="peer-row" style="margin-top:8px">
         <input id="peerMemQ" maxlength="120" placeholder="记忆检索（只读）…" />
         <button type="button" id="peerMem">检索</button>
+        <button type="button" id="peerWorld">读 world-state</button>
       </div>
       <div class="sub" id="peerMemOut" style="margin-top:6px;white-space:pre-wrap"></div>
     </section>
@@ -216,6 +217,24 @@
       el('peerMemOut').textContent = Array.isArray(hits) && hits.length
         ? hits.slice(0, 5).map((h, i) => (i + 1) + '. ' + (h.text || h.body || h.title || JSON.stringify(h))).join('\n')
         : (note || JSON.stringify(data || {}).slice(0, 240) || '无命中')
+      showErr('')
+    } catch (err) {
+      el('peerMemOut').textContent = ''
+      showErr(String(err.message || err))
+    }
+  }
+  el('peerWorld').onclick = async () => {
+    if (!peerMode) return
+    try {
+      const data = await apiFetch('/api/open-world/space/peer-action', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'world-state-get' }),
+      })
+      const world = data && data.world
+      el('peerMemOut').textContent = world
+        ? JSON.stringify(world, null, 0).slice(0, 480)
+        : (JSON.stringify(data || {}).slice(0, 480) || '无 world-state')
       showErr('')
     } catch (err) {
       el('peerMemOut').textContent = ''

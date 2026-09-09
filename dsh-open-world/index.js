@@ -1510,7 +1510,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.73'
+    return '2.74'
   }
 }
 
@@ -3012,7 +3012,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.73 online', `${SPACE_PROTOCOL} · 世界包接口预留 · RRA 适配器默认关`)
+  pushEvent('system', 'Open World v2.74 online', `${SPACE_PROTOCOL} · peer+world-state-get · RRA 适配器默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)

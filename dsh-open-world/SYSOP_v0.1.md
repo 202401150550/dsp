@@ -1,10 +1,10 @@
 # Open World 系统规划 · SYSOP v0.1
 
 > 状态：规划 + 实现对照 · 2026-09-09  
-> 运行时：**v2.70** · 协议默认 **owip/0.3-draft** · **产品定稿**：[SHELL_PLAN.md](./SHELL_PLAN.md) · **进世界**：[WORLD_PLAN.md](./WORLD_PLAN.md) · **开发者**：[DEVELOPER.md](./DEVELOPER.md)  
+> 运行时：**v2.74** · 协议默认 **owip/0.3-draft** · **产品定稿**：[SHELL_PLAN.md](./SHELL_PLAN.md) · **进世界**：[WORLD_PLAN.md](./WORLD_PLAN.md) · **开发者**：[DEVELOPER.md](./DEVELOPER.md)  
 > 配套：[OWIP_v0.1.md](./OWIP_v0.1.md) · [CHECKLIST.md](./CHECKLIST.md) · [QUICKSTART.md](./QUICKSTART.md)  
 > 一句话定位：**Open World 是 DSH 这台机器上的「系统壳 / 控制台」——不是聊天替代品，也不是第二套 DSH。**  
-> A→B→C、联动改革、**进世界阶段 0–1（任务）** 已落地；神经 RRA 大行李后置。
+> A→B→C、联动改革、**进世界 0–4 + peer 白名单至 world-state-get** 已落地；神经 RRA 大行李后置。
 
 ---
 
@@ -234,9 +234,9 @@
 
 ## 8. 下一步（征求主人确认后执行）
 
-**S1–S3 / A–C / RRA L0–L6 脚手架已齐（2026-09）**。后续仅在主人点名时做：
+**WORLD_PLAN 阶段 0–4 已齐（v2.73）· peer 白名单至 `world-state-get`（v2.74）**。后续仅在主人点名时做：
 
-1. **冷启验收**：~~Desktop 开着跑 `npm run test:live`~~ **已绿**（`desktop:cdp` + CDP；fw/clientVer **v2.60**）
-2. **生产神经 RRA M1+**：`rra-proto` pooled/raw 快照与续训（见 `PRODUCTION.md`）
-3. **跨机扩展**：Space peer 白名单可加动作（须改 `PEER_ACTION_ALLOWLIST` + 单测）；**不**合并 Pair
+1. **peer 再 +1**：极窄「请求本机白名单动作」（须单测 + 审计）；**不**合并 Pair
+2. **真实元宇宙世界包**：在 `worlds.packs.all-in-all: true` 之上落地安装物（现仅接口预留）
+3. **生产神经 RRA M1+**：`rra-proto` pooled/raw 快照与续训（见 `PRODUCTION.md`）；**不进 60% 路径**
 4. **S4（默认不做）**：新 ATI 整页主题 / 第二套对话 UI

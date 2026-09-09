@@ -69,7 +69,7 @@ L1 宿主（只桥接）               DSH Harness / 各插件 API
 | 通道 | 给谁 | 规则 |
 |------|------|------|
 | 同源 cookie | Desktop 壳内 | 默认（loopback-shell） |
-| Space Bearer | 第二屏 / LAN | 默认只读；显式 peer：`send-message`/`mark-read`/`memory-search` |
+| Space Bearer | 第二屏 / LAN | 默认只读；显式 peer：`send-message`/`mark-read`/`memory-search`/`world-state-get` |
 | Pair / remote-web-ui | 手机控工作区 | 独立 Host（`/m`）；OW 只代理状态与入口 |
 | 进程外裸 HTTP | 脚本 | **不承诺**（Desktop 常 403）；联调走 CDP |
 
