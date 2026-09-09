@@ -15,3 +15,8 @@
 ## 宿主工具
 
 - 仅当用户明确要求列出宿主、预演或读写 dsp 白名单文件时，才用 `dsh_host_*`。
+
+## 架构规划
+
+- 全工作区目标与阶段真源：`ARCHITECTURE_PLAN.md`（v2.77 口径）。**先规划、再行动**；Phase 0 勾选清单未完成前不加新能力。
+- Open World 壳产品真源：`dsh-open-world/SYSOP_v0.1.md` · `CHECKLIST.md`。
