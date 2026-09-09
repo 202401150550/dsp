@@ -183,22 +183,29 @@ const ui = await evalJson(`(async () => {
     }
   }
   const root = shellRoot()
-  const rootText = root?.innerText || ''
-  const tabs = root ? [...root.querySelectorAll('.ow-side-tab')] : []
-  const actionsTab = tabs.find((t) => /动作/.test(t.innerText || ''))
-  if (actionsTab) {
-    actionsTab.click()
-    await sleep(500)
+  const tabs = () => [...(shellRoot()?.querySelectorAll('.ow-side-tab') || [])]
+  const clickTab = async (re) => {
+    const t = tabs().find((el) => re.test(el.innerText || ''))
+    if (t) {
+      t.click()
+      await sleep(500)
+    }
   }
-    const text = shellRoot()?.innerText || document.body?.innerText || ''
+  // Hub cards live under 动作；进世界地图在 状态
+  await clickTab(/动作/)
+  const actionsText = shellRoot()?.innerText || document.body?.innerText || ''
+  await clickTab(/状态/)
+  const statusText = shellRoot()?.innerText || document.body?.innerText || ''
+  const text = statusText
   return {
     text,
     title: document.title || '',
     wm: /OPEN-WORLD\\s+v2\\.(5\\d|[6-9]\\d|\\d{3,})/.test(text),
-    spaceCard: /观察\\/回写|签发只读令牌/.test(text),
-    pairCard: /手机控工作区|生成配对码|停止 Pair/.test(text),
-    peerBtn: /签发可回写/.test(text),
-    enterCta: /进入\\s*·\\s*任务|进入 · 任务/.test(text) || !!document.querySelector('[data-ow-enter-world]'),
+    spaceCard: /观察\\/回写|签发只读令牌/.test(actionsText),
+    pairCard: /手机控工作区|生成配对码|停止 Pair/.test(actionsText),
+    peerBtn: /签发可回写/.test(actionsText),
+    enterCta: /进入\\s*·\\s*任务|进入 · 任务/.test(statusText) || !!document.querySelector('[data-ow-enter-world]'),
+    worldMap: !!document.querySelector('[data-ow-world-map]') || !!document.querySelector('[data-ow-world=\"rewind\"]'),
     worlds: null,
   }
 })()`)
@@ -221,8 +228,9 @@ ok(ui.spaceCard === true, 'hub Space dual-card visible')
 ok(ui.pairCard === true, 'hub Pair dual-card visible')
 ok(ui.peerBtn === true, 'hub peer issue button visible')
 ok(ui.enterCta === true, 'EnterWorldCta visible on status')
+ok(ui.worldMap === true, 'world map present')
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.70；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.71；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

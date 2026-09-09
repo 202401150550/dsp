@@ -1,4 +1,4 @@
-// CLIENT_BUILD 7569f04f8f 2026-09-09T07:31:55.703Z v2.70
+// CLIENT_BUILD 2c65952be7 2026-09-09T08:19:12.532Z v2.71
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -838,10 +838,10 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.70'
+    exports.CLIENT_VER = 'v2.71'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '7569f04f8f'
-    exports.CLIENT_BUILT_AT = '2026-09-09T07:31:55.703Z'
+    exports.CLIENT_BUILD = '2c65952be7'
+    exports.CLIENT_BUILT_AT = '2026-09-09T08:19:12.532Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -1639,17 +1639,35 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** 60% 主路径：一键进入默认世界（通常任务看板） */
+    /** 60% 主路径：世界地图（任务 / 回退）+ 默认一键进入 */
     function EnterWorldCta({ worlds, onEnter, onOffline }) {
-      const pick = (worlds && (worlds.pick || worlds.default)) || null
-      const cta = (pick && pick.cta) || '进入 · 任务'
+      const nodes = (worlds && worlds.nodes) || []
+      const pick = (worlds && (worlds.pick || worlds.default))
+        || nodes.find((n) => n.id === 'tasks')
+        || null
+      const ordered = nodes.length
+        ? nodes.slice().sort((a, b) => (a.cost || 99) - (b.cost || 99))
+        : [
+          { id: 'tasks', title: '任务', panel: 'task-board', cta: '进入 · 任务', enterable: true, online: true },
+          { id: 'rewind', title: '回退', panel: 'rewind', cta: '进入 · 回退', enterable: false, online: false },
+        ]
       const hint = pick && pick.enterable
-        ? (pick.defaultAction || '进去办一件真事，再回来')
-        : ((pick && pick.howToEnable) || '任务扩展未在线时，点这里会提示怎么打开')
-      const disabled = !!(pick && pick.howToEnable && !pick.enterable && pick.online === false)
+        ? `主路径：${pick.cta || '进入'} · ${pick.defaultAction || '办一件真事再回来'}`
+        : ((pick && pick.howToEnable) || '扩展未在线时点卡片会提示怎么打开')
+
+      const enterOne = (w) => {
+        if (!w) return
+        if (!w.enterable) {
+          onOffline && onOffline(w)
+          return
+        }
+        onEnter && onEnter(w)
+      }
+
       return React.createElement('div', {
         className: 'ow-enter-world',
         'data-ow-enter-world': (pick && pick.id) || 'tasks',
+        'data-ow-world-map': '1',
         style: {
           marginTop: 12,
           padding: '10px 12px',
@@ -1661,22 +1679,49 @@ window.__ModuleLoader__.load({
         React.createElement('div', {
           style: { fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.45 },
         }, hint),
+        React.createElement('div', {
+          className: 'ow-world-map',
+          style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
+        },
+          ordered.map((w) => React.createElement('button', {
+            key: w.id,
+            type: 'button',
+            className: `ow-msg-btn ${w.enterable ? '' : 'ow-world-offline'}`,
+            'data-ow-world': w.id,
+            'data-enterable': w.enterable ? '1' : '0',
+            style: {
+              flex: '1 1 88px',
+              padding: '8px 10px',
+              fontSize: 12,
+              opacity: w.enterable ? 1 : 0.55,
+              borderColor: w.enterable ? undefined : 'rgba(251,191,36,.35)',
+              color: w.enterable ? undefined : '#fbbf24',
+            },
+            title: w.enterable
+              ? (w.cta || w.titleFull || w.title)
+              : (w.howToEnable || `${w.title} 未在线`),
+            onClick: () => enterOne(w),
+          }, w.enterable ? (w.title || w.id) : `${w.title || w.id} · 未启用`)),
+          React.createElement('button', {
+            key: 'connect',
+            type: 'button',
+            className: 'ow-msg-btn',
+            'data-ow-world': 'connect',
+            style: { flex: '1 1 88px', padding: '8px 10px', fontSize: 12, opacity: 0.85 },
+            title: '跨机连接在动作页「更多」',
+            onClick: () => onOffline && onOffline({
+              id: 'connect',
+              howToEnable: '跨机（Space / Pair）在左栏「动作 → 更多」；默认不进主路径',
+            }),
+          }, '连接'),
+        ),
         React.createElement('button', {
           type: 'button',
           className: 'ow-msg-btn primary',
           style: { width: '100%', padding: '10px 12px', fontSize: 14 },
-          title: pick && pick.howToEnable ? pick.howToEnable : cta,
-          onClick: () => {
-            if (pick && !pick.enterable) {
-              onOffline && onOffline(pick)
-              return
-            }
-            onEnter && onEnter(pick || { id: 'tasks', panel: 'task-board', titleFull: '任务世界' })
-          },
-        }, cta),
-        disabled && React.createElement('div', {
-          style: { marginTop: 6, fontSize: 10, color: '#fbbf24' },
-        }, pick.howToEnable || '扩展未启用'),
+          title: pick && !pick.enterable ? (pick.howToEnable || '') : ((pick && pick.cta) || '进入 · 任务'),
+          onClick: () => enterOne(pick || ordered[0]),
+        }, (pick && pick.cta) || '进入 · 任务'),
       )
     }
 
@@ -2313,7 +2358,7 @@ window.__ModuleLoader__.load({
       ]
       const hints = {
         status: '看现在稳不稳：健康 · 连接 · 进程 · 负载',
-        actions: '干活入口：进入任务世界 · 扩展 · 回退',
+        actions: '干活入口：任务 / 回退世界 · 扩展 · 连接',
         events: '刚才发生了什么：记忆 · 日志 · 消息',
       }
       return React.createElement(React.Fragment, null,
@@ -2331,8 +2376,8 @@ window.__ModuleLoader__.load({
 
     function pluginAction(plugin) {
       const map = {
-        'task-board': { type: 'embed', label: '进入任务看板', panel: 'task-board' },
-        rewind: { type: 'embed', label: '进入回退时间轴', panel: 'rewind' },
+        'task-board': { type: 'enter-world', worldId: 'tasks', panel: 'task-board', label: '已进入任务世界' },
+        rewind: { type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' },
         ssh: { type: 'embed', label: '进入 SSH', panel: 'ssh' },
         market: { type: 'embed', label: '进入插件市场', panel: 'market' },
         'workspace-analyzer': { type: 'embed', label: '进入工作区分析', panel: 'analytics' },
@@ -2354,7 +2399,7 @@ window.__ModuleLoader__.load({
         'community-plugins': { type: 'embed', label: '进入插件市场', panel: 'market' },
         ssh: { type: 'embed', label: '进入 SSH', panel: 'ssh' },
         'remote-web-ui': { type: 'embed', label: '进入移动端远程', panel: 'remote' },
-        'task-collab': { type: 'embed', label: '进入任务看板', panel: 'task-board' },
+        'task-collab': { type: 'enter-world', worldId: 'tasks', panel: 'task-board', label: '已进入任务世界' },
       }
       return map[channelId] || { type: 'embed', label: channelId, panel: 'sidebar' }
     }
@@ -4159,7 +4204,7 @@ window.__ModuleLoader__.load({
           React.createElement('div', { className: 'ow-rewind-actions', style: { marginTop: 8 } },
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn primary',
-              onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+              onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
             }, '展开回退'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
@@ -4174,7 +4219,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'ow-rewind-actions' },
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn primary',
-            onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+            onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
           }, '壳内时间轴'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
@@ -4540,22 +4585,39 @@ window.__ModuleLoader__.load({
               if (!node || id === 'core') return null
               const layout = NODE_LAYOUT[id] || { color: node.color || '#5eead4', en: id }
               const sel = selected === id
+              const offline = node.status === 'offline' || node.status === 'missing'
+              const stroke = offline ? '#64748b' : layout.color
+              const fill = offline ? '#33415566' : `${layout.color}44`
               return React.createElement('g', {
-                key: id, className: 'ow-nn-node',
+                key: id,
+                className: `ow-nn-node${offline ? ' ow-nn-offline' : ''}`,
+                opacity: offline ? 0.48 : 1,
                 onClick: () => onSelect(id),
-                onDoubleClick: (ev) => { ev.stopPropagation(); node.action && onActivate(node.action) },
+                onDoubleClick: (ev) => {
+                  ev.stopPropagation()
+                  if (!node.action) return
+                  if (offline) {
+                    // 灰态：只选中，由详情卡「如何启用」处理；禁止空壳进场
+                    onSelect(id)
+                    return
+                  }
+                  onActivate(node.action)
+                },
               },
                 React.createElement('circle', {
                   cx: pos.x, cy: pos.y, r: sel ? 14 : 11,
-                  fill: `${layout.color}44`, stroke: layout.color, strokeWidth: sel ? 2.5 : 1,
-                  filter: sel ? 'url(#owAtiGlow)' : undefined,
+                  fill, stroke, strokeWidth: sel ? 2.5 : 1,
+                  strokeDasharray: offline ? '3 3' : undefined,
+                  filter: sel && !offline ? 'url(#owAtiGlow)' : undefined,
                 }),
                 React.createElement('text', {
-                  x: pos.x, y: pos.y - 18, textAnchor: 'middle', fill: '#e6f1ff', fontSize: 9,
+                  x: pos.x, y: pos.y - 18, textAnchor: 'middle',
+                  fill: offline ? '#94a3b8' : '#e6f1ff', fontSize: 9,
                 }, NODE_ZH[id] || node.label),
                 React.createElement('text', {
                   x: pos.x, y: pos.y + 24, textAnchor: 'middle', className: 'ow-ati-metric',
-                }, `${node.metric}%`),
+                  fill: offline ? '#64748b' : undefined,
+                }, offline ? '未启用' : `${node.metric}%`),
               )
             }),
           ),
@@ -5042,8 +5104,8 @@ window.__ModuleLoader__.load({
                       React.createElement(ActionsEmptyState, {
                         plugins,
                         onIdea: () => runBridge({ type: 'idea-panel' }),
-                        onTasks: () => runBridge({ type: 'task-board', label: '任务看板' }),
-                        onRewind: () => runBridge({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+                        onTasks: () => runBridge({ type: 'enter-world', worldId: 'tasks', panel: 'task-board', label: '已进入任务世界' }),
+                        onRewind: () => runBridge({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
                       }),
                       React.createElement(Panel, { titleZh: '扩展', titleEn: 'EXTENSIONS', icon: 'config' },
                         React.createElement(IntegrationsPanel, {

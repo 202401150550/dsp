@@ -522,7 +522,7 @@ window.__ModuleLoader__.load({
           React.createElement('div', { className: 'ow-rewind-actions', style: { marginTop: 8 } },
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn primary',
-              onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+              onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
             }, '展开回退'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
@@ -537,7 +537,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'ow-rewind-actions' },
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn primary',
-            onClick: () => onAction({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+            onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
           }, '壳内时间轴'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',

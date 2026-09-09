@@ -1,9 +1,9 @@
 # Open World · 「进世界」分层总规划（WORLD_PLAN）
 
 > 状态：**规划定稿草案** · 2026-09-09  
-> 前提：运行时 **v2.70** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
+> 前提：运行时 **v2.71** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
 > 主航道（冻结）：**先进一个世界（体验）→ 再扩 peer 写（跨机）→ 元宇宙素材以后再说**  
-> **阶段 0–1 状态：已落地**（CapabilityGraph · 进入·任务 · `world-enter`/`leave`）
+> **阶段 0–2 状态：已落地**（CapabilityGraph · 任务/回退世界 · 节点灰态）
 
 ---
 

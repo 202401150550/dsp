@@ -216,22 +216,39 @@ window.__ModuleLoader__.load({
               if (!node || id === 'core') return null
               const layout = NODE_LAYOUT[id] || { color: node.color || '#5eead4', en: id }
               const sel = selected === id
+              const offline = node.status === 'offline' || node.status === 'missing'
+              const stroke = offline ? '#64748b' : layout.color
+              const fill = offline ? '#33415566' : `${layout.color}44`
               return React.createElement('g', {
-                key: id, className: 'ow-nn-node',
+                key: id,
+                className: `ow-nn-node${offline ? ' ow-nn-offline' : ''}`,
+                opacity: offline ? 0.48 : 1,
                 onClick: () => onSelect(id),
-                onDoubleClick: (ev) => { ev.stopPropagation(); node.action && onActivate(node.action) },
+                onDoubleClick: (ev) => {
+                  ev.stopPropagation()
+                  if (!node.action) return
+                  if (offline) {
+                    // 灰态：只选中，由详情卡「如何启用」处理；禁止空壳进场
+                    onSelect(id)
+                    return
+                  }
+                  onActivate(node.action)
+                },
               },
                 React.createElement('circle', {
                   cx: pos.x, cy: pos.y, r: sel ? 14 : 11,
-                  fill: `${layout.color}44`, stroke: layout.color, strokeWidth: sel ? 2.5 : 1,
-                  filter: sel ? 'url(#owAtiGlow)' : undefined,
+                  fill, stroke, strokeWidth: sel ? 2.5 : 1,
+                  strokeDasharray: offline ? '3 3' : undefined,
+                  filter: sel && !offline ? 'url(#owAtiGlow)' : undefined,
                 }),
                 React.createElement('text', {
-                  x: pos.x, y: pos.y - 18, textAnchor: 'middle', fill: '#e6f1ff', fontSize: 9,
+                  x: pos.x, y: pos.y - 18, textAnchor: 'middle',
+                  fill: offline ? '#94a3b8' : '#e6f1ff', fontSize: 9,
                 }, NODE_ZH[id] || node.label),
                 React.createElement('text', {
                   x: pos.x, y: pos.y + 24, textAnchor: 'middle', className: 'ow-ati-metric',
-                }, `${node.metric}%`),
+                  fill: offline ? '#64748b' : undefined,
+                }, offline ? '未启用' : `${node.metric}%`),
               )
             }),
           ),

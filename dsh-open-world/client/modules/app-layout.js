@@ -116,8 +116,8 @@ window.__ModuleLoader__.load({
                       React.createElement(ActionsEmptyState, {
                         plugins,
                         onIdea: () => runBridge({ type: 'idea-panel' }),
-                        onTasks: () => runBridge({ type: 'task-board', label: '任务看板' }),
-                        onRewind: () => runBridge({ type: 'embed', panel: 'rewind', label: '回退时间轴' }),
+                        onTasks: () => runBridge({ type: 'enter-world', worldId: 'tasks', panel: 'task-board', label: '已进入任务世界' }),
+                        onRewind: () => runBridge({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
                       }),
                       React.createElement(Panel, { titleZh: '扩展', titleEn: 'EXTENSIONS', icon: 'config' },
                         React.createElement(IntegrationsPanel, {

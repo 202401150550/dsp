@@ -1,7 +1,7 @@
 # Open World 验收清单（CHECKLIST）
 
 > 配套 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · [SHELL_PLAN.md](./SHELL_PLAN.md) · [DEVELOPER.md](./DEVELOPER.md) · [OWIP_v0.1.md](./OWIP_v0.1.md)  
-> 最后更新：2026-09-09 · **运行时真源 v2.70 / owip/0.3-draft** · schema **8** · 进世界 MVP（任务）· 神经 RRA **脚手架冻结**
+> 最后更新：2026-09-09 · **运行时真源 v2.71 / owip/0.3-draft** · schema **8** · 进世界（任务+回退）· 神经 RRA **脚手架冻结**
 
 ---
 
@@ -14,7 +14,7 @@ npm run desktop:cdp      # 完全退出 Desktop 后：带 --remote-debugging-por
 npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-cdp
 ```
 
-**冷启**：profile 须与 `CLIENT_VER=v2.70` 对齐；改完完全退出 Desktop 再开。
+**冷启**：profile 须与 `CLIENT_VER=v2.71` 对齐；改完完全退出 Desktop 再开。
 
 ---
 
@@ -40,12 +40,11 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 ## 三、架构与代码（别继续堆单体）
 
 - [x] client 已拆 styles/runtime/app-layout/portal/hooks；OpenWorldApp 仅编排
-- [x] 版本号统一——package / plugin / framework / CLIENT_VER = **2.70 / v2.70**
+- [x] 版本号统一——package / plugin / framework / CLIENT_VER = **2.71 / v2.71**
 - [x] QUICKSTART / SYSOP / DEVELOPER 与真源对齐
 - [x] `GET /api/open-world/snapshot?view=shell` 瘦身；UI 默认 shell URL
 - [x] `CORE_SHELL_HOST_ACTIONS` 日常 vs 高级（含 `world-enter`）
-- [x] CapabilityGraph + **进入 · 任务** CTA（[WORLD_PLAN.md](./WORLD_PLAN.md) 阶段 1）
-
+- [x] CapabilityGraph + 世界地图（任务/回退）+ 节点灰态（[WORLD_PLAN.md](./WORLD_PLAN.md) 阶段 0–2）
 - [x] space.enabled=false 时第二屏签发/打开按钮禁用
 - [x] 神经 RRA：OW `rra.probe` 默认关；`implemented` / `fullNeuralRra` 保持 false
 - [x] `bridge/capability-registry.mjs` + `capability-graph.mjs`；`resolveEmbedGate` 拦离线 embed
@@ -85,8 +84,8 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 - [x] 快捷操作 3 个：新建任务 · 任务看板 · 回退
 - [x] 壳顶用法条（可关闭）· 记忆双页签（本地 RRM | Hindsight）
 - [x] 用户常看到旧 UI——水印含 `CLIENT_BUILD`；`npm run check:client` 拦未 rebuild
-- [x] 冷启：`desktop:cdp` + `test:live`；水印 `OPEN-WORLD v2.70 · <hash>`
-- [x] **60% 路径**：状态页 **进入 · 任务** → 任务世界 → 返回开放世界
+- [x] 冷启：`desktop:cdp` + `test:live`；水印 `OPEN-WORLD v2.71 · <hash>`
+- [x] **60% 路径**：世界地图 → 任务/回退 → 返回开放世界
 - [ ] 改完仍须完全退出 DSH + 强刷一次（Electron 缓存）——**操作习惯，非代码债**
 
 ## 八、开发与流程
@@ -120,7 +119,7 @@ B       WM · world-state · ATI 表面 · 舰队 ✅
 C       token · 密封 outbox · SSE 第二屏   ✅（v0.2 只读）
 壳定稿  SHELL_PLAN · v2.52 · CDP 冷启      ✅
 联动改革 WP0–WP4 · ACL + peer MVP · v2.60  ✅（owip/0.3-draft）
-进世界  阶段0–1 · CapabilityGraph + 任务世界 · v2.70 ✅
+进世界  阶段0–2 · 任务+回退世界 · 节点灰态 · v2.71 ✅
 ```
 
 改 Client 源码后跑：`npm run build:client`
@@ -131,11 +130,11 @@ C       token · 密封 outbox · SSE 第二屏   ✅（v0.2 只读）
 
 | 文件 | 字段 | 应为 |
 |------|------|------|
-| dsh.plugin.json | version | `"2.70.0"` |
-| package.json | version | `"2.70.0"` |
-| index.js `buildFramework()` | version | `"2.70"` |
+| dsh.plugin.json | version | `"2.71.0"` |
+| package.json | version | `"2.71.0"` |
+| index.js `buildFramework()` | version | `"2.71"` |
 | index.js framework | protocol | `"owip/0.3-draft"`（space 开）或 `"owip/0.1"`（关） |
 | snapshot schema | `version` / `snapshotSchema` | `8` |
-| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.70'` + compose 哈希；源码占位 `dev` |
-| 界面水印 | — | `OPEN-WORLD v2.70 · <build>` |
+| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.71'` + compose 哈希；源码占位 `dev` |
+| 界面水印 | — | `OPEN-WORLD v2.71 · <build>` |
 | 大行李 | RRA | `rra-proto` 脚手架冻结；OW `rra.probe` 默认关；`implemented:false` |
