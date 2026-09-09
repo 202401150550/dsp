@@ -25,71 +25,55 @@
 
 #### A. Dirty 分轨
 
-- [ ] **A1** 列出并分类当前 dirty（命令：`git status -sb`）
-  - 桶 1：`rra-proto/**` → 实验提交 *或* `git stash push -m rra-wip -- rra-proto`
-  - 桶 2：`dsh-desktop-toggle/last-apply.json` → 忽略或移入 `dsh-doctor/baselines/`
-  - 桶 3：嵌套库 `dsh-better-sidebar` / `dsh-ventus-progress` / `dsh-ventus-search` / `dsh-voice` → 执行 §0.2 决议
-  - 桶 4：`.zcode/` → 忽略或单独文档仓，不进架构基线
-- [ ] **A2** `.gitignore` 增加：`dsh-desktop-toggle/last-apply.json`、`.zcode/`（若选忽略）
-- [ ] **A3** `git status` 干净到「只剩刻意保留的 submodule 指针 / 已说明的实验分支」
+- [x] **A1** 列出并分类当前 dirty（命令：`git status -sb`）
+  - 桶 1：`rra-proto/**` → 已 `git stash push -m "rra-wip Phase0 isolate" -- rra-proto`（`stash@{0}`）
+  - 桶 2：`dsh-desktop-toggle/last-apply.json` → 已进 `.gitignore`
+  - 桶 3：嵌套库 → 已写 `.gitmodules`（真 submodule）
+  - 桶 4：`.zcode/` → 已进 `.gitignore`
+- [x] **A2** `.gitignore` 增加：`dsh-desktop-toggle/last-apply.json`、`.zcode/`
+- [x] **A3** 根仓干净到「只剩 submodule 内本地脏（不回写 upstream）+ 已说明的 stash」；不以半截 gitlink 交差
 
 #### B. 根目录编排
 
-- [ ] **B1** 根 `package.json` 增加 scripts（文案已定，开工时原样落地）：
-
-```json
-"test:open-world": "npm --prefix dsh-open-world test",
-"gate:rra": "npm --prefix rra-proto test",
-"doctor": "node dsh-doctor/dsh-doctor.mjs check",
-"status": "node dsh-desktop-toggle/apply.mjs list",
-"preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge",
-"check:bootstrap": "node dsh-desktop-toggle/patch-anchored-bootstrap.mjs --check"
-```
-
-- [ ] **B2** 验收：在仓库根执行 `npm run doctor`、`npm run check:bootstrap` 退出码 0
-- [ ] **B3**（可选）`scripts/workspace-status.mjs` 一次打印：preset 名、OW 版本、doctor.ok、bootstrap.ok
+- [x] **B1** 根 `package.json` scripts 已落地（含 `check:bootstrap`）
+- [x] **B2** `npm run doctor`、`npm run check:bootstrap` 退出码 0（2026-09-09 复跑）
+- [x] **B3** `scripts/workspace-status.mjs` + `npm run workspace:status`
 
 #### C. 事实源
 
-- [ ] **C1** 本文保持 v2.77 口径（已重写）
-- [ ] **C2** 根 README 或 `AGENTS.md` 增加一行入口：`架构规划 → ARCHITECTURE_PLAN.md`
-- [ ] **C3** 旧 `dsh-architecture.json` 顶部加注：以本文六层为准，旧图仅 Desktop/Gateway 遗留
+- [x] **C1** 本文保持 v2.77 口径
+- [x] **C2** `AGENTS.md` 入口指向本文
+- [x] **C3** `dsh-architecture.json` meta 已注 `superseded_by: ARCHITECTURE_PLAN.md`
 
 #### D. 门禁绿
 
-- [ ] **D1** `npm run test:open-world`（或等价 prefix）全绿
-- [ ] **D2** `npm run gate:rra` 全绿（玩具尺度；不宣称生产）
-- [ ] **D3** `npm run doctor` → `ok: true`，无 critical/high
-- [ ] **D4** `npm run check:bootstrap` → `ok: true`
+- [x] **D1** `npm run test:open-world` 全绿（含 pretest check:client）
+- [x] **D2** `npm run gate:rra` 全绿（86 passed；玩具尺度）
+- [x] **D3** `npm run doctor` → `ok: true`
+- [x] **D4** `npm run check:bootstrap` → `ok: true`
 
 #### E. 下一切片纸面签字
 
-- [ ] **E1** §0.3 Rewind×Host 草图已阅；实现范围 = `fs.write` only（不含 shell/git）
-- [ ] **E2** 测试用例表已定（§0.3.4）；开工后先写测再改 `host-runtime`
+- [x] **E1** §0.3 Rewind×Host 草图已阅；实现范围 = `fs.write` only
+- [x] **E2** 用例 H1–H5 已定；**行动**须先写测再改 `host-runtime`（等主人开 `P2_SLICE0_ACTIVE`）
 
 ---
 
-### 0.2 嵌套 Git 决议（规划裁定）
+### 0.2 嵌套 Git 决议（已落地）
 
-**现状**：下列路径在根索引里是 `mode 160000`（gitlink），目录内有独立 `.git`，但根目录 **没有** `.gitmodules` → 半截状态，`git status` 噪声大、克隆他人不可复现。
+**曾况**：根索引 `mode 160000`（gitlink）但缺 `.gitmodules`。  
+**现况（Phase 0）**：根目录已有 `.gitmodules`，四库登记为真 submodule：
 
-| 路径 | 角色 | 档位 |
-|---|---|---|
-| `dsh-better-sidebar` | 右侧工作台 | daily/bridge |
-| `dsh-ventus-progress` | 子代理进度 / OW fleet 卫星 | daily/bridge |
-| `dsh-ventus-search` | @ 搜索 | daily 可选 |
-| `dsh-voice` | 离线语音（未进日常） | 关 |
+| 路径 | remote |
+|---|---|
+| `dsh-better-sidebar` | `https://github.com/omdsh-dev/DSH-better-sidebar.git` |
+| `dsh-ventus-progress` | `https://github.com/mmzm0808/dsh-ventus-progress.git` |
+| `dsh-ventus-search` | `https://github.com/mmzm0808/dsh-ventus-search.git` |
+| `dsh-voice` | `https://github.com/3274375092/dsh-voice.git` |
 
-**裁定：补真 submodule（写 `.gitmodules` + 记录 remote/commit）为默认方案。**
+子模块工作区内的本地脏文件（`package-lock.json` 等）**不**强行提交上游；根仓只认指针。
 
-| 选项 | 何时用 | 代价 |
-|---|---|---|
-| **A. 真 submodule（默认）** | 各库有自己 remote / 要独立升版 | 需补 `.gitmodules`；clone 要 `--recurse-submodules` |
-| B. Vendor 普通目录 | 无 remote、只当 dsp 私货 | 删内嵌 `.git`，整树进根仓；升版变手工拷贝 |
-
-**否决**：继续维持「有 gitlink、无 gitmodules」——禁止。
-
-**开工顺序（行动阶段才做）**：确认四库 remote URL → 写 `.gitmodules` → `git submodule absorbgitdirs` / 正式登记 → `git status` 只显示指针变化。
+**否决**：继续维持「有 gitlink、无 gitmodules」。
 
 ---
 
@@ -381,8 +365,9 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | `dsh-desktop-toggle/plugins.yml` + `presets.yml` | 装机镜像与档位 |
 | `rra-proto` 包内文档 | 研究轨边界 |
 
-**现在：规划纸面已锁定到 Phase 0 勾选 + Rewind×Host 草图。**  
-**行动开关**：主人明确说「开始 Phase 0」后再改脚本/gitignore/submodule；未说之前只改本文与入口文档。
+**现在：Phase 0 门禁已绿（A–E 纸面勾选完成）。**  
+**下一行动开关**：主人说「开始 Rewind×Host」或「开 P2 切片 0」→ `P2_SLICE0_ACTIVE`（先写 H1–H5 测，再改 `fsWrite`）。  
+在此之前：**FEATURE_FREEZE** 仍禁止新插件 / 开记忆进日常档。
 
 ---
 
@@ -451,9 +436,9 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 
 | 状态 | 含义 |
 |---|---|
-| **PLAN_LOCKED** | 本文 §0–§0.3、§11–§13 为当前真源；只允许改规划文档与入口链接 |
-| **PHASE0_ACTIVE** | 主人下令后：允许改 gitignore、根 scripts、submodule、跑门禁 |
-| **P2_SLICE0_ACTIVE** | Phase 0 全绿后：允许改 `dsh-self` 宿主写快照 |
-| **FEATURE_FREEZE** | 上述未满足时：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
+| **PLAN_LOCKED** | 规划纸面冻结期（已完成） |
+| **PHASE0_DONE** | 根 scripts / gitignore / gitmodules / 门禁复跑绿（当前） |
+| **P2_SLICE0_ACTIVE** | 允许改 `dsh-self` 宿主写快照（未开） |
+| **FEATURE_FREEZE** | 未开 P2 切片前：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
 
-当前默认：**PHASE0_ACTIVE**（已开工：根 scripts / gitignore / `.gitmodules`；`rra-proto` dirty 仍待 A1 单独分轨）。
+当前默认：**PHASE0_DONE** + **FEATURE_FREEZE**（等主人开 Rewind×Host / P2 切片 0）。

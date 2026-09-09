@@ -13,7 +13,8 @@
     "doctor": "node dsh-doctor/dsh-doctor.mjs check",
     "status": "node dsh-desktop-toggle/apply.mjs list",
     "preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge",
-    "check:bootstrap": "node dsh-desktop-toggle/patch-anchored-bootstrap.mjs --check"
+    "check:bootstrap": "node dsh-desktop-toggle/patch-anchored-bootstrap.mjs --check",
+    "workspace:status": "node scripts/workspace-status.mjs"
   },
   "openclaw": {
     "version": "v2026.6.1",
