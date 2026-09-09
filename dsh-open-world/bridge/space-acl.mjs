@@ -18,7 +18,20 @@ export const PEER_ACTION_ALLOWLIST = Object.freeze([
   'mark-read',
   'memory-search', // v2.72：更深只读（Hindsight 检索；不写世界 / 不发令牌）
   'world-state-get', // v2.74：更深只读（读本机 world-state；不写 / 不 enter）
+  'request-local', // v2.75：极窄「请求本机白名单动作」；实际本机动作见 PEER_LOCAL_REQUEST_ALLOWLIST
 ])
+
+/**
+ * peer 经 request-local 可请求的本机 Host 动作（与 PEER_ACTION_ALLOWLIST 分家）
+ * 默认仅 share-snapshot（密封 outbox 拓扑分享）；禁止 pair / 令牌 / 注入 / 写 world-state
+ */
+export const PEER_LOCAL_REQUEST_ALLOWLIST = Object.freeze([
+  'share-snapshot',
+])
+
+export function allowLocalRequest(localActionName) {
+  return PEER_LOCAL_REQUEST_ALLOWLIST.includes(String(localActionName || ''))
+}
 
 /** observer / second-screen：只允许这些路径前缀（method 另判） */
 const OBSERVER_GET_PREFIXES = Object.freeze([

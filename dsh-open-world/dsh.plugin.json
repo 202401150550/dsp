@@ -1,6 +1,6 @@
 {
   "name": "dsh-open-world",
-  "version": "2.74.0",
+  "version": "2.75.0",
   "description": "DSH 系统壳：状态 · 动作 · 事件",
   "entry": {
     "name": "dsh-open-world",

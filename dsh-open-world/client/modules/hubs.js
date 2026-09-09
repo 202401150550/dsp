@@ -238,7 +238,7 @@ window.__ModuleLoader__.load({
               } catch { /* ignore */ }
             }
             onToast && onToast(role === 'peer'
-              ? `已签发可回写令牌（send-message / mark-read / memory-search / world-state-get）${rotate ? ' · 已轮换' : ''}`
+              ? `已签发可回写令牌（send-message / mark-read / memory-search / world-state-get / request-local）${rotate ? ' · 已轮换' : ''}`
               : (rotate
                 ? `第二屏只读令牌已轮换（TTL ${ttlHours > 0 ? `${ttlHours}h` : '永不过期'}）`
                 : '第二屏只读令牌已签发'))
@@ -326,7 +326,7 @@ window.__ModuleLoader__.load({
         },
           React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 观察/回写（Space）'),
           React.createElement('div', { className: 'ow-hub-stat' },
-            'OW 第二屏：局域网观察 + 可选白名单回写（send-message / mark-read / memory-search / world-state-get）。与 Pair 不是同一条协议。'),
+            'OW 第二屏：局域网观察 + 可选白名单回写（含 request-local→share-snapshot）。与 Pair 不是同一条协议。'),
           React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4 } },
             spaceOff
               ? 'space 未启用（open-world.yml → space.enabled）'
@@ -353,7 +353,7 @@ window.__ModuleLoader__.load({
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
               disabled: spaceOff,
-              title: 'peer 仅可 send-message / mark-read / memory-search / world-state-get；禁止 pair-*、space-token-*、idea-inject',
+              title: 'peer：send-message / mark-read / memory-search / world-state-get / request-local(→share-snapshot)；禁止 pair-*、space-token-*、idea-inject',
               onClick: () => {
                 if (spaceOff) return
                 if (typeof window !== 'undefined' && window.confirm

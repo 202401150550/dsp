@@ -1,7 +1,7 @@
 # Open World · 给开发者（一页）
 
 > 对接壳 API / 真机联调时看本页即可。产品用法见 [QUICKSTART.md](./QUICKSTART.md)；协议全文见 [OWIP_v0.1.md](./OWIP_v0.1.md)。  
-> 运行时：**v2.74** · 协议（space 开）：**owip/0.3-draft** · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md)
+> 运行时：**v2.75** · 协议（space 开）：**owip/0.3-draft** · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md)
 
 ---
 
@@ -85,7 +85,7 @@ npm run test:live-rra-cdp     # 直接 CDP 页内：snapshot / rra probe·sketch
 |--|-----------------|---------------------------|
 | 目的 | 局域网第二屏观察 + 可选受限回写 | 手机控工作区（`/m`） |
 | 凭证 | OW Bearer · role=`second-screen`\|`peer` | Pair 配对码 / remote Host |
-| 写能力 | 仅 peer：`send-message` · `mark-read` · `memory-search` · `world-state-get` | 由 remote-web-ui 决定（非 OW ACL） |
+| 写能力 | 仅 peer：`send-message` · `mark-read` · `memory-search` · `world-state-get` · `request-local`(→`share-snapshot`) | 由 remote-web-ui 决定（非 OW ACL） |
 | 入口 | 枢纽「跨机 · 观察/回写」· `space-view.html` | 枢纽「跨机 · 手机控」· `pair-issue`/`pair-stop` |
 | 信箱 `to: remote` | 本地 outbox，**不是**手机实时通道 | — |
 

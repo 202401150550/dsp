@@ -10,6 +10,8 @@ import {
   consumeSseTicket,
   SPACE_ROLES,
   PEER_ACTION_ALLOWLIST,
+  PEER_LOCAL_REQUEST_ALLOWLIST,
+  allowLocalRequest,
   roleFromTokenRecord,
 } from '../bridge/space-acl.mjs'
 import {
@@ -64,15 +66,21 @@ try {
   ok(allowRoute('/space/peer-action', 'POST', peer), 'peer may peer-action')
   ok(allowAction('send-message', peer) && allowAction('mark-read', peer), 'peer allowlist send/mark')
   ok(allowAction('memory-search', peer), 'peer allowlist memory-search')
-  ok(allowAction('world-state-get', peer), 'peer allowlist world-state-get (+1)')
+  ok(allowAction('world-state-get', peer), 'peer allowlist world-state-get')
+  ok(allowAction('request-local', peer), 'peer allowlist request-local (+1)')
+  ok(!allowAction('share-snapshot', peer), 'peer cannot call share-snapshot directly')
   ok(!allowAction('world-state-save', peer), 'peer still denied world-state-save')
-  ok(!allowAction('share-snapshot', peer), 'peer denied share-snapshot')
   ok(!allowAction('pair-issue', peer), 'peer denied pair-issue')
   ok(!allowAction('space-token-issue', peer), 'peer denied space-token-issue')
   ok(!allowAction('idea-inject', peer), 'peer denied idea-inject')
   ok(!allowAction('rrm-session-apply', peer), 'peer denied rrm-session')
-  ok(PEER_ACTION_ALLOWLIST.length === 4, 'peer allowlist size=4')
-  ok(PEER_ACTION_ALLOWLIST.includes('world-state-get'), 'allowlist contains world-state-get')
+  ok(PEER_ACTION_ALLOWLIST.length === 5, 'peer allowlist size=5')
+  ok(PEER_ACTION_ALLOWLIST.includes('request-local'), 'allowlist contains request-local')
+  ok(PEER_LOCAL_REQUEST_ALLOWLIST.length === 1 && PEER_LOCAL_REQUEST_ALLOWLIST[0] === 'share-snapshot', 'local request only share-snapshot')
+  ok(allowLocalRequest('share-snapshot'), 'allowLocalRequest share-snapshot')
+  ok(!allowLocalRequest('world-state-save'), 'deny local world-state-save')
+  ok(!allowLocalRequest('request-local'), 'deny nested request-local')
+  ok(!allowLocalRequest('idea-inject'), 'deny local idea-inject')
 
   const lanOpen = attachPrincipal({ ok: true, via: 'lan-open', loopback: false }, null)
   ok(lanOpen.role === SPACE_ROLES.SECOND_SCREEN && !allowAction('send-message', lanOpen), 'lan-open is observe-only')

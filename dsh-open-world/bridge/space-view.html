@@ -81,7 +81,7 @@
     </div>
     <section class="card" id="peerPanel" hidden>
       <h2>受限回写（peer）</h2>
-      <div class="sub">send-message / mark-read / memory-search / world-state-get · 禁止 pair / 令牌 / 注入</div>
+      <div class="sub">白名单含 request-local→share-snapshot · 禁止 pair / 令牌 / 注入</div>
       <div class="peer-row">
         <input id="peerMsg" maxlength="280" placeholder="短消息（≤280）…" />
         <button type="button" id="peerSend">发送</button>
@@ -91,6 +91,7 @@
         <input id="peerMemQ" maxlength="120" placeholder="记忆检索（只读）…" />
         <button type="button" id="peerMem">检索</button>
         <button type="button" id="peerWorld">读 world-state</button>
+        <button type="button" id="peerShare">请求分享快照</button>
       </div>
       <div class="sub" id="peerMemOut" style="margin-top:6px;white-space:pre-wrap"></div>
     </section>
@@ -236,6 +237,28 @@
         ? JSON.stringify(world, null, 0).slice(0, 480)
         : (JSON.stringify(data || {}).slice(0, 480) || '无 world-state')
       showErr('')
+    } catch (err) {
+      el('peerMemOut').textContent = ''
+      showErr(String(err.message || err))
+    }
+  }
+  el('peerShare').onclick = async () => {
+    if (!peerMode) return
+    try {
+      const data = await apiFetch('/api/open-world/space/peer-action', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request-local',
+          localAction: 'share-snapshot',
+          body: 'peer 请求拓扑快照分享',
+        }),
+      })
+      el('peerMemOut').textContent = data && data.requestLocal
+        ? ('request-local → ' + data.requestLocal.localAction + (data.requestLocal.ok ? ' · ok' : ' · fail'))
+        : JSON.stringify(data || {}).slice(0, 480)
+      showErr('')
+      poll()
     } catch (err) {
       el('peerMemOut').textContent = ''
       showErr(String(err.message || err))

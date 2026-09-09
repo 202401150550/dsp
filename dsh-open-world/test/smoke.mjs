@@ -56,7 +56,7 @@ assertEq(cfg.synapses.length, 1, 'synapses pair')
 // ── buildFramework ──
 console.log('\nbuildFramework')
 const fw = __test.buildFramework(cfg)
-assertEq(fw.version, '2.74', 'framework.version')
+assertEq(fw.version, '2.75', 'framework.version')
 
 {
   const { readFileSync, existsSync } = await import('node:fs')
@@ -69,9 +69,9 @@ assertEq(fw.version, '2.74', 'framework.version')
   const hubsSrc = readFileSync(join(root, 'client/modules/hubs.js'), 'utf8')
   const shellSrc = readFileSync(join(root, 'client/modules/shell.js'), 'utf8')
   const layoutSrc = readFileSync(join(root, 'client/modules/app-layout.js'), 'utf8')
-  assertEq(pkg.version, '2.74.0', 'package.json version')
-  assertEq(plugin.version, '2.74.0', 'dsh.plugin.json version')
-  assert(constantsSrc.includes("CLIENT_VER = 'v2.74'"), 'constants CLIENT_VER v2.74')
+  assertEq(pkg.version, '2.75.0', 'package.json version')
+  assertEq(plugin.version, '2.75.0', 'dsh.plugin.json version')
+  assert(constantsSrc.includes("CLIENT_VER = 'v2.75'"), 'constants CLIENT_VER v2.75')
   assert(constantsSrc.includes("CLIENT_BUILD = 'dev'"), 'constants CLIENT_BUILD placeholder')
   assert(constantsSrc.includes('CLIENT_BUILT_AT'), 'constants CLIENT_BUILT_AT')
   const clientJs = readFileSync(join(root, 'client.js'), 'utf8')
@@ -79,7 +79,7 @@ assertEq(fw.version, '2.74', 'framework.version')
   assert(!clientJs.includes("CLIENT_BUILD = 'dev'"), 'composed client.js not left as dev')
   const meta = __test.readClientBuildMeta()
   assert(meta && meta.clientBuild && meta.clientBuild !== 'dev', 'Host reads clientBuild from client.js')
-  assertEq(meta.clientVer, 'v2.74', 'Host clientVer aligned')
+  assertEq(meta.clientVer, 'v2.75', 'Host clientVer aligned')
   assert(fw.clientBuild === meta.clientBuild, 'framework.clientBuild matches disk')
   assert(constantsSrc.includes('MEMORY_ARCHIVES_URL'), 'constants MEMORY_ARCHIVES_URL')
   const bridgeSrc = readFileSync(join(root, 'bridge/execute.mjs'), 'utf8')
@@ -90,7 +90,9 @@ assertEq(fw.version, '2.74', 'framework.version')
   const aclSrc = readFileSync(join(root, 'bridge/space-acl.mjs'), 'utf8')
   assert(aclSrc.includes("'memory-search'"), 'PEER allowlist includes memory-search')
   assert(aclSrc.includes("'world-state-get'"), 'PEER allowlist includes world-state-get')
-  assert(hubsSrc.includes('world-state-get'), 'hubs peer copy mentions world-state-get')
+  assert(aclSrc.includes("'request-local'"), 'PEER allowlist includes request-local')
+  assert(aclSrc.includes('PEER_LOCAL_REQUEST_ALLOWLIST'), 'PEER_LOCAL_REQUEST_ALLOWLIST present')
+  assert(hubsSrc.includes('request-local'), 'hubs peer copy mentions request-local')
   const packsSrc = readFileSync(join(root, 'bridge/world-packs.mjs'), 'utf8')
   assert(packsSrc.includes('all-in-all') && packsSrc.includes('reserved'), 'world-packs reserved interface')
   const yml = readFileSync(join(root, 'open-world.yml'), 'utf8')
@@ -98,7 +100,7 @@ assertEq(fw.version, '2.74', 'framework.version')
   assert(hubsSrc.includes('enter-world') && hubsSrc.includes('rewind'), 'hubs rewind uses enter-world')
   assert(hubsSrc.includes('spaceOff') || hubsSrc.includes('space 未启用'), 'hubs space-off disables issue')
   const quickSrc = readFileSync(join(root, 'QUICKSTART.md'), 'utf8')
-  assert(quickSrc.includes('OPEN-WORLD v2.74'), 'QUICKSTART watermark aligned')
+  assert(quickSrc.includes('OPEN-WORLD v2.75'), 'QUICKSTART watermark aligned')
   assert(quickSrc.includes('进入 · 任务') || quickSrc.includes('进入任务'), 'QUICKSTART enter-world path')
   assert(hubsSrc.includes('搜 Hindsight'), 'hubs Hindsight search label')
   assert(shellSrc.includes('ShellGuide') || shellSrc.includes('三步上手'), 'shell ShellGuide tip')
@@ -123,7 +125,7 @@ assertEq(fw.version, '2.74', 'framework.version')
   assert(existsSync(join(root, 'SHELL_PLAN.md')), 'SHELL_PLAN.md present')
   assert(existsSync(join(root, 'CHECKLIST.md')), 'CHECKLIST.md present')
   const checkSrc = readFileSync(join(root, 'CHECKLIST.md'), 'utf8')
-  assert((checkSrc.includes('v2.74') || checkSrc.includes('v2.73')) && checkSrc.includes('desktop:cdp'), 'CHECKLIST version + desktop:cdp')
+  assert((checkSrc.includes('v2.75') || checkSrc.includes('v2.74')) && checkSrc.includes('desktop:cdp'), 'CHECKLIST version + desktop:cdp')
   assert(checkSrc.includes('0.3-draft') || checkSrc.includes('owip/0.3'), 'CHECKLIST mentions owip/0.3')
   const owipSrc = readFileSync(join(root, 'OWIP_v0.1.md'), 'utf8')
   assert(owipSrc.includes('0.3-draft') && owipSrc.includes('PEER_ACTION_ALLOWLIST'), 'OWIP documents 0.3 ACL')
@@ -272,10 +274,38 @@ try {
 
 // ── action registry ──
 console.log('\naction registry')
-assert(__test.CORE_ACTION_NAMES.size === 10, 'core actions count = 10')
+assert(__test.CORE_ACTION_NAMES.size === 11, 'core actions count = 11')
 assert(__test.ACTION_REGISTRY.has('send-message'), 'registry send-message')
 assert(__test.ACTION_REGISTRY.has('idea-inject'), 'registry idea-inject')
+assert(__test.ACTION_REGISTRY.has('request-local'), 'registry request-local')
 assert(!__test.CORE_ACTION_NAMES.has('idea-wrap'), 'idea-wrap not in core set')
+
+// ── request-local ──
+console.log('\nrequest-local')
+const reqHome = mkdtempSync(join(tmpdir(), 'ow-req-local-'))
+process.env.DSH_HOME = reqHome
+try {
+  const env = {
+    home: reqHome,
+    config: { messaging: { enabled: true, max_messages: 50, allow_broadcast: true, outbox_dir: 'open-world/outbox' }, idea: { enabled: true } },
+    ctx: mockCtx,
+    hostHeader: '127.0.0.1:0',
+    buildSnapshot: __test.buildSnapshot,
+    notifyStream: () => {},
+    pushEvent: () => {},
+  }
+  const denied = await __test.dispatchOpenWorldAction('request-local', { localAction: 'world-state-save' }, env)
+  assert(denied.status === 403 && denied.body.error === 'acl-local-action', 'request-local denies world-state-save')
+  const okShare = await __test.dispatchOpenWorldAction('request-local', {
+    localAction: 'share-snapshot',
+    body: 'smoke peer share',
+  }, env)
+  assert(okShare.status === 200 && okShare.body.ok === true, 'request-local share-snapshot ok')
+  assert(okShare.body.requestLocal?.localAction === 'share-snapshot', 'requestLocal meta')
+} finally {
+  delete process.env.DSH_HOME
+  try { rmSync(reqHome, { recursive: true, force: true }) } catch { /* ignore */ }
+}
 
 // ── idea-inject ──
 console.log('\nidea-inject')

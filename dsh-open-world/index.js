@@ -105,6 +105,8 @@ import {
   denyBody,
   SPACE_ROLES,
   PEER_ACTION_ALLOWLIST,
+  PEER_LOCAL_REQUEST_ALLOWLIST,
+  allowLocalRequest,
 } from './bridge/space-acl.mjs'
 
 export const name = 'dsh-open-world'
@@ -1510,7 +1512,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.74'
+    return '2.75'
   }
 }
 
@@ -2284,7 +2286,7 @@ function slimSnapshotForShell(snap) {
 const CORE_ACTION_NAMES = new Set([
   'send-message', 'mark-read', 'share-snapshot', 'memory-search',
   'pair-issue', 'pair-stop', 'notification-ack-all', 'notification-publish',
-  'idea-inject', 'idea-compare',
+  'idea-inject', 'idea-compare', 'request-local',
 ])
 
 function buildActionRegistry() {
@@ -2560,6 +2562,34 @@ async function handleIdeaAction(actionName, parsed, env) {
 
 const ACTION_REGISTRY = buildActionRegistry()
 
+// peer 极窄本机请求：挂在 registry 建成之后，避免建表期递归
+ACTION_REGISTRY.set('request-local', async (parsed, env) => {
+  const local = String(parsed.localAction || parsed.request || parsed.target || '').trim()
+  if (!allowLocalRequest(local)) {
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        error: 'acl-local-action',
+        localAction: local || null,
+        allow: PEER_LOCAL_REQUEST_ALLOWLIST,
+        note: 'peer 仅能经 request-local 请求本机白名单动作',
+      },
+    }
+  }
+  const result = await dispatchOpenWorldAction(local, parsed, env)
+  if (typeof env.pushEvent === 'function') {
+    try { env.pushEvent('space', `request-local:${local}`, 'ok') } catch { /* ignore */ }
+  }
+  return {
+    status: result.status,
+    body: {
+      ...(result.body || {}),
+      requestLocal: { localAction: local, ok: !!(result.body && result.body.ok !== false) },
+    },
+  }
+})
+
 async function dispatchOpenWorldAction(actionName, parsed, env) {
   const handler = ACTION_REGISTRY.get(actionName)
   if (!handler) {
@@ -2700,7 +2730,14 @@ export async function apply(ctx) {
           home, config, ctx, hostHeader, buildSnapshot, notifyStream, pushEvent,
         }
         const result = await dispatchOpenWorldAction(action, parsed, actionEnv)
-        pushEvent('space', `peer-action:${action}`, principal.role)
+        const localTag = action === 'request-local'
+          ? String(parsed.localAction || parsed.request || parsed.target || '')
+          : ''
+        pushEvent(
+          'space',
+          localTag ? `peer-action:${action}:${localTag}` : `peer-action:${action}`,
+          principal.role,
+        )
         sendJson(res, result.status, { ...result.body, acl: { role: principal.role, via: principal.via } })
         return
       }
@@ -3012,7 +3049,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.74 online', `${SPACE_PROTOCOL} · peer+world-state-get · RRA 适配器默认关`)
+  pushEvent('system', 'Open World v2.75 online', `${SPACE_PROTOCOL} · peer request-local→share-snapshot · RRA 默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)

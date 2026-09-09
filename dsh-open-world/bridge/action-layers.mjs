@@ -29,6 +29,7 @@ export const HOST_ACTION_IDS = Object.freeze([
   'world-state-get',
   'world-enter',
   'world-leave',
+  'request-local',
   'space-token-status',
   'space-token-issue',
   'space-token-revoke',
