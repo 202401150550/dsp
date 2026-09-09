@@ -96,7 +96,7 @@ const snap = snapPack.json || {}
   const min = Number((ver.match(/^\d+\.(\d+)/) || [])[1] || 0)
   ok(maj > 2 || (maj === 2 && min >= 52), `framework.version=${ver} (≥2.52)`)
 }
-ok(snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft',
+ok(snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft' || snap.framework?.protocol === 'owip/0.3-draft',
   `framework.protocol=${snap.framework?.protocol}`)
 ok(snap.space != null && typeof snap.space.hasToken === 'boolean', 'snapshot.space')
 ok(snap.fleet != null && snap.fleet.counts != null, 'snapshot.fleet')
@@ -175,11 +175,12 @@ const ui = await evalJson(`({
   title: document.title || '',
 })`)
 const wmOk = /OPEN-WORLD\s+v2\.(5\d|[6-9]\d|\d{3,})/.test(ui.text)
-  || String(snap.framework?.clientVer || '').startsWith('v2.5')
-ok(wmOk || String(snap.framework?.version || '').startsWith('2.5'),
+const fwOk = /^2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.version || ''))
+const cvOk = /^v2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.clientVer || ''))
+ok(wmOk || fwOk || cvOk,
   `watermark/clientVer aligned (fw=${snap.framework?.version} clientVer=${snap.framework?.clientVer || '?'})`)
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.52；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.60；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

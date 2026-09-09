@@ -8,7 +8,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 export const SPACE_TOKEN_REL = 'open-world/space-token.json'
-export const SPACE_PROTOCOL = 'owip/0.2-draft'
+export const SPACE_PROTOCOL = 'owip/0.3-draft'
+export const SPACE_PROTOCOL_LEGACY = 'owip/0.2-draft'
 
 export function defaultSpaceConfig() {
   return {
@@ -70,6 +71,7 @@ export function loadSpaceToken(home, cfg = {}) {
       issuedAt,
       expiresAt,
       label: data.label || 'second-screen',
+      role: data.role || (String(data.label || '').toLowerCase() === 'peer' ? 'peer' : 'second-screen'),
       protocol: data.protocol || SPACE_PROTOCOL,
     }
   } catch {
@@ -77,7 +79,7 @@ export function loadSpaceToken(home, cfg = {}) {
   }
 }
 
-export function ensureSpaceToken(home, cfg = {}, { rotate = false, label, ttl_hours } = {}) {
+export function ensureSpaceToken(home, cfg = {}, { rotate = false, label, ttl_hours, role } = {}) {
   const space = mergeSpaceConfig(cfg)
   if (!space.enabled && !rotate) {
     return { ok: true, enabled: false, token: null }
@@ -85,18 +87,25 @@ export function ensureSpaceToken(home, cfg = {}, { rotate = false, label, ttl_ho
   const file = spaceTokenPath(home, space)
   mkdirSync(dirname(file), { recursive: true })
   const existing = rotate ? null : loadSpaceToken(home, space)
-  if (existing && !isSpaceTokenExpired(existing, space)) {
+  if (existing && !isSpaceTokenExpired(existing, space) && role == null) {
+    return { ok: true, enabled: !!space.enabled, created: false, ...existing, path: SPACE_TOKEN_REL }
+  }
+  // 若指定 role 且与现有不同，强制轮换
+  if (existing && !isSpaceTokenExpired(existing, space) && role != null
+    && String(existing.role) === String(role)) {
     return { ok: true, enabled: !!space.enabled, created: false, ...existing, path: SPACE_TOKEN_REL }
   }
   const issuedAt = new Date().toISOString()
   const ttl = ttl_hours != null && Number.isFinite(Number(ttl_hours))
     ? Number(ttl_hours)
     : space.token_ttl_hours
+  const roleNorm = String(role || 'second-screen').toLowerCase() === 'peer' ? 'peer' : 'second-screen'
   const record = {
     token: newTokenValue(),
     issuedAt,
     expiresAt: computeExpiresAt(issuedAt, ttl),
-    label: label || 'second-screen',
+    label: label || roleNorm,
+    role: roleNorm,
     protocol: SPACE_PROTOCOL,
     ttlHours: ttl,
   }
@@ -164,8 +173,16 @@ export function authorizeSpaceRequest(req, home, spaceCfg) {
     return { ok: true, via: loopback ? 'loopback' : 'lan-open', loopback }
   }
 
+  // SSE 短时 ticket（仅当 URL 带 ticket= 时由 ACL 层消费；此处仍要求或允许 bearer）
   const presented = extractBearer(req)
   if (!presented) {
+    // 允许仅带 ticket 进入（stream）；ACL 再验 ticket
+    try {
+      const u = new URL(req.url || '/', 'http://local')
+      if (u.searchParams.get('ticket')) {
+        return { ok: true, via: 'ticket-pending', loopback }
+      }
+    } catch { /* ignore */ }
     return { ok: false, status: 401, error: 'token-required', loopback }
   }
   const stored = loadSpaceToken(home, space)
@@ -251,6 +268,7 @@ export function spaceStatus(home, cfg = {}) {
     issuedAt: tok && tok.issuedAt,
     expiresAt: tok && (tok.expiresAt || computeExpiresAt(tok.issuedAt, space.token_ttl_hours)),
     label: tok && tok.label,
+    role: tok && (tok.role || 'second-screen'),
     path: SPACE_TOKEN_REL,
     // 永不在 status 里回传完整 token（需专门 issue/reveal 动作）
   }

@@ -7,6 +7,12 @@ import { connect } from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { mergePluginResults, scanManifestEntry, howToEnableHint } from './bridge/manifest.mjs'
 import {
+  CAPABILITY_REGISTRY,
+  enrichPluginWithRegistry,
+  resolveEmbedGate,
+  satelliteFeatureIds,
+} from './bridge/capability-registry.mjs'
+import {
   SNAPSHOT_SCHEMA_VERSION,
   SNAPSHOT_SCHEMA_NOTES,
   classifyAction,
@@ -76,6 +82,16 @@ import {
   buildSecondScreenPayload,
   revokeSpaceToken,
 } from './bridge/space-auth.mjs'
+import {
+  attachPrincipal,
+  allowRoute,
+  allowAction,
+  issueSseTicket,
+  consumeSseTicket,
+  denyBody,
+  SPACE_ROLES,
+  PEER_ACTION_ALLOWLIST,
+} from './bridge/space-acl.mjs'
 
 export const name = 'dsh-open-world'
 export const inject = ['webServer', 'sessions']
@@ -807,7 +823,7 @@ function probePlugins(home, taskBoard, rewind) {
     probes,
     deps,
     manifests,
-  })
+  }).map(enrichPluginWithRegistry)
 }
 
 function securityMetrics(home) {
@@ -1466,7 +1482,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.52'
+    return '2.60'
   }
 }
 
@@ -2301,24 +2317,31 @@ function buildActionRegistry() {
   registry.set('space-token-issue', async (parsed, env) => {
     const reveal = parsed.reveal !== false
     const ttlHours = parsed.ttl_hours != null ? Number(parsed.ttl_hours) : undefined
+    const roleRaw = String(parsed.role || parsed.label || 'second-screen').toLowerCase()
+    const role = roleRaw === 'peer' || roleRaw === 'readwrite' || roleRaw === 'rw' ? 'peer' : 'second-screen'
     const opts = {
-      label: parsed.label,
+      label: parsed.label || role,
+      role,
       ...(Number.isFinite(ttlHours) ? { ttl_hours: ttlHours } : {}),
     }
     const rotated = parsed.rotate
       ? rotateSpaceToken(env.home, env.config.space, opts)
       : ensureSpaceToken(env.home, env.config.space, opts)
     const status = spaceStatus(env.home, env.config.space)
+    const risk = role === 'peer'
+      ? `peer 可写白名单：${PEER_ACTION_ALLOWLIST.join(', ')}；禁止 space-token-* / pair-* / idea-inject 等`
+      : '默认 second-screen 只读；不可 POST /action'
     return {
       status: 200,
       body: {
         ok: true,
         space: status,
+        role,
         token: reveal ? rotated.token : undefined,
         created: !!rotated.created,
         expiresAt: rotated.expiresAt,
         ttlHours: rotated.ttlHours,
-        note: reveal ? '请妥善保存 token；status 接口不会再次回传明文；轮换/吊销可使旧 token 立即失效' : '未回传明文 token',
+        note: reveal ? `请妥善保存 token（role=${role}）；${risk}` : '未回传明文 token',
       },
     }
   })
@@ -2518,6 +2541,74 @@ export async function apply(ctx) {
       const sub = url.pathname.slice(API_PREFIX.length) || '/'
       const hostHeader = req.headers.host || '127.0.0.1'
 
+      // Space ACL：principal + 路由/动作白名单（owip/0.3-draft）
+      const spaceCfg = mergeSpaceConfig(config.space)
+      let principal = attachPrincipal(auth, loadSpaceToken(home, spaceCfg))
+      const ticketParam = url.searchParams.get('ticket')
+      if (auth.via === 'ticket-pending' || ticketParam) {
+        const ticketPrincipal = consumeSseTicket(home, ticketParam)
+        if (!ticketPrincipal) {
+          sendJson(res, 401, { ok: false, error: 'ticket-invalid', acl: true })
+          return
+        }
+        principal = {
+          role: ticketPrincipal.role || SPACE_ROLES.SECOND_SCREEN,
+          scopes: ticketPrincipal.role === SPACE_ROLES.PEER ? ['observe', 'peer-write'] : ['observe'],
+          via: 'sse-ticket',
+          loopback: !!auth.loopback,
+        }
+      }
+      // 弃用：非 loopback 的 /stream 不得仅靠长寿命 ?token=（须 ticket 或 Authorization）
+      if ((sub === '/stream' || sub === '/stream/') && !auth.loopback && spaceCfg.enabled) {
+        const hasTicket = !!ticketParam && principal.via === 'sse-ticket'
+        const authz = String(req.headers.authorization || req.headers.Authorization || '')
+        const hasBearerHeader = /^Bearer\s+\S+/i.test(authz)
+        if (!hasTicket && !hasBearerHeader && url.searchParams.get('token')) {
+          sendJson(res, 403, { ok: false, error: 'use-sse-ticket', acl: true, hint: 'POST /space/sse-ticket then EventSource(?ticket=)' })
+          return
+        }
+      }
+      if (!allowRoute(sub, req.method, principal, url.searchParams)) {
+        sendJson(res, 403, { ...denyBody('acl-route'), role: principal && principal.role })
+        return
+      }
+
+      if (sub === '/space/sse-ticket' || sub === '/space/sse-ticket/') {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        const tok = loadSpaceToken(home, spaceCfg)
+        const issued = issueSseTicket(home, principal, tok && tok.token)
+        if (!issued) {
+          sendJson(res, 400, { ok: false, error: 'ticket-unavailable', acl: true })
+          return
+        }
+        sendJson(res, 200, { ok: true, ...issued, protocol: SPACE_PROTOCOL })
+        return
+      }
+
+      if (sub === '/space/peer-action' || sub === '/space/peer-action/') {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        let parsed = {}
+        try { parsed = JSON.parse(await readBody(req) || '{}') } catch { /* ignore */ }
+        const action = parsed.action || parsed.kind
+        if (!allowAction(action, principal)) {
+          sendJson(res, 403, { ...denyBody('acl-action'), action, role: principal.role, allow: PEER_ACTION_ALLOWLIST })
+          return
+        }
+        const actionEnv = {
+          home, config, ctx, hostHeader, buildSnapshot, notifyStream, pushEvent,
+        }
+        const result = await dispatchOpenWorldAction(action, parsed, actionEnv)
+        pushEvent('space', `peer-action:${action}`, principal.role)
+        sendJson(res, result.status, { ...result.body, acl: { role: principal.role, via: principal.via } })
+        return
+      }
+
       if (sub === '/snapshot' || sub === '/snapshot/') {
         if (req.method !== 'GET') {
           sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
@@ -2622,7 +2713,12 @@ export async function apply(ctx) {
           return
         }
         if (mergeSpaceConfig(config.space).enabled) ensureSpaceToken(home, config.space)
-        sendJson(res, 200, { ok: true, space: spaceStatus(home, config.space), auth: { via: auth.via, loopback: auth.loopback } })
+        sendJson(res, 200, {
+          ok: true,
+          space: spaceStatus(home, config.space),
+          auth: { via: auth.via, loopback: auth.loopback, role: principal && principal.role, scopes: principal && principal.scopes },
+          protocol: SPACE_PROTOCOL,
+        })
         return
       }
 
@@ -2663,6 +2759,15 @@ export async function apply(ctx) {
         let parsed = {}
         try { parsed = JSON.parse(await readBody(req) || '{}') } catch { /* ignore */ }
         const action = parsed.action || parsed.kind
+        if (!allowAction(action, principal)) {
+          sendJson(res, 403, {
+            ...denyBody('acl-action'),
+            action,
+            role: principal && principal.role,
+            allow: principal && principal.role === SPACE_ROLES.PEER ? PEER_ACTION_ALLOWLIST : [],
+          })
+          return
+        }
         const actionEnv = {
           home,
           config,
@@ -2811,7 +2916,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.52 online', `${SPACE_PROTOCOL} · DSH 系统壳 · RRA 适配器默认关`)
+  pushEvent('system', 'Open World v2.60 online', `${SPACE_PROTOCOL} · DSH 系统壳 · RRA 适配器默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)

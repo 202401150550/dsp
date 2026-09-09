@@ -58,15 +58,31 @@ curl -s http://127.0.0.1:<port>/api/open-world/messages | jq '.messages[0:5]'
 
 ### 1.2 安全
 
-| 规则 | v0.1 | **v0.2-draft（已实现 · v2.12）** |
-|------|------|----------------------------------|
-| 访问范围 | **仅 loopback** | loopback 默认免 token；非 loopback 需 `Authorization: Bearer` 或 `?token=` |
-| 令牌 | — | `~/.dsh/open-world/space-token.json`；`space-token-issue` / `rotate` / `revoke` / status（status 不回明文） |
-| TTL | — | `space.token_ttl_hours`（默认 168h）；过期返回 `token-expired`；轮换/吊销立即失效旧 token |
-| 第二屏 | — | `GET /space/view`（HTML）· `GET /space/second-screen`（JSON）· stream `?role=second-screen` |
-| outbox | 明文 | 可选 AES-256-GCM 密封（`space.seal_outbox`，默认开） |
-| 方法 | 见各端点 | — |
-| 缓存 | `Cache-Control: no-store` | — |
+| 规则 | v0.1 | **v0.2-draft（v2.12+）** | **v0.3-draft（v2.60+ · 已实现）** |
+|------|------|--------------------------|-----------------------------------|
+| 访问范围 | **仅 loopback** | loopback 默认免 token；非 loopback 需 `Authorization: Bearer` 或 `?token=` | 同左；**主体（principal）+ ACL** |
+| 令牌 | — | `~/.dsh/open-world/space-token.json`；`space-token-issue` / `rotate` / `revoke` | 令牌带 **`role`**：默认 `second-screen`；显式 `peer` 才可写 |
+| TTL | — | `space.token_ttl_hours`（默认 168h） | 同左 |
+| 第二屏 | — | `GET /space/view` · `GET /space/second-screen` · stream `?role=second-screen` | 同左；EventSource 须 **短时 SSE ticket**（`POST /space/sse-ticket`），禁止仅靠长寿命 `?token=` |
+| 回写 | — | （产品标只读，实现曾可打全量 `/action`） | **observer 禁止写**；`peer` 仅 `send-message` / `mark-read`（`PEER_ACTION_ALLOWLIST`）；统一口 `POST /space/peer-action` |
+| outbox | 明文 | 可选 AES-256-GCM 密封（`space.seal_outbox`） | 同左 |
+| Pair | — | OW 可代理 pair 状态 | **不合并协议**：Pair 仍属 `dsh-remote-web-ui`；Space peer ≠ Pair |
+
+#### 1.2.1 owip/0.3-draft · 主体与 ACL
+
+| role | 谁 | 可做什么 |
+|------|----|----------|
+| `loopback-shell` | 本机 Desktop 壳（同源） | 全量 OW API |
+| `second-screen` | LAN 第二屏（默认签发） | 只读：`GET /space/*`、stream `role=second-screen`、换 SSE ticket |
+| `peer` | 显式「可回写（受限）」令牌 | 观察 + 白名单写：`send-message`、`mark-read`；**禁止** `space-token-*` / `pair-*` / `idea-inject` / `rrm-session-*` |
+
+```text
+POST /api/open-world/space/sse-ticket   → { ticket, expiresInSec, role }
+GET  /api/open-world/stream?ticket=…&role=second-screen
+POST /api/open-world/space/peer-action  → { action: "send-message"|"mark-read", … }
+```
+
+实现真源：`bridge/space-acl.mjs` · `bridge/space-auth.mjs`（`SPACE_PROTOCOL = owip/0.3-draft`）。
 
 ### 1.3 版本字段
 
@@ -74,7 +90,7 @@ Snapshot 内（space 启用时）：
 
 ```json
 {
-  "framework": { "version": "2.21", "protocol": "owip/0.2-draft", "snapshotSchema": 8 },
+  "framework": { "version": "2.60", "protocol": "owip/0.3-draft", "snapshotSchema": 8 },
   "product": "NEXORA",
   "version": 8,
   "space": { "enabled": true, "hasToken": true, "sync": true },
@@ -83,7 +99,7 @@ Snapshot 内（space 启用时）：
 ```
 
 - `framework.version` — Open World 实现版本（与 `CLIENT_VER` / package 主版本对齐）  
-- `framework.protocol` — **OWIP 协议版本**：`owip/0.1` 或 `owip/0.2-draft`  
+- `framework.protocol` — **OWIP 协议版本**：`owip/0.1` · `owip/0.2-draft`（历史）· **`owip/0.3-draft`（当前，含 ACL）**  
 - `framework.snapshotSchema` / `version` — snapshot schema 整数修订（破坏性变更时 +1；当前 **8**）  
 - `framework.actionLayers` — Host HTTP vs Bridge Client 分层摘要（见 `bridge/action-layers.mjs`）
 
@@ -633,5 +649,6 @@ dsh-open-world/
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| owip/0.3-draft | 2026-09-09 | Space ACL · principal roles · peer 白名单回写 · SSE ticket；实现版 v2.60 |
 | owip/0.2-draft | 2026-09-03 | 空间层：Bearer / 密封 outbox / 第二屏 SSE+view；实现版 v2.12 |
 | owip/0.1 | 2026-08-23 | 首版草案；对齐 v2.5 实现与 v2.6 迁移 |

@@ -17,7 +17,7 @@ window.__ModuleLoader__.load({
     const Portal = require('dsh-open-world/portal')
     const Hooks = require('dsh-open-world/hooks')
     const React = require('react')
-    const { useState, useEffect, useCallback, useMemo } = React
+    const { useState, useEffect, useCallback, useMemo, useRef } = React
     const { CSS } = Styles
     const {
       readWmLastMode,
@@ -76,6 +76,7 @@ window.__ModuleLoader__.load({
         try { localStorage.setItem(LEFT_TAB_KEY, tab) } catch { /* ignore */ }
       }, [])
       const [bridgeHealth, setBridgeHealth] = useState(() => readBridgeHealth())
+      const pluginsRef = useRef([])
 
       const setMode = useCallback((next) => {
         if (typeof onWmMode === 'function') onWmMode(next)
@@ -88,7 +89,8 @@ window.__ModuleLoader__.load({
 
       const bridgeCtx = useMemo(() => ({
         onClose, setView, setToast, setEmbed,
-      }), [onClose, setToast])
+        get plugins() { return pluginsRef.current },
+      }), [onClose, setToast, setEmbed])
 
       const runBridge = useCallback(async (action) => {
         try {
@@ -144,6 +146,7 @@ window.__ModuleLoader__.load({
         selectedNode, selectedAction, tasks, health, load, events,
         healthCirc, loadRows,
       } = panel
+      pluginsRef.current = plugins || []
 
       const activateSelectedAction = () => {
         if (selectedNode && selectedNode.status === 'offline' && selectedNode.howToEnable) {

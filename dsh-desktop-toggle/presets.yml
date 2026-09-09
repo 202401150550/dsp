@@ -7,6 +7,9 @@
 #
 # enable 列表之外的 features 一律关掉；always_on 不动；forbidden 永关。
 # 注意：默认档不含 hindsight——9077 不通时每轮卡 ~25s，全模型超时。
+# OW 卫星集（与 dsh-open-world/bridge/capability-registry.mjs 对齐）：
+#   bridge/full：dsh-open-world + web-ui-rewind + web-ui-task-board + apiproxy-compat + ventus-progress
+#   web-ui-remote-web-ui / hindsight：默认关；枢纽显示「未安装/未启用」，勿假装已联动
 
 presets:
   daily:
@@ -24,7 +27,7 @@ presets:
 
   bridge:
     title: 指挥舱
-    note: Open World + 任务看板 + 回退/进度/侧栏；不开 hindsight（先通 9077 再单独 set）
+    note: Open World 卫星集（OW+看板+回退/进度/侧栏+apiproxy）；不开 remote/hindsight（先通 Pair 插件 / 9077 再单独 set）
     enable:
       - apiproxy-compat
       - dsh-open-world
@@ -40,7 +43,7 @@ presets:
 
   full:
     title: 全开调试
-    note: 常用全集（仍默认不含 hindsight / 全家桶 / 皮肤中心）
+    note: 常用全集（仍默认不含 hindsight / remote-web-ui / 全家桶 / 皮肤中心；remote 需手动 set）
     enable:
       - apiproxy-compat
       - dsh-open-world

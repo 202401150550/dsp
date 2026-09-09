@@ -113,7 +113,7 @@ window.__ModuleLoader__.load({
           },
             React.createElement('option', { value: 'broadcast' }, '全体广播'),
             React.createElement('option', { value: 'sessions' }, '全部会话'),
-            remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发'),
+            remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发（本地 outbox，非手机实时）'),
             React.createElement('option', { value: 'agent' }, '投递到官方聊天'),
             React.createElement('option', { value: 'clipboard' }, '复制分享包'),
             React.createElement('option', { value: 'external' }, '导出外发文件'),
@@ -166,11 +166,15 @@ window.__ModuleLoader__.load({
       const [memSource, setMemSource] = useState(null)
       const [spaceTok, setSpaceTok] = useState('')
       const [spaceInfo, setSpaceInfo] = useState(space || null)
+      const [spaceRole, setSpaceRole] = useState(() => (space && space.role) || 'second-screen')
       const [ttlHours, setTtlHours] = useState(() => {
         const n = space && space.token_ttl_hours
         return Number.isFinite(Number(n)) ? Number(n) : 168
       })
       useEffect(() => { setSpaceInfo(space || null) }, [space])
+      useEffect(() => {
+        if (space && space.role) setSpaceRole(space.role)
+      }, [space && space.role])
       useEffect(() => {
         if (space && space.token_ttl_hours != null && Number.isFinite(Number(space.token_ttl_hours))) {
           setTtlHours(Number(space.token_ttl_hours))
@@ -191,31 +195,53 @@ window.__ModuleLoader__.load({
             setPairUrl(data.url)
             onToast && onToast('配对链接已生成')
           } else {
-            onToast && onToast(data.code || '配对失败')
+            onToast && onToast(data.code || data.error || '配对失败 · 检查 web-ui-remote-web-ui 是否启用')
           }
         } catch (err) {
           onToast && onToast(String(err.message || err))
         }
       }
 
-      const issueSpaceToken = async (rotate) => {
+      const stopPair = async () => {
+        try {
+          const data = await postOpenWorldAction({ action: 'pair-stop' })
+          if (data && data.ok) {
+            setPairUrl('')
+            onToast && onToast('Pair 已停止')
+          } else {
+            onToast && onToast((data && (data.error || data.code)) || '停止失败')
+          }
+        } catch (err) {
+          onToast && onToast(String(err.message || err))
+        }
+      }
+
+      const issueSpaceToken = async (rotate, roleOverride) => {
+        const role = roleOverride || 'second-screen'
         try {
           const data = await postOpenWorldAction({
             action: 'space-token-issue',
             rotate: !!rotate,
             reveal: true,
-            label: 'second-screen',
+            role,
+            label: role,
             ttl_hours: ttlHours,
           })
           if (data && data.ok) {
             if (data.space) setSpaceInfo(data.space)
+            if (data.role) setSpaceRole(data.role)
             if (data.token) {
               setSpaceTok(data.token)
-              try { sessionStorage.setItem('ow-space-token', data.token) } catch { /* ignore */ }
+              try {
+                sessionStorage.setItem('ow-space-token', data.token)
+                sessionStorage.setItem('ow-space-role', data.role || role)
+              } catch { /* ignore */ }
             }
-            onToast && onToast(rotate
-              ? `第二屏令牌已轮换（TTL ${ttlHours > 0 ? `${ttlHours}h` : '永不过期'}，旧令牌立即失效）`
-              : '第二屏令牌已签发')
+            onToast && onToast(role === 'peer'
+              ? `已签发可回写令牌（仅 send-message / mark-read）${rotate ? ' · 已轮换' : ''}`
+              : (rotate
+                ? `第二屏只读令牌已轮换（TTL ${ttlHours > 0 ? `${ttlHours}h` : '永不过期'}）`
+                : '第二屏只读令牌已签发'))
           } else {
             onToast && onToast((data && (data.error || data.code)) || '令牌失败')
           }
@@ -229,8 +255,12 @@ window.__ModuleLoader__.load({
           const data = await postOpenWorldAction({ action: 'space-token-revoke' })
           if (data && data.ok) {
             setSpaceTok('')
-            try { sessionStorage.removeItem('ow-space-token') } catch { /* ignore */ }
+            try {
+              sessionStorage.removeItem('ow-space-token')
+              sessionStorage.removeItem('ow-space-role')
+            } catch { /* ignore */ }
             if (data.space) setSpaceInfo(data.space)
+            setSpaceRole('second-screen')
             onToast && onToast('第二屏令牌已吊销')
           } else {
             onToast && onToast((data && data.error) || '吊销失败')
@@ -257,6 +287,7 @@ window.__ModuleLoader__.load({
             const data = await postOpenWorldAction({
               action: 'space-token-issue',
               reveal: true,
+              role: 'second-screen',
               label: 'second-screen',
               ttl_hours: ttlHours,
             })
@@ -270,7 +301,7 @@ window.__ModuleLoader__.load({
         const url = secondScreenUrl(tok)
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(url)
-          onToast && onToast('第二屏链接已复制（LAN 请把 host 换成局域网 IP）')
+          onToast && onToast('第二屏链接已复制（页内用 Bearer 换 SSE ticket；勿把长寿命 token 当唯一凭证）')
         } else {
           onToast && onToast(url)
         }
@@ -283,17 +314,23 @@ window.__ModuleLoader__.load({
       }
 
       const spaceOff = sp.enabled === false
+      const pairOfflineHint = !pair.available
+        ? 'Pair 未启用 · 在 plugins.yml 将 web-ui-remote-web-ui: enabled 设为 true，运行 apply.cmd 后重启 Desktop'
+        : null
+      const roleLabel = (sp.role || spaceRole) === 'peer' ? 'peer（受限回写）' : 'second-screen（只读）'
 
       return React.createElement('div', { className: 'ow-hub' },
-        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
-          React.createElement('summary', {
-            className: 'ow-hub-title',
-            style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 第二屏（只读）'),
+        React.createElement('div', {
+          className: 'ow-hub-sec',
+          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(94,234,212,.2)', borderRadius: 6 },
+        },
+          React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 观察/回写（Space）'),
           React.createElement('div', { className: 'ow-hub-stat' },
+            'OW 第二屏：局域网观察 + 可选白名单回写（send-message / mark-read）。与 Pair 不是同一条协议。'),
+          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4 } },
             spaceOff
-              ? 'space 未启用（open-world.yml → space.enabled）· 只读观察面关闭，下方签发已禁用'
-              : `${sp.hasToken ? '令牌已就绪' : (sp.expired ? '令牌已过期' : '尚无令牌')} · LAN 需 Bearer · ${sp.protocol || 'owip/0.2-draft'}${sp.seal_outbox ? ' · 密封 outbox' : ''}${sp.sync === false ? '' : ' · SSE 同步'}${sp.token_ttl_hours != null ? ` · 默认 TTL ${sp.token_ttl_hours}h` : ''}`),
+              ? 'space 未启用（open-world.yml → space.enabled）'
+              : `${sp.hasToken ? '令牌就绪' : (sp.expired ? '令牌已过期' : '尚无令牌')} · ${roleLabel} · ${sp.protocol || 'owip/0.3-draft'}${sp.token_ttl_hours != null ? ` · TTL ${sp.token_ttl_hours}h` : ''}`),
           !spaceOff && React.createElement('div', {
             className: 'ow-hub-row',
             style: { marginTop: 6, gap: 4, flexWrap: 'wrap', alignItems: 'center' },
@@ -307,17 +344,29 @@ window.__ModuleLoader__.load({
               onClick: () => setTtlHours(c.hours),
             }, c.label)),
           ),
-          React.createElement('div', { className: 'ow-hub-row', style: { marginTop: 6 } },
+          React.createElement('div', { className: 'ow-hub-row', style: { marginTop: 6, flexWrap: 'wrap' } },
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn primary',
               disabled: spaceOff,
-              title: spaceOff ? 'space.enabled=false' : undefined,
-              onClick: () => !spaceOff && issueSpaceToken(false),
-            }, sp.hasToken ? '显示令牌' : '签发令牌'),
+              onClick: () => !spaceOff && issueSpaceToken(false, 'second-screen'),
+            }, '签发只读令牌'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
               disabled: spaceOff,
-              onClick: () => !spaceOff && issueSpaceToken(true),
+              title: 'peer 仅可 send-message / mark-read；禁止 pair-*、space-token-*、idea-inject',
+              onClick: () => {
+                if (spaceOff) return
+                if (typeof window !== 'undefined' && window.confirm
+                  && !window.confirm('签发可回写（受限）令牌？对端可发短消息与全部已读，无法管 Pair/令牌/注入。')) {
+                  return
+                }
+                issueSpaceToken(true, 'peer')
+              },
+            }, '签发可回写（受限）'),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn',
+              disabled: spaceOff,
+              onClick: () => !spaceOff && issueSpaceToken(true, sp.role || spaceRole || 'second-screen'),
             }, '轮换'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
@@ -348,17 +397,29 @@ window.__ModuleLoader__.load({
             sp.expired ? ' · 已过期请轮换' : null,
           ].filter(Boolean).join('')),
         ),
-        React.createElement('details', { className: 'ow-hub-sec ow-hub-fold', style: { marginBottom: 8 } },
-          React.createElement('summary', {
-            className: 'ow-hub-title',
-            style: { cursor: 'pointer', listStyle: 'none' },
-          }, '高级 · 跨机配对'),
+        React.createElement('div', {
+          className: 'ow-hub-sec',
+          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(245,214,122,.22)', borderRadius: 6 },
+        },
+          React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 手机控工作区（Pair）'),
           React.createElement('div', { className: 'ow-hub-stat' },
+            '由 dsh-remote-web-ui 负责 /m；OW 只代理状态与入口，不重写 Pair Host。'),
+          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4, color: pair.available ? '#7c8ea6' : '#fbbf24' } },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
-              : 'remote-web-ui 未安装'),
-          React.createElement('div', { className: 'ow-hub-row', style: { marginTop: 6 } },
-            React.createElement('button', { type: 'button', className: 'ow-msg-btn primary', onClick: issuePair }, '生成配对码'),
+              : (pairOfflineHint || 'remote-web-ui 未安装/未启用')),
+          React.createElement('div', { className: 'ow-hub-row', style: { marginTop: 6, flexWrap: 'wrap' } },
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn primary',
+              disabled: !pair.available,
+              title: pairOfflineHint || undefined,
+              onClick: () => pair.available ? issuePair() : onToast && onToast(pairOfflineHint),
+            }, '生成配对码'),
+            React.createElement('button', {
+              type: 'button', className: 'ow-msg-btn',
+              disabled: !pair.available,
+              onClick: () => pair.available ? stopPair() : onToast && onToast(pairOfflineHint),
+            }, '停止 Pair'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
               onClick: () => onAction({ type: 'remote', label: '远程面板' }),

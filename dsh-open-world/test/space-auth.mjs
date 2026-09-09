@@ -36,6 +36,8 @@ try {
   const st = spaceStatus(home, cfg)
   ok(st.hasToken === true && !('token' in st), 'status hasToken, no plaintext')
   ok(st.protocol === SPACE_PROTOCOL, 'status protocol')
+  ok(st.role === 'second-screen' || st.role === 'peer', 'status includes role')
+  ok(issued.role === 'second-screen', 'default issue role is second-screen')
 
   const rotated = rotateSpaceToken(home, cfg, 'rotated')
   ok(rotated.token !== issued.token, 'rotate changes token')

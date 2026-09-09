@@ -8,6 +8,34 @@
 export const BRIDGE_HEALTH_KEY = 'ow-bridge-health'
 export const BRIDGE_HEALTH_TTL = 5 * 60 * 1000
 
+/** 与 capability-registry EMBED_PLUGIN_ID 对齐（compose 进 client，禁止 ES import） */
+const EMBED_PLUGIN_ID = {
+  rewind: 'rewind',
+  'task-board': 'task-board',
+  remote: 'remote-web-ui',
+  memory: 'hindsight',
+  market: 'market',
+  ssh: 'ssh',
+  analytics: 'workspace-analyzer',
+}
+
+function resolveEmbedGate(panel, plugins = []) {
+  const id = String(panel || '')
+  if (!id || id === 'monitor' || id === 'fleet' || id === 'sidebar') {
+    return { ok: true, panel: id }
+  }
+  const pluginId = EMBED_PLUGIN_ID[id]
+  if (!pluginId) return { ok: true, panel: id }
+  const list = plugins || []
+  if (list.length === 0) return { ok: true, panel: id }
+  const plug = list.find((p) => p.id === pluginId)
+  if (!plug) return { ok: true, panel: id }
+  if (plug.online) return { ok: true, panel: id, plugin: plug }
+  const hint = (plug && plug.howToEnable)
+    || `${id}未启用 · 在 plugins.yml 启用对应 feature 后 apply 并重启 Desktop`
+  return { ok: false, panel: id, plugin: plug || null, howToEnable: hint }
+}
+
 export const BRIDGE_CAPABILITY_MAP = {
   'inject-message': 'inject-message',
   'agent-prompt': 'agent-prompt',
@@ -389,6 +417,17 @@ export function createBridge(deps) {
       return
     }
     const { onClose, setView, setToast } = ctx
+    const trySetEmbed = (panel, toastLabel) => {
+      const gate = resolveEmbedGate(panel, ctx.plugins || [])
+      if (!gate.ok) {
+        setToast(gate.howToEnable || `${panel} 未在线`)
+        recordBridgeOutcome(action.type || 'embed', { ok: false, strategy: 'unavailable', error: 'embed-offline' })
+        return false
+      }
+      if (ctx.setEmbed) ctx.setEmbed(panel)
+      if (toastLabel) setToast(toastLabel)
+      return true
+    }
     const afterClose = async (fn) => {
       onClose()
       await delay(180)
@@ -420,13 +459,11 @@ export function createBridge(deps) {
         setToast(action.label || '已切换监视视图')
         break
       case 'rewind-panel':
-        if (ctx.setEmbed) ctx.setEmbed('rewind')
-        setToast('已进入回退时间轴')
+        trySetEmbed('rewind', '已进入回退时间轴')
         break
       case 'enter-app':
       case 'embed':
-        if (ctx.setEmbed) ctx.setEmbed(action.panel || 'task-board')
-        setToast(action.label || `已进入 ${action.panel || '应用'}`)
+        trySetEmbed(action.panel || 'task-board', action.label || `已进入 ${action.panel || '应用'}`)
         break
       case 'idea-panel':
         setView('idea')
@@ -435,9 +472,9 @@ export function createBridge(deps) {
       case 'panel': {
         const embedable = new Set(['task-board', 'rewind', 'market', 'memory', 'ssh', 'remote', 'analytics', 'monitor', 'fleet', 'sidebar'])
         if (action.panel && embedable.has(action.panel) && ctx.setEmbed) {
-          ctx.setEmbed(action.panel)
-          recordBridgeOutcome('panel', { ok: true, strategy: 'embed' })
-          setToast(action.label || `已进入 ${action.panel}`)
+          if (trySetEmbed(action.panel, action.label || `已进入 ${action.panel}`)) {
+            recordBridgeOutcome('panel', { ok: true, strategy: 'embed' })
+          }
           break
         }
         let usedDom = false
@@ -520,8 +557,7 @@ export function createBridge(deps) {
           break
         }
         if (action.inline) break
-        if (ctx.setEmbed) ctx.setEmbed('task-board')
-        else setToast('任务已创建 · 无壳内嵌入，请到官方任务看板查看（未点 DOM）')
+        if (!trySetEmbed('task-board')) setToast('任务已创建 · 无壳内嵌入，请到官方任务看板查看（未点 DOM）')
         break
       }
       case 'task-run': {
@@ -537,8 +573,7 @@ export function createBridge(deps) {
           break
         }
         if (action.inline) break
-        if (ctx.setEmbed) ctx.setEmbed('task-board')
-        else setToast('任务已触发 · 无壳内嵌入，请到官方任务看板查看（未点 DOM）')
+        if (!trySetEmbed('task-board')) setToast('任务已触发 · 无壳内嵌入，请到官方任务看板查看（未点 DOM）')
         break
       }
       case 'agent-prompt': {
@@ -565,10 +600,8 @@ export function createBridge(deps) {
         break
       }
       case 'remote': {
-        if (ctx.setEmbed) {
-          ctx.setEmbed('remote')
+        if (trySetEmbed('remote', '已进入移动端远程表面')) {
           recordBridgeOutcome('remote', { ok: true, strategy: 'embed' })
-          setToast('已进入移动端远程表面')
           break
         }
         let usedDom = false
@@ -661,9 +694,9 @@ export function createBridge(deps) {
       case 'rewind-open': {
         // 默认进壳内时间轴；preferChat/forceDom 才关壳开官方 /rewind
         if (!action.preferChat && !action.forceDom && ctx.setEmbed) {
-          ctx.setEmbed('rewind')
-          recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'embed' })
-          setToast('已进入壳内回退时间轴')
+          if (trySetEmbed('rewind', '已进入壳内回退时间轴')) {
+            recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'embed' })
+          }
           break
         }
         const face = getActiveSessionFace()

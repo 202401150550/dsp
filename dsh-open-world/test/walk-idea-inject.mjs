@@ -30,7 +30,7 @@ async function findBase() {
       })
       if (!res.ok) continue
       const j = await res.json()
-      if (j?.ok && (j.framework?.protocol === 'owip/0.1' || j.framework?.protocol === 'owip/0.2-draft')) return `http://127.0.0.1:${port}`
+      if (j?.ok && (j.framework?.protocol === 'owip/0.1' || j.framework?.protocol === 'owip/0.2-draft' || j.framework?.protocol === 'owip/0.3-draft')) return `http://127.0.0.1:${port}`
     } catch { /* next */ }
   }
   return null

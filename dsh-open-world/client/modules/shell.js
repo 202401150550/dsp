@@ -1090,7 +1090,7 @@ window.__ModuleLoader__.load({
           React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#5eead4' } },
             space.enabled === false
               ? 'Space 未启用'
-              : `Space · ${space.hasToken ? '令牌就绪' : '待签发'} · ${space.protocol || 'owip/0.2-draft'}${space.sync === false ? '' : ' · sync'}`),
+              : `Space · ${space.hasToken ? '令牌就绪' : '待签发'} · ${space.protocol || 'owip/0.3-draft'}${space.sync === false ? '' : ' · sync'}`),
           React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' } },
             officialBtn('打开远程面板', { type: 'remote', label: '远程' }),
             React.createElement('button', {

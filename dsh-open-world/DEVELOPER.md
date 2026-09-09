@@ -1,7 +1,7 @@
 # Open World · 给开发者（一页）
 
 > 对接壳 API / 真机联调时看本页即可。产品用法见 [QUICKSTART.md](./QUICKSTART.md)；协议全文见 [OWIP_v0.1.md](./OWIP_v0.1.md)。  
-> 运行时：**v2.52**
+> 运行时：**v2.60** · 协议（space 开）：**owip/0.3-draft**
 
 ---
 
@@ -12,8 +12,8 @@ Desktop 对本机**进程外** HTTP 常返回 **403**（Host/连接围栏）。
 
 | 通道 | 场景 | 承诺 |
 |------|------|------|
-| 壳内同源 | UI 轮询 / 按钮 | 默认 |
-| Space Bearer | 第二屏 / LAN | 只读观察；高级 |
+| 壳内同源 | UI 轮询 / 按钮 | 默认（loopback-shell） |
+| Space Bearer | 第二屏 / LAN | 默认只读；`peer` 仅白名单回写 |
 | 进程外 HTTP | 外部脚本 | **不承诺** → 用 CDP |
 
 ---
@@ -71,9 +71,12 @@ npm run test:live-rra-cdp     # 直接 CDP 页内：snapshot / rra probe·sketch
 | `idea-inject` | 人格前缀包装后投递（Host 包装 → Bridge 真注入） |
 | `memory-search` | Hindsight 检索 |
 | `world-state-get` / `world-state-save` | 壳 UI 状态（页签 / 窗口模式） |
-| `space-token-issue` / `space-token-status` | 第二屏令牌（高级面仍用；日常壳可折叠） |
+| `space-token-issue` / `space-token-status` | Space 令牌（默认 `second-screen`；可显式 `role: peer`） |
+| `pair-issue` / `pair-stop` | Pair 配对（需 remote-web-ui 在线） |
 
-其余 Host（`pair-*` · `notification-*` · `idea-compare` · `rrm-session-*` · `space-token-revoke` …）标 **高级**，见 `framework.actionLayers.host.advanced`。
+**Space ACL（0.3）**：observer 禁写；peer 走 `POST /space/peer-action`；SSE 用 `POST /space/sse-ticket`。能力契约：`bridge/capability-registry.mjs`。
+
+其余 Host（`notification-*` · `idea-compare` · `rrm-session-*` · `space-token-revoke` …）标 **高级**，见 `framework.actionLayers.host.advanced`。
 
 ---
 

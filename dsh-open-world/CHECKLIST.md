@@ -1,20 +1,20 @@
 # Open World 验收清单（CHECKLIST）
 
 > 配套 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · [SHELL_PLAN.md](./SHELL_PLAN.md) · [DEVELOPER.md](./DEVELOPER.md) · [OWIP_v0.1.md](./OWIP_v0.1.md)  
-> 最后更新：2026-09-08 · **运行时真源 v2.52 / owip/0.2-draft** · schema **8** · 神经 RRA **脚手架冻结（OW 适配器默认关）**
+> 最后更新：2026-09-09 · **运行时真源 v2.60 / owip/0.3-draft** · schema **8** · 神经 RRA **脚手架冻结（OW 适配器默认关）**
 
 ---
 
 ## 验证命令
 
 ```powershell
-npm test                 # 离线门禁（smoke + bridge + …）
+npm test                 # 离线门禁（含 space-acl · capability-registry）
 npm run build:client     # 改 client/ 后必跑
 npm run desktop:cdp      # 完全退出 Desktop 后：带 --remote-debugging-port=9333 启动
 npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-cdp
 ```
 
-**冷启（2026-09-08 已绿）**：v2.52 profile + CDP live **19/19** · 水印/clientVer 对齐 · 首屏白话一轮。
+**冷启**：profile 须与 `CLIENT_VER=v2.60` 对齐；改完完全退出 Desktop 再开。
 
 ---
 
@@ -40,12 +40,13 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 ## 三、架构与代码（别继续堆单体）
 
 - [x] client 已拆 styles/runtime/app-layout/portal/hooks；OpenWorldApp 仅编排
-- [x] 版本号统一——package / plugin / framework / CLIENT_VER = **2.51 / v2.51**
+- [x] 版本号统一——package / plugin / framework / CLIENT_VER = **2.60 / v2.60**
 - [x] QUICKSTART / SYSOP / DEVELOPER 与真源对齐
 - [x] `GET /api/open-world/snapshot?view=shell` 瘦身；UI 默认 shell URL
 - [x] `CORE_SHELL_HOST_ACTIONS` 日常 vs 高级
 - [x] space.enabled=false 时第二屏签发/打开按钮禁用
 - [x] 神经 RRA：OW `rra.probe` 默认关；`implemented` / `fullNeuralRra` 保持 false（无生产 checkpoint）
+- [x] `bridge/capability-registry.mjs`：featureId / insertId / embed 对齐；`resolveEmbedGate` 拦离线 embed
 
 ## 四、Bridge 与稳定性
 
@@ -58,16 +59,20 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 ## 五、集成与插件
 
 - [x] 通知中心未启用就不显示入口
-- [x] 第二屏 / Pair 默认折叠为「高级」
-- [x] PLUGIN_CATALOG 与 plugins.yml 对齐；offline 诚实提示
+- [x] 枢纽 **Space / Pair 双卡划界**（不合并协议）；Pair 离线诚实提示 plugins.yml
+- [x] PLUGIN_CATALOG + CapabilityRegistry 与 plugins.yml 对齐；offline 诚实提示
 - [x] IDEA 单入口（左栏打开；完整面只在中区）
 - [x] Rewind / 舰队：左栏摘要，完整面仅 embed
 - [x] 无在线插件时动作空状态引导；事件空提示
+- [x] remote-web-ui / hindsight **默认关**（presets）；枢纽不假装已联动
 
-## 六、接口与安全（阶段 C）
+## 六、接口与安全（owip/0.3-draft）
 
 - [x] 非 loopback 需 Bearer；loopback 默认免 token
-- [x] 第二屏只读观察（Bearer · TTL · 吊销/轮换）
+- [x] Space principal：`loopback-shell` | `second-screen` | `peer`
+- [x] 默认签发只读；`peer` 仅 `send-message` / `mark-read`（`PEER_ACTION_ALLOWLIST`）
+- [x] stream `role=` 与主体匹配；非 loopback 弃用长寿命 `?token=` 作唯一 SSE 凭证（须 ticket）
+- [x] `POST /space/peer-action` + 审计事件；禁止 peer 调 `space-token-*` / `pair-*` / `idea-inject`
 - [x] outbox 可密封；SSE mailbox + snapshot-delta
 - [x] Host action registry；进程外裸 HTTP **不承诺**（常 403 → CDP）
 
@@ -78,12 +83,12 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 - [x] 快捷操作 3 个：新建任务 · 任务看板 · 回退
 - [x] 壳顶用法条（可关闭）· 记忆双页签（本地 RRM | Hindsight）
 - [x] 用户常看到旧 UI——水印含 `CLIENT_BUILD`；`npm run check:client` 拦未 rebuild
-- [x] 冷启：`desktop:cdp` + `test:live`；水印 `OPEN-WORLD v2.51 · <hash>`
+- [x] 冷启：`desktop:cdp` + `test:live`；水印 `OPEN-WORLD v2.60 · <hash>`
 - [ ] 改完仍须完全退出 DSH + 强刷一次（Electron 缓存）——**操作习惯，非代码债**
 
 ## 八、开发与流程
 
-- [x] 单测：`npm test`
+- [x] 单测：`npm test`（含 `test/space-acl.mjs` · `test/capability-registry.mjs`）
 - [x] 冷启脚本：`npm run desktop:cdp` · `test:live` / `test:live-cdp`
 - [ ] DSH Desktop 与 LobsterAI 不要同时跑——task-board ledger 会锁冲突
 - [ ] 改 plugins.yml 后要跑 apply 并完全重启 DSH
@@ -91,11 +96,12 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 ## 九、明确「不做」清单（L1 禁区）
 
 - ❌ 自研 LLM 路由
-- ❌ 重写 task-board / rewind 核心
+- ❌ 重写 task-board / rewind / **dsh-remote-web-ui** 核心
+- ❌ 合并 Space 与 Pair 为单一 token 体系
 - ❌ 把 metaphor 包装成真实 ML 指标
 - ❌ 继续往 L3 堆视图当主迭代
 - ❌ 无 registry 地无限加 /action 种类
-- ❌ 未点名就上神经 RRA 或真跨机双向世界
+- ❌ 未点名就上神经 RRA 或「全写」跨机世界
 - ❌ 把壳层 RRM `falsify` 宣称为神经 RRA 已实现
 - ❌ 在 stub 返回假 attention / 假 KV 冒充已实现
 - ❌ 承诺进程外 HTTP 对 Desktop 恒绿
@@ -108,8 +114,9 @@ npm run test:live        # HTTP 常 403 → 自动 CDP；或 npm run test:live-c
 S0–S3   SYSOP 壳可用 / Bridge / 模块化     ✅
 A 门槛  冷启 + 三问 + task online + RRM   ✅
 B       WM · world-state · ATI 表面 · 舰队 ✅
-C       token · 密封 outbox · SSE 第二屏   ✅（只读观察）
-壳定稿  SHELL_PLAN P1–P3 · v2.51 · CDP 冷启 ✅（commit 832b3d4）
+C       token · 密封 outbox · SSE 第二屏   ✅（v0.2 只读）
+壳定稿  SHELL_PLAN · v2.52 · CDP 冷启      ✅
+联动改革 WP0–WP4 · ACL + peer MVP · v2.60  ✅（owip/0.3-draft）
 ```
 
 改 Client 源码后跑：`npm run build:client`
@@ -120,11 +127,11 @@ C       token · 密封 outbox · SSE 第二屏   ✅（只读观察）
 
 | 文件 | 字段 | 应为 |
 |------|------|------|
-| dsh.plugin.json | version | `"2.52.0"` |
-| package.json | version | `"2.52.0"` |
-| index.js `buildFramework()` | version | `"2.52"` |
-| index.js framework | protocol | `"owip/0.2-draft"`（space 开）或 `"owip/0.1"`（关） |
+| dsh.plugin.json | version | `"2.60.0"` |
+| package.json | version | `"2.60.0"` |
+| index.js `buildFramework()` | version | `"2.60"` |
+| index.js framework | protocol | `"owip/0.3-draft"`（space 开）或 `"owip/0.1"`（关） |
 | snapshot schema | `version` / `snapshotSchema` | `8` |
-| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.52'` + compose 哈希；源码占位 `dev` |
-| 界面水印 | — | `OPEN-WORLD v2.52 · <build>` |
+| client.js `CLIENT_VER` / `CLIENT_BUILD` | — | `'v2.60'` + compose 哈希；源码占位 `dev` |
+| 界面水印 | — | `OPEN-WORLD v2.60 · <build>` |
 | 大行李 | RRA | `rra-proto` 脚手架冻结；OW `rra.probe` 默认关；`implemented:false` |

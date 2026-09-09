@@ -40,7 +40,7 @@ async function probeOpenWorld(port) {
     })
     if (!res.ok) return null
     const snap = await res.json().catch(() => null)
-    if (snap?.ok === true && (snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft')) {
+    if (snap?.ok === true && (snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft' || snap.framework?.protocol === 'owip/0.3-draft')) {
       return `http://127.0.0.1:${port}`
     }
   } catch { /* next */ }
@@ -132,7 +132,7 @@ ok(snap.ok === true, 'snapshot.ok')
     console.log(`  ⚠ live host still on ${ver} — fully quit Desktop to load profile copy of v2.46+`)
   }
 }
-ok(snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft', `framework.protocol=${snap.framework?.protocol}`)
+ok(snap.framework?.protocol === 'owip/0.1' || snap.framework?.protocol === 'owip/0.2-draft' || snap.framework?.protocol === 'owip/0.3-draft', `framework.protocol=${snap.framework?.protocol}`)
 ok(snap.config?.integrations != null, 'config.integrations present')
 ok(snap.config?.idea != null, 'config.idea present')
 ok(snap.space != null && typeof snap.space.hasToken === 'boolean', 'snapshot.space')

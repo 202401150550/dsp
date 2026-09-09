@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NEXORA · 第二屏</title>
+  <title>Open World · 第二屏</title>
   <style>
     :root {
       --bg: #071018;
@@ -51,14 +51,24 @@
     .ev { font-size: 12px; color: #c9d7e8; padding: 6px 0; border-bottom: 1px solid rgba(94,234,212,.08); }
     .ev time { color: var(--muted); font-family: var(--mono); font-size: 10px; margin-right: 8px; }
     .err { color: #f87171; font-size: 12px; }
+    .peer-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+    .peer-row input {
+      flex: 1; min-width: 160px; background: #0b1520; border: 1px solid var(--border);
+      color: var(--text); border-radius: 4px; padding: 8px 10px; font-size: 13px;
+    }
+    .peer-row button {
+      background: rgba(94,234,212,.12); border: 1px solid var(--border); color: var(--cyan);
+      border-radius: 4px; padding: 8px 12px; cursor: pointer; font-size: 12px;
+    }
+    .peer-row button:disabled { opacity: .45; cursor: default; }
     footer { padding: 0 20px 20px; color: var(--muted); font-size: 11px; font-family: var(--mono); text-align: center; }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>NEXORA · 第二屏</h1>
-      <div class="sub" id="proto">owip/0.2-draft · live sync</div>
+      <h1>Open World · 第二屏</h1>
+      <div class="sub" id="proto">owip/0.3-draft · live sync</div>
     </div>
     <div class="status" id="link">连接中…</div>
   </header>
@@ -69,6 +79,15 @@
       <div class="card"><div class="label">舰队运行</div><div class="value gold" id="running">—</div></div>
       <div class="card"><div class="label">信箱未读</div><div class="value" id="unread">—</div></div>
     </div>
+    <section class="card" id="peerPanel" hidden>
+      <h2>受限回写（peer）</h2>
+      <div class="sub">仅 send-message / mark-read · 禁止 pair / 令牌 / 注入</div>
+      <div class="peer-row">
+        <input id="peerMsg" maxlength="280" placeholder="短消息（≤280）…" />
+        <button type="button" id="peerSend">发送</button>
+        <button type="button" id="peerRead">全部已读</button>
+      </div>
+    </section>
     <section class="card">
       <h2>进程舰队</h2>
       <div id="fleet"></div>
@@ -84,21 +103,21 @@
 (function () {
   const params = new URLSearchParams(location.search)
   const token = params.get('token') || params.get('access_token') || ''
-  const q = token ? ('?token=' + encodeURIComponent(token) + '&role=second-screen') : '?role=second-screen'
-  const api = {
-    screen: '/api/open-world/space/second-screen' + (token ? ('?token=' + encodeURIComponent(token)) : ''),
-    stream: '/api/open-world/stream' + q,
-  }
+  const headers = token ? { authorization: 'Bearer ' + token } : {}
   const el = (id) => document.getElementById(id)
+  let peerMode = false
+  let role = 'second-screen'
+
   function showErr(msg) {
     const n = el('err')
     if (!msg) { n.hidden = true; n.textContent = ''; return }
     n.hidden = false
     n.textContent = msg
   }
+
   function render(data) {
     if (!data || !data.ok) return
-    el('proto').textContent = (data.protocol || 'owip/0.2-draft') + ' · second-screen'
+    el('proto').textContent = (data.protocol || 'owip/0.3-draft') + ' · ' + (role || 'second-screen')
     el('health').textContent = (data.core && data.core.healthScore != null) ? data.core.healthScore : '—'
     el('sessions').textContent = (data.core && data.core.sessionCount != null) ? data.core.sessionCount : '—'
     const counts = (data.fleet && data.fleet.counts) || {}
@@ -124,11 +143,30 @@
     el('foot').textContent = '捕获 ' + (data.capturedAt || '—')
     showErr('')
   }
+
+  async function apiFetch(path, opts) {
+    const res = await fetch(path, Object.assign({ cache: 'no-store', headers: Object.assign({}, headers, (opts && opts.headers) || {}) }, opts || {}))
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status))
+    return data
+  }
+
+  async function detectRole() {
+    try {
+      const st = await apiFetch('/api/open-world/space/status')
+      role = (st.auth && st.auth.role) || (st.space && st.space.role) || 'second-screen'
+      peerMode = role === 'peer'
+      el('peerPanel').hidden = !peerMode
+      if (st.protocol) el('proto').textContent = st.protocol + ' · ' + role
+    } catch (_) {
+      peerMode = false
+      el('peerPanel').hidden = true
+    }
+  }
+
   async function poll() {
     try {
-      const res = await fetch(api.screen, { cache: 'no-store' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status))
+      const data = await apiFetch('/api/open-world/space/second-screen')
       render(data)
       el('link').textContent = '轮询 · ' + new Date().toLocaleTimeString()
     } catch (err) {
@@ -136,35 +174,79 @@
       el('link').textContent = '轮询失败'
     }
   }
-  let es
-  try {
-    es = new EventSource(api.stream)
-    es.onopen = () => { el('link').textContent = 'SSE 已连接' }
-    es.onerror = () => {
-      el('link').textContent = 'SSE 断开 · 回退轮询'
-      try { es.close() } catch (_) {}
+
+  async function peerAction(body) {
+    if (!peerMode) return
+    try {
+      await apiFetch('/api/open-world/space/peer-action', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      showErr('')
+      poll()
+    } catch (err) {
+      showErr(String(err.message || err))
+    }
+  }
+
+  el('peerSend').onclick = () => {
+    const body = (el('peerMsg').value || '').trim()
+    if (!body) return
+    peerAction({ action: 'send-message', to: 'broadcast', body: body.slice(0, 280) })
+    el('peerMsg').value = ''
+  }
+  el('peerRead').onclick = () => peerAction({ action: 'mark-read', ids: [] })
+
+  async function connectSse() {
+    let ticket = ''
+    if (token) {
+      try {
+        const t = await apiFetch('/api/open-world/space/sse-ticket', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+        ticket = t.ticket || ''
+      } catch (err) {
+        showErr('SSE ticket 失败：' + (err.message || err) + ' · 回退轮询')
+        poll()
+        setInterval(poll, 4000)
+        return
+      }
+    }
+    const q = ticket
+      ? ('?ticket=' + encodeURIComponent(ticket) + '&role=second-screen')
+      : '?role=second-screen'
+    let es
+    try {
+      es = new EventSource('/api/open-world/stream' + q)
+      es.onopen = () => { el('link').textContent = 'SSE 已连接' }
+      es.onerror = () => {
+        el('link').textContent = 'SSE 断开 · 回退轮询'
+        try { es.close() } catch (_) {}
+        poll()
+        setInterval(poll, 4000)
+      }
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data)
+          if (data.type === 'second-screen') render(data)
+          else if (data.type === 'hello') {
+            el('link').textContent = 'SSE · hello'
+            if (data.secondScreen) render(data.secondScreen)
+            else poll()
+          } else if (data.type === 'mailbox' || data.type === 'snapshot-delta') {
+            poll()
+          }
+        } catch (_) {}
+      }
+    } catch (_) {
       poll()
       setInterval(poll, 4000)
     }
-    es.onmessage = (ev) => {
-      try {
-        const data = JSON.parse(ev.data)
-        if (data.type === 'second-screen') render(data)
-        else if (data.type === 'hello') {
-          el('link').textContent = 'SSE · hello'
-          if (data.secondScreen) render(data.secondScreen)
-          else poll()
-        } else if (data.type === 'mailbox' || data.type === 'snapshot-delta') {
-          poll()
-        }
-      } catch (_) {}
-    }
-  } catch (_) {
-    poll()
-    setInterval(poll, 4000)
   }
-  // 首屏立即拉一次，避免等 SSE
-  poll()
+
+  detectRole().then(() => {
+    poll()
+    connectSse()
+  })
 })()
   </script>
 </body>

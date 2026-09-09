@@ -1,6 +1,6 @@
 # Open World · 系统壳 / 控制台规划（v1）
 
-> 状态：**产品定稿方向** · 2026-09-08 · 运行时目标 **v2.52**  
+> 状态：**产品定稿方向** · 2026-09-09 · 运行时目标 **v2.60**  
 > 定位一句话：**DSH 的系统壳 / 控制台**——状态 · 动作 · 事件；不是聊天替代品，不是第二套 Agent，不是神经记忆产品。  
 > 配套：[SYSOP_v0.1.md](./SYSOP_v0.1.md) · [QUICKSTART.md](./QUICKSTART.md) · [OWIP_v0.1.md](./OWIP_v0.1.md) · [DEVELOPER.md](./DEVELOPER.md)
 
@@ -68,8 +68,9 @@ L1 宿主（只桥接）               DSH Harness / 各插件 API
 
 | 通道 | 给谁 | 规则 |
 |------|------|------|
-| 同源 cookie | Desktop 壳内 | 默认 |
-| Space Bearer | 第二屏 / LAN | 只读观察；高级 |
+| 同源 cookie | Desktop 壳内 | 默认（loopback-shell） |
+| Space Bearer | 第二屏 / LAN | 默认只读；显式 peer 仅 `send-message`/`mark-read` |
+| Pair / remote-web-ui | 手机控工作区 | 独立 Host（`/m`）；OW 只代理状态与入口 |
 | 进程外裸 HTTP | 脚本 | **不承诺**（Desktop 常 403）；联调走 CDP |
 
 **Host 核心动作（日常推荐，文档置顶）**  
@@ -94,7 +95,7 @@ L1 宿主（只桥接）               DSH Harness / 各插件 API
 4. ATI **实验室预设** 默认折叠，只露「统一场」  
 5. IDEA 单入口、假温度→真实内存、拓扑退出底栏  
 6. （v2.48）左栏 **舰队 / 回退** 只留摘要；完整列表仅 embed  
-7. （v2.48）集成枢纽 **第二屏 / Pair** 默认折叠为「高级」  
+7. （v2.48）集成枢纽 **第二屏 / Pair** 曾默认折叠；**v2.60** 改为双卡划界（观察/回写 vs 手机控）  
 
 ### 增加
 
