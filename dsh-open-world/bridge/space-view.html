@@ -81,12 +81,17 @@
     </div>
     <section class="card" id="peerPanel" hidden>
       <h2>受限回写（peer）</h2>
-      <div class="sub">仅 send-message / mark-read · 禁止 pair / 令牌 / 注入</div>
+      <div class="sub">send-message / mark-read / memory-search · 禁止 pair / 令牌 / 注入</div>
       <div class="peer-row">
         <input id="peerMsg" maxlength="280" placeholder="短消息（≤280）…" />
         <button type="button" id="peerSend">发送</button>
         <button type="button" id="peerRead">全部已读</button>
       </div>
+      <div class="peer-row" style="margin-top:8px">
+        <input id="peerMemQ" maxlength="120" placeholder="记忆检索（只读）…" />
+        <button type="button" id="peerMem">检索</button>
+      </div>
+      <div class="sub" id="peerMemOut" style="margin-top:6px;white-space:pre-wrap"></div>
     </section>
     <section class="card">
       <h2>进程舰队</h2>
@@ -197,6 +202,26 @@
     el('peerMsg').value = ''
   }
   el('peerRead').onclick = () => peerAction({ action: 'mark-read', ids: [] })
+  el('peerMem').onclick = async () => {
+    const q = (el('peerMemQ').value || '').trim()
+    if (!q || !peerMode) return
+    try {
+      const data = await apiFetch('/api/open-world/space/peer-action', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'memory-search', query: q }),
+      })
+      const hits = (data && (data.hits || data.results || data.items)) || []
+      const note = data && (data.note || data.error || data.message)
+      el('peerMemOut').textContent = Array.isArray(hits) && hits.length
+        ? hits.slice(0, 5).map((h, i) => (i + 1) + '. ' + (h.text || h.body || h.title || JSON.stringify(h))).join('\n')
+        : (note || JSON.stringify(data || {}).slice(0, 240) || '无命中')
+      showErr('')
+    } catch (err) {
+      el('peerMemOut').textContent = ''
+      showErr(String(err.message || err))
+    }
+  }
 
   async function connectSse() {
     let ticket = ''

@@ -12,10 +12,11 @@ export const SPACE_ROLES = Object.freeze({
   PEER: 'peer',
 })
 
-/** peer 可调用的 Host action（白名单） */
+/** peer 可调用的 Host action（白名单；每次只 +1，须单测 + 审计） */
 export const PEER_ACTION_ALLOWLIST = Object.freeze([
   'send-message',
   'mark-read',
+  'memory-search', // v2.72：更深只读（Hindsight 检索；不写世界 / 不发令牌）
 ])
 
 /** observer / second-screen：只允许这些路径前缀（method 另判） */

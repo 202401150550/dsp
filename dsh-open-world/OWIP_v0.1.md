@@ -64,7 +64,7 @@ curl -s http://127.0.0.1:<port>/api/open-world/messages | jq '.messages[0:5]'
 | 令牌 | — | `~/.dsh/open-world/space-token.json`；`space-token-issue` / `rotate` / `revoke` | 令牌带 **`role`**：默认 `second-screen`；显式 `peer` 才可写 |
 | TTL | — | `space.token_ttl_hours`（默认 168h） | 同左 |
 | 第二屏 | — | `GET /space/view` · `GET /space/second-screen` · stream `?role=second-screen` | 同左；EventSource 须 **短时 SSE ticket**（`POST /space/sse-ticket`），禁止仅靠长寿命 `?token=` |
-| 回写 | — | （产品标只读，实现曾可打全量 `/action`） | **observer 禁止写**；`peer` 仅 `send-message` / `mark-read`（`PEER_ACTION_ALLOWLIST`）；统一口 `POST /space/peer-action` |
+| 回写 | — | （产品标只读，实现曾可打全量 `/action`） | **observer 禁止写**；`peer` 仅 `send-message` / `mark-read` / `memory-search`（`PEER_ACTION_ALLOWLIST`）；统一口 `POST /space/peer-action` |
 | outbox | 明文 | 可选 AES-256-GCM 密封（`space.seal_outbox`） | 同左 |
 | Pair | — | OW 可代理 pair 状态 | **不合并协议**：Pair 仍属 `dsh-remote-web-ui`；Space peer ≠ Pair |
 
@@ -74,12 +74,12 @@ curl -s http://127.0.0.1:<port>/api/open-world/messages | jq '.messages[0:5]'
 |------|----|----------|
 | `loopback-shell` | 本机 Desktop 壳（同源） | 全量 OW API |
 | `second-screen` | LAN 第二屏（默认签发） | 只读：`GET /space/*`、stream `role=second-screen`、换 SSE ticket |
-| `peer` | 显式「可回写（受限）」令牌 | 观察 + 白名单写：`send-message`、`mark-read`；**禁止** `space-token-*` / `pair-*` / `idea-inject` / `rrm-session-*` |
+| `peer` | 显式「可回写（受限）」令牌 | 观察 + 白名单：`send-message`、`mark-read`、`memory-search`；**禁止** `space-token-*` / `pair-*` / `idea-inject` / `rrm-session-*` |
 
 ```text
 POST /api/open-world/space/sse-ticket   → { ticket, expiresInSec, role }
 GET  /api/open-world/stream?ticket=…&role=second-screen
-POST /api/open-world/space/peer-action  → { action: "send-message"|"mark-read", … }
+POST /api/open-world/space/peer-action  → { action: "send-message"|"mark-read"|"memory-search", … }
 ```
 
 实现真源：`bridge/space-acl.mjs` · `bridge/space-auth.mjs`（`SPACE_PROTOCOL = owip/0.3-draft`）。
