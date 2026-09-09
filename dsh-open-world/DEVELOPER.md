@@ -76,6 +76,16 @@ npm run test:live-rra-cdp     # 直接 CDP 页内：snapshot / rra probe·sketch
 
 **Space ACL（0.3）**：observer 禁写；peer 走 `POST /space/peer-action`；SSE 用 `POST /space/sse-ticket`。能力契约：`bridge/capability-registry.mjs`。
 
+### Space vs Pair（勿混）
+
+| | **Space（OW）** | **Pair（remote-web-ui）** |
+|--|-----------------|---------------------------|
+| 目的 | 局域网第二屏观察 + 可选受限回写 | 手机控工作区（`/m`） |
+| 凭证 | OW Bearer · role=`second-screen`\|`peer` | Pair 配对码 / remote Host |
+| 写能力 | 仅 peer：`send-message` · `mark-read` | 由 remote-web-ui 决定（非 OW ACL） |
+| 入口 | 枢纽「跨机 · 观察/回写」· `space-view.html` | 枢纽「跨机 · 手机控」· `pair-issue`/`pair-stop` |
+| 信箱 `to: remote` | 本地 outbox，**不是**手机实时通道 | — |
+
 其余 Host（`notification-*` · `idea-compare` · `rrm-session-*` · `space-token-revoke` …）标 **高级**，见 `framework.actionLayers.host.advanced`。
 
 ---

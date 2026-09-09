@@ -170,15 +170,44 @@ ok(mbPack.status === 200, `messages status ${mbPack.status}`)
 const hit = (mbPack.json?.messages || []).some((m) => String(m.body || '').includes('[live-cdp]'))
 ok(hit, 'broadcast message visible in mailbox')
 
-const ui = await evalJson(`({
-  text: document.body?.innerText || '',
-  title: document.title || '',
-})`)
-const wmOk = /OPEN-WORLD\s+v2\.(5\d|[6-9]\d|\d{3,})/.test(ui.text)
+const ui = await evalJson(`(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  const shellRoot = () => [...document.querySelectorAll('.ow-overlay.ow-root')]
+    .find((el) => el.querySelector('.ow-shell'))
+  if (!shellRoot()) {
+    const opener = document.querySelector('.ow-dock-chip')
+      || document.querySelector('.ow-trigger')
+    if (opener) {
+      opener.click()
+      await sleep(800)
+    }
+  }
+  const root = shellRoot()
+  const rootText = root?.innerText || ''
+  const tabs = root ? [...root.querySelectorAll('.ow-side-tab')] : []
+  const actionsTab = tabs.find((t) => /动作/.test(t.innerText || ''))
+  if (actionsTab) {
+    actionsTab.click()
+    await sleep(500)
+  }
+  const text = shellRoot()?.innerText || document.body?.innerText || ''
+  return {
+    text,
+    title: document.title || '',
+    wm: /OPEN-WORLD\\s+v2\\.(5\\d|[6-9]\\d|\\d{3,})/.test(text),
+    spaceCard: /观察\\/回写|签发只读令牌/.test(text),
+    pairCard: /手机控工作区|生成配对码|停止 Pair/.test(text),
+    peerBtn: /签发可回写/.test(text),
+  }
+})()`)
+const wmOk = !!ui.wm
 const fwOk = /^2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.version || ''))
 const cvOk = /^v2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.clientVer || ''))
 ok(wmOk || fwOk || cvOk,
   `watermark/clientVer aligned (fw=${snap.framework?.version} clientVer=${snap.framework?.clientVer || '?'})`)
+ok(ui.spaceCard === true, 'hub Space dual-card visible')
+ok(ui.pairCard === true, 'hub Pair dual-card visible')
+ok(ui.peerBtn === true, 'hub peer issue button visible')
 if (!wmOk) {
   console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.60；当前以 framework.version 为准')
 }
