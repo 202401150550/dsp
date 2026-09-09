@@ -9,7 +9,7 @@
 1. `plugins.yml` 里 `dsh-open-world: enabled: true`
 2. 跑过 `dsh-desktop-toggle/apply.mjs`（若你用 profile 链接）
 3. **完全退出 DSH → 重开 → Ctrl+Shift+R**
-4. 侧栏底部或输入框旁点 **✦**，水印应为 `OPEN-WORLD v2.75`（须与 `framework.version` 一致）
+4. 侧栏底部或输入框旁点 **✦**，水印应为 `OPEN-WORLD v2.76`（须与 `framework.version` 一致）
 
 ---
 

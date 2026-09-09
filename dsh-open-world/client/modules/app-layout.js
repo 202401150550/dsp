@@ -75,6 +75,7 @@ window.__ModuleLoader__.load({
                         React.createElement(StatusSummaryChips, { snapshot, plugins }),
                         React.createElement(EnterWorldCta, {
                           worlds: snapshot && snapshot.worlds,
+                          worldPacks: snapshot && snapshot.worldPacks,
                           onEnter: (w) => runBridge({
                             type: 'enter-world',
                             worldId: (w && w.id) || 'tasks',

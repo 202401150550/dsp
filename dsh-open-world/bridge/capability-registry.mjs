@@ -161,13 +161,14 @@ export function resolveEmbedGate(panel, plugins = []) {
   if (!id || id === 'monitor' || id === 'fleet' || id === 'sidebar') {
     return { ok: true, panel: id }
   }
-  // 后置世界包：阶段4无真实包，禁止空壳 embed（不看 plugins 空列表放行）
+  // 后置世界包：壳内诚实占位面（说明未装包）；进场仍由 Host world-enter / yml opt-in 约束
   const pack = worldPackByPanel(id)
   if (pack) {
     return {
-      ok: false,
+      ok: true,
       panel: id,
-      howToEnable: `后置世界包「${pack.title}」仅接口预留 · 默认关 · 不可空壳进入`,
+      placeholder: true,
+      howToEnable: `后置世界包「${pack.title}」· 默认关 · opt-in 后仅诚实占位`,
     }
   }
   const pluginId = EMBED_PLUGIN_ID[id]

@@ -174,22 +174,29 @@ const ui = await evalJson(`(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   const shellRoot = () => [...document.querySelectorAll('.ow-overlay.ow-root')]
     .find((el) => el.querySelector('.ow-shell'))
-  if (!shellRoot()) {
-    const opener = document.querySelector('.ow-dock-chip')
-      || document.querySelector('.ow-trigger')
-    if (opener) {
-      opener.click()
-      await sleep(800)
+  const openShell = async () => {
+    for (let i = 0; i < 8; i++) {
+      if (shellRoot()) return true
+      const opener = document.querySelector('.ow-dock-chip')
+        || document.querySelector('.ow-trigger')
+      if (opener) opener.click()
+      await sleep(700)
     }
+    return !!shellRoot()
   }
-  const root = shellRoot()
+  await openShell()
   const tabs = () => [...(shellRoot()?.querySelectorAll('.ow-side-tab') || [])]
   const clickTab = async (re) => {
-    const t = tabs().find((el) => re.test(el.innerText || ''))
-    if (t) {
-      t.click()
-      await sleep(500)
+    for (let i = 0; i < 4; i++) {
+      const t = tabs().find((el) => re.test(el.innerText || ''))
+      if (t) {
+        t.click()
+        await sleep(450)
+        return true
+      }
+      await sleep(400)
     }
+    return false
   }
   // Hub cards live under 动作；进世界地图在 状态
   await clickTab(/动作/)
@@ -230,7 +237,7 @@ ok(ui.peerBtn === true, 'hub peer issue button visible')
 ok(ui.enterCta === true, 'EnterWorldCta visible on status')
 ok(ui.worldMap === true, 'world map present')
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.75；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.76；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

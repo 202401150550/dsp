@@ -1512,7 +1512,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.75'
+    return '2.76'
   }
 }
 
@@ -2375,13 +2375,28 @@ function buildActionRegistry() {
     const byPanel = parsed.panel ? resolveWorldPackGate(parsed.panel, env.config) : { applies: false }
     const gate = byId.applies ? byId : byPanel
     if (gate.applies) {
+      if (!gate.ok) {
+        return {
+          status: 403,
+          body: {
+            ok: false,
+            error: 'world-pack-disabled',
+            worldId: (gate.pack && gate.pack.id) || worldId,
+            howToEnable: gate.howToEnable,
+            source: 'reserved',
+          },
+        }
+      }
+      const pack = gate.pack
+      env.pushEvent('world', `进入 · ${pack.titleFull}（占位）`, pack.panel)
       return {
-        status: 403,
+        status: 200,
         body: {
-          ok: false,
-          error: 'world-pack-reserved',
-          worldId: (gate.pack && gate.pack.id) || worldId,
-          howToEnable: gate.howToEnable,
+          ok: true,
+          worldId: pack.id,
+          panel: pack.panel,
+          title: pack.titleFull,
+          mode: gate.mode || 'placeholder',
           source: 'reserved',
         },
       }
@@ -3049,7 +3064,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.75 online', `${SPACE_PROTOCOL} · peer request-local→share-snapshot · RRA 默认关`)
+  pushEvent('system', 'Open World v2.76 online', `${SPACE_PROTOCOL} · 世界包诚实占位 · RRA 默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)

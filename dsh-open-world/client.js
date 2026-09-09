@@ -1,4 +1,4 @@
-// CLIENT_BUILD 17ac85ddf1 2026-09-09T08:51:17.067Z v2.75
+// CLIENT_BUILD 233b98cf09 2026-09-09T09:19:05.699Z v2.76
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -838,10 +838,10 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.75'
+    exports.CLIENT_VER = 'v2.76'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '17ac85ddf1'
-    exports.CLIENT_BUILT_AT = '2026-09-09T08:51:17.067Z'
+    exports.CLIENT_BUILD = '233b98cf09'
+    exports.CLIENT_BUILT_AT = '2026-09-09T09:19:05.699Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -1640,17 +1640,30 @@ window.__ModuleLoader__.load({
     }
 
     /** 60% 主路径：世界地图（任务 / 回退）+ 默认一键进入 */
-    function EnterWorldCta({ worlds, onEnter, onOffline }) {
+    function EnterWorldCta({ worlds, worldPacks, onEnter, onOffline }) {
       const nodes = (worlds && worlds.nodes) || []
       const pick = (worlds && (worlds.pick || worlds.default))
         || nodes.find((n) => n.id === 'tasks')
         || null
+      const packChips = ((worldPacks && worldPacks.packs) || [])
+        .filter((p) => p && p.optedIn && p.enterable)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          titleFull: p.titleFull,
+          panel: p.panel,
+          cta: p.cta || `进入 · ${p.title}`,
+          enterable: true,
+          online: true,
+          mode: p.mode || 'placeholder',
+        }))
       const ordered = nodes.length
         ? nodes.slice().sort((a, b) => (a.cost || 99) - (b.cost || 99))
         : [
           { id: 'tasks', title: '任务', panel: 'task-board', cta: '进入 · 任务', enterable: true, online: true },
           { id: 'rewind', title: '回退', panel: 'rewind', cta: '进入 · 回退', enterable: false, online: false },
         ]
+      const mapNodes = ordered.concat(packChips)
       const hint = pick && pick.enterable
         ? `主路径：${pick.cta || '进入'} · ${pick.defaultAction || '办一件真事再回来'}`
         : ((pick && pick.howToEnable) || '扩展未在线时点卡片会提示怎么打开')
@@ -1683,7 +1696,7 @@ window.__ModuleLoader__.load({
           className: 'ow-world-map',
           style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
         },
-          ordered.map((w) => React.createElement('button', {
+          mapNodes.map((w) => React.createElement('button', {
             key: w.id,
             type: 'button',
             className: `ow-msg-btn ${w.enterable ? '' : 'ow-world-offline'}`,
@@ -1720,7 +1733,7 @@ window.__ModuleLoader__.load({
           className: 'ow-msg-btn primary',
           style: { width: '100%', padding: '10px 12px', fontSize: 14 },
           title: pick && !pick.enterable ? (pick.howToEnable || '') : ((pick && pick.cta) || '进入 · 任务'),
-          onClick: () => enterOne(pick || ordered[0]),
+          onClick: () => enterOne(pick || mapNodes[0]),
         }, (pick && pick.cta) || '进入 · 任务'),
       )
     }
@@ -2620,6 +2633,7 @@ window.__ModuleLoader__.load({
       const SURFACE_META = {
       'task-board': { title: '任务世界', en: 'TASKS WORLD' },
       rewind: { title: '回退世界', en: 'REWIND WORLD' },
+      'all-in-all': { title: '元宇宙世界包 · 占位', en: 'ALL-IN-ALL' },
       market: { title: '插件中心 · 内嵌', en: 'MARKET' },
       memory: { title: '长期记忆 · 内嵌', en: 'HINDSIGHT' },
       ssh: { title: 'SSH 远程 · 内嵌', en: 'SSH' },
@@ -2821,6 +2835,25 @@ window.__ModuleLoader__.load({
           onAction,
           compact: false,
         })
+      } else if (panel === 'all-in-all') {
+        const packs = (snapshot && snapshot.worldPacks && snapshot.worldPacks.packs) || []
+        const pack = packs.find((p) => p.id === 'all-in-all') || null
+        const opted = !!(pack && pack.optedIn) || !!(snapshot && snapshot.worldPacks && snapshot.worldPacks.enabled)
+        body = React.createElement('div', {
+          className: 'ow-world-pack-placeholder',
+          'data-ow-world-pack': 'all-in-all',
+          'data-mode': 'placeholder',
+          style: { fontSize: 13, color: '#cbd5e1', lineHeight: 1.55 },
+        },
+          React.createElement('div', { style: { fontSize: 15, color: '#5eead4', marginBottom: 8 } },
+            opted ? 'ALL-IN-ALL · 诚实占位' : 'ALL-IN-ALL · 默认关闭'),
+          React.createElement('div', null,
+            opted
+              ? '配置已选开，但本机尚未安装真实世界包。这里不会假装有元宇宙素材，也不会空壳进 ATI。'
+              : '后置世界包默认关闭，不进 60% 主路径。需要时在 open-world.yml 设 worlds.packs.all-in-all: true。'),
+          React.createElement('div', { style: { marginTop: 10, fontSize: 12, color: '#64748b' } },
+            'package 预留名：dsh-open-world-pack-all-in-all · source=reserved'),
+        )
       } else {
         body = React.createElement(React.Fragment, null,
           React.createElement(SidebarSummaryView, { snapshot }),
@@ -5063,6 +5096,7 @@ window.__ModuleLoader__.load({
                         React.createElement(StatusSummaryChips, { snapshot, plugins }),
                         React.createElement(EnterWorldCta, {
                           worlds: snapshot && snapshot.worlds,
+                          worldPacks: snapshot && snapshot.worldPacks,
                           onEnter: (w) => runBridge({
                             type: 'enter-world',
                             worldId: (w && w.id) || 'tasks',

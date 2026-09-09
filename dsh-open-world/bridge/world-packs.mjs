@@ -1,6 +1,7 @@
 /**
  * Optional world packs（WORLD_PLAN 阶段 4 · 后置）
- * 与主航道 WORLD_DEFS 分家：不进 60% 世界地图；默认全关；无真实包时不可 enter。
+ * 与主航道 WORLD_DEFS 分家：不进默认 60% 地图；默认全关。
+ * opt-in 后可进「诚实占位」世界（说明未装真实包），禁止假空壳 ATI。
  */
 export const WORLD_PACK_DEFS = Object.freeze([
   {
@@ -12,7 +13,7 @@ export const WORLD_PACK_DEFS = Object.freeze([
     packageName: 'dsh-open-world-pack-all-in-all',
     priority: 90,
     cta: '进入 · 元宇宙',
-    defaultAction: '后置接口 · 未装包',
+    defaultAction: '查看占位说明（未装真实包）',
     defaultEnabled: false,
   },
 ])
@@ -47,8 +48,10 @@ export function isWorldPackOptedIn(config, packId) {
 }
 
 /**
- * 世界包进场门禁：阶段 4 一律不可进（即使 yml 选开，也须真实包落地后再放行）。
- * @returns {{ applies:boolean, ok?:boolean, pack?:object, howToEnable?:string }}
+ * 世界包进场门禁。
+ * - 未 opt-in：不可进
+ * - 已 opt-in：可进诚实占位（mode=placeholder）；真实包落地前不装素材
+ * @returns {{ applies:boolean, ok?:boolean, mode?:string, pack?:object, howToEnable?:string }}
  */
 export function resolveWorldPackGate(panelOrId, config) {
   const pack = worldPackByPanel(panelOrId) || worldPackById(panelOrId)
@@ -59,14 +62,15 @@ export function resolveWorldPackGate(panelOrId, config) {
       applies: true,
       ok: false,
       pack,
-      howToEnable: `后置世界包默认关闭 · open-world.yml → worlds.packs.${pack.id}: true（仍需安装真实包）`,
+      howToEnable: `后置世界包默认关闭 · open-world.yml → worlds.packs.${pack.id}: true（可进诚实占位，仍无真实素材）`,
     }
   }
   return {
     applies: true,
-    ok: false,
+    ok: true,
+    mode: 'placeholder',
     pack,
-    howToEnable: `${pack.titleFull} 已在配置中选开，但本机尚未安装世界包（接口预留 · 不可空壳进入）`,
+    howToEnable: null,
   }
 }
 
@@ -75,14 +79,18 @@ export function buildWorldPacksSnapshot(config) {
   const worlds = mergeWorldsConfig(config && config.worlds)
   const packs = WORLD_PACK_DEFS.map((p) => {
     const gate = resolveWorldPackGate(p.id, { worlds })
+    const optedIn = worlds.packs[p.id] === true
     return {
       id: p.id,
       title: p.title,
       titleFull: p.titleFull,
       panel: p.panel,
       featureId: p.featureId,
-      optedIn: worlds.packs[p.id] === true,
-      enterable: false,
+      cta: p.cta,
+      defaultAction: p.defaultAction,
+      optedIn,
+      enterable: !!gate.ok,
+      mode: gate.mode || null,
       defaultInPath: false,
       howToEnable: gate.howToEnable,
       source: 'reserved',
@@ -97,13 +105,31 @@ export function buildWorldPacksSnapshot(config) {
   }
 }
 
-/** shell 瘦身：不拖冷启、不进主文案 */
+/**
+ * shell 瘦身：默认不带 packs 载荷；仅当有 opt-in 时附带可进占位条目（不拖冷启）
+ */
 export function slimWorldPacksForShell(full) {
   if (!full) return { source: 'reserved', defaultInPath: false, enabled: false, count: 0 }
-  return {
+  const opted = (full.packs || []).filter((p) => p && p.optedIn)
+  const base = {
     source: 'reserved',
     defaultInPath: false,
     enabled: !!full.enabled,
     count: Array.isArray(full.packs) ? full.packs.length : 0,
+  }
+  if (!opted.length) return base
+  return {
+    ...base,
+    packs: opted.map((p) => ({
+      id: p.id,
+      title: p.title,
+      titleFull: p.titleFull,
+      panel: p.panel,
+      cta: p.cta,
+      enterable: !!p.enterable,
+      mode: p.mode || 'placeholder',
+      defaultInPath: false,
+      howToEnable: p.howToEnable || null,
+    })),
   }
 }

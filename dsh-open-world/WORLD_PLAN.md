@@ -1,7 +1,7 @@
 # Open World · 「进世界」分层总规划（WORLD_PLAN）
 
 > 状态：**规划定稿草案** · 2026-09-09  
-> 前提：运行时 **v2.75** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
+> 前提：运行时 **v2.76** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
 > 主航道（冻结）：**先进一个世界（体验）→ 再扩 peer 写（跨机）→ 元宇宙素材以后再说**  
 > **阶段 0–4 已落地**（进世界 · peer+memory-search · 世界包接口预留 · v2.73）
 
@@ -109,7 +109,8 @@ L0  稳定核（可测数学）     CapabilityGraph · DerivedMetrics · Gates
 
 - ALL-IN-ALL 等 = 可选世界包，走同一仪式 + registry。  
 - **默认档关闭**；不拖冷启、不进 60% 文案。
-- **v2.73**：`bridge/world-packs.mjs` + `snapshot.worldPacks`（source=reserved）；`worlds.packs.all-in-all: false`；禁止空壳 embed。
+- **v2.73**：`bridge/world-packs.mjs` + `snapshot.worldPacks`（source=reserved）；`worlds.packs.all-in-all: false`。
+- **v2.76**：opt-in 后可进诚实占位世界（mode=placeholder）；默认仍关、不进 60% 地图。
 
 ---
 
