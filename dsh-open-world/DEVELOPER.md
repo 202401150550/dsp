@@ -1,7 +1,7 @@
 # Open World · 给开发者（一页）
 
 > 对接壳 API / 真机联调时看本页即可。产品用法见 [QUICKSTART.md](./QUICKSTART.md)；协议全文见 [OWIP_v0.1.md](./OWIP_v0.1.md)。  
-> 运行时：**v2.72** · 协议（space 开）：**owip/0.3-draft** · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md)
+> 运行时：**v2.73** · 协议（space 开）：**owip/0.3-draft** · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md)
 
 ---
 

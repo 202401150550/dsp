@@ -4,7 +4,7 @@
  */
 import { CAPABILITY_REGISTRY, EMBED_PLUGIN_ID, resolveEmbedGate } from './capability-registry.mjs'
 
-/** 主航道可进入世界（阶段 1–2）；meta 后置不进此表 */
+/** 主航道可进入世界（阶段 1–2）；元宇宙等 WORLD_PACK_DEFS 后置，不进此表 */
 export const WORLD_DEFS = Object.freeze([
   {
     id: 'tasks',

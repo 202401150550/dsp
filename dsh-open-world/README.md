@@ -2,7 +2,7 @@
 
 DSH 上的 **系统壳**（SYSOP + OWIP）：像任务管理器 + 桌面，聚合会话、任务、回退、插件、记忆、舰队与第二屏——**不是聊天替代品，也不是第二套 DSH**。
 
-当前实现：**v2.72** · 默认协议 **`owip/0.3-draft`** · 产品规划：[SHELL_PLAN.md](./SHELL_PLAN.md) · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md) · 系统规划：[SYSOP_v0.1.md](./SYSOP_v0.1.md)
+当前实现：**v2.73** · 默认协议 **`owip/0.3-draft`** · 产品规划：[SHELL_PLAN.md](./SHELL_PLAN.md) · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md) · 系统规划：[SYSOP_v0.1.md](./SYSOP_v0.1.md)
 
 ## 30 秒验收
 
@@ -14,7 +14,7 @@ DSH 上的 **系统壳**（SYSOP + OWIP）：像任务管理器 + 桌面，聚�
 | 我能做什么？ | 左栏 **动作** 或中间节点 · `snapshot.nodes[].action` |
 | 刚才发生了什么？ | 左栏 **事件** · `snapshot.events` / 消息 |
 
-水印：`OPEN-WORLD v2.72`（须与 `framework.version` 一致）
+水印：`OPEN-WORLD v2.73`（须与 `framework.version` 一致）
 
 
 
@@ -31,7 +31,7 @@ DSH 上的 **系统壳**（SYSOP + OWIP）：像任务管理器 + 桌面，聚�
 ## 入口
 
 - 侧栏 / 输入框 **✦** 按钮
-- 水印：`OPEN-WORLD v2.72`（须与 `framework.version` 一致）
+- 水印：`OPEN-WORLD v2.73`（须与 `framework.version` 一致）
 
 
 - 产品规划：[SHELL_PLAN.md](./SHELL_PLAN.md)（删减冗余 · 日常三步）

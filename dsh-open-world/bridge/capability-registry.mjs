@@ -4,6 +4,7 @@
  * owSurfaces = 壳内表面 id · embedIds = setEmbed 面板名 · defaultInPresets = presets.yml
  */
 import { howToEnableHint } from './manifest.mjs'
+import { worldPackByPanel } from './world-packs.mjs'
 
 export const CAPABILITY_REGISTRY = Object.freeze([
   {
@@ -102,6 +103,20 @@ export const CAPABILITY_REGISTRY = Object.freeze([
     defaultInPresets: ['bridge', 'full'],
     satellite: false,
   },
+  {
+    // WORLD_PLAN 阶段4 · 后置接口；永不进 presets；无真实包前不可 embed
+    featureId: 'ow-world-pack-all-in-all',
+    insertId: null,
+    packageName: 'dsh-open-world-pack-all-in-all',
+    title: 'ALL-IN-ALL 世界包',
+    probe: null,
+    owSurfaces: ['metaverse'],
+    hostActions: [],
+    embedIds: ['all-in-all'],
+    defaultInPresets: [],
+    satellite: false,
+    worldPack: true,
+  },
 ])
 
 /** embed 面板 → 负责探测的 plugin catalog id（与 PLUGIN_CATALOG.id 对齐） */
@@ -145,6 +160,15 @@ export function resolveEmbedGate(panel, plugins = []) {
   // 壳内自有面：不依赖外部插件
   if (!id || id === 'monitor' || id === 'fleet' || id === 'sidebar') {
     return { ok: true, panel: id }
+  }
+  // 后置世界包：阶段4无真实包，禁止空壳 embed（不看 plugins 空列表放行）
+  const pack = worldPackByPanel(id)
+  if (pack) {
+    return {
+      ok: false,
+      panel: id,
+      howToEnable: `后置世界包「${pack.title}」仅接口预留 · 默认关 · 不可空壳进入`,
+    }
   }
   const pluginId = EMBED_PLUGIN_ID[id]
   if (!pluginId) return { ok: true, panel: id }

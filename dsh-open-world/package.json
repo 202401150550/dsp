@@ -1,6 +1,6 @@
 {
   "name": "dsh-open-world",
-  "version": "2.72.0",
+  "version": "2.73.0",
   "description": "DSH 系统壳 / 控制台：状态·动作·事件",
   "license": "MIT",
   "type": "module",
@@ -55,7 +55,7 @@
   },
   "scripts": {
     "pretest": "node scripts/check-client-fresh.mjs",
-    "test": "node test/smoke.mjs && node test/bridge.mjs && node test/manifest.mjs && node test/rrm.mjs && node test/fleet.mjs && node test/world-state.mjs && node test/space-auth.mjs && node test/space-acl.mjs && node test/capability-registry.mjs && node test/capability-graph.mjs && node test/action-layers.mjs",
+    "test": "node test/smoke.mjs && node test/bridge.mjs && node test/manifest.mjs && node test/rrm.mjs && node test/fleet.mjs && node test/world-state.mjs && node test/space-auth.mjs && node test/space-acl.mjs && node test/capability-registry.mjs && node test/capability-graph.mjs && node test/world-packs.mjs && node test/action-layers.mjs",
     "test:smoke": "node test/smoke.mjs",
     "test:bridge": "node test/bridge.mjs",
     "test:manifest": "node test/manifest.mjs",

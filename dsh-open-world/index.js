@@ -19,6 +19,14 @@ import {
   WORLD_DEFS,
 } from './bridge/capability-graph.mjs'
 import {
+  mergeWorldsConfig,
+  defaultWorldsConfig,
+  buildWorldPacksSnapshot,
+  slimWorldPacksForShell,
+  resolveWorldPackGate,
+  WORLD_PACK_DEFS,
+} from './bridge/world-packs.mjs'
+import {
   SNAPSHOT_SCHEMA_VERSION,
   SNAPSHOT_SCHEMA_NOTES,
   classifyAction,
@@ -292,6 +300,7 @@ function parseOpenWorldConfig(text) {
     idea: {
       enabled: true,
     },
+    worlds: defaultWorldsConfig(),
     rrm: defaultRrmConfig(),
     rra: defaultRraConfig(),
     space: defaultSpaceConfig(),
@@ -308,6 +317,7 @@ function parseOpenWorldConfig(text) {
     if (line === 'messaging:') { section = 'messaging'; subKey = null; continue }
     if (line === 'integrations:') { section = 'integrations'; subKey = null; continue }
     if (line === 'idea:') { section = 'idea'; subKey = null; continue }
+    if (line === 'worlds:') { section = 'worlds'; subKey = null; continue }
     if (line === 'rrm:') { section = 'rrm'; subKey = null; continue }
     if (line === 'rra:') { section = 'rra'; subKey = null; continue }
     if (line === 'space:') { section = 'space'; subKey = null; continue }
@@ -350,6 +360,17 @@ function parseOpenWorldConfig(text) {
         }
       } else if (section === 'idea') {
         cfg.idea[k] = parseVal(v)
+      } else if (section === 'worlds') {
+        if (v === '') {
+          subKey = k
+          if (!cfg.worlds[k] || typeof cfg.worlds[k] !== 'object') cfg.worlds[k] = {}
+        } else if (subKey === 'packs') {
+          if (!cfg.worlds.packs || typeof cfg.worlds.packs !== 'object') cfg.worlds.packs = {}
+          cfg.worlds.packs[k] = parseVal(v)
+        } else {
+          cfg.worlds[k] = parseVal(v)
+          subKey = null
+        }
       } else if (section === 'rrm') {
         cfg.rrm[k] = parseVal(v)
       } else if (section === 'rra') {
@@ -365,6 +386,7 @@ function parseOpenWorldConfig(text) {
   cfg.rrm = mergeRrmConfig(cfg.rrm)
   cfg.rra = mergeRraConfig(cfg.rra)
   cfg.space = mergeSpaceConfig(cfg.space)
+  cfg.worlds = mergeWorldsConfig(cfg.worlds)
   return cfg
 }
 
@@ -1488,7 +1510,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.72'
+    return '2.73'
   }
 }
 
@@ -2031,6 +2053,7 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader, opts = {}) {
         pick: pickDefaultWorld(graph),
       }
     })(),
+    worldPacks: buildWorldPacksSnapshot(config),
     core: {
       healthScore: health,
       healthScoreSource: 'derived',
@@ -2136,6 +2159,7 @@ function slimSnapshotForShell(snap) {
           })),
         }
       : undefined,
+    worldPacks: slimWorldPacksForShell(snap.worldPacks),
     config: {
       default_view: snap.config?.default_view,
       rra: snap.config?.rra,
@@ -2345,6 +2369,21 @@ function buildActionRegistry() {
 
   registry.set('world-enter', async (parsed, env) => {
     const worldId = String(parsed.worldId || parsed.world || 'tasks')
+    const byId = resolveWorldPackGate(worldId, env.config)
+    const byPanel = parsed.panel ? resolveWorldPackGate(parsed.panel, env.config) : { applies: false }
+    const gate = byId.applies ? byId : byPanel
+    if (gate.applies) {
+      return {
+        status: 403,
+        body: {
+          ok: false,
+          error: 'world-pack-reserved',
+          worldId: (gate.pack && gate.pack.id) || worldId,
+          howToEnable: gate.howToEnable,
+          source: 'reserved',
+        },
+      }
+    }
     const def = worldDefById(worldId) || WORLD_DEFS[0]
     env.pushEvent('world', `进入 · ${def.titleFull}`, def.panel)
     return {
@@ -2973,7 +3012,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.72 online', `${SPACE_PROTOCOL} · peer+memory-search · RRA 适配器默认关`)
+  pushEvent('system', 'Open World v2.73 online', `${SPACE_PROTOCOL} · 世界包接口预留 · RRA 适配器默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)
@@ -3014,6 +3053,9 @@ export const __test = {
   buildCapabilityGraph,
   pickDefaultWorld,
   WORLD_DEFS,
+  WORLD_PACK_DEFS,
+  buildWorldPacksSnapshot,
+  mergeWorldsConfig,
   taskBoardMetrics,
   projectLiveMemory,
   mergeRrmConfig,

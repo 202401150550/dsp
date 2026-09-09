@@ -69,6 +69,12 @@ space:
   sync: true
   token_ttl_hours: 168
 
+# 可选世界包（WORLD_PLAN 阶段4 · 后置接口）
+# 默认全关；不进 60% 世界地图；选开也不装素材，直至有真实包
+worlds:
+  packs:
+    all-in-all: false
+
 synapses:
   - [memory, ai-engine]
   - [user-hub, ai-engine]

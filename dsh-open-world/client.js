@@ -1,4 +1,4 @@
-// CLIENT_BUILD 86648e44fa 2026-09-09T08:23:55.096Z v2.72
+// CLIENT_BUILD 3dc6239945 2026-09-09T08:34:08.864Z v2.73
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -838,10 +838,10 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.72'
+    exports.CLIENT_VER = 'v2.73'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '86648e44fa'
-    exports.CLIENT_BUILT_AT = '2026-09-09T08:23:55.096Z'
+    exports.CLIENT_BUILD = '3dc6239945'
+    exports.CLIENT_BUILT_AT = '2026-09-09T08:34:08.864Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
