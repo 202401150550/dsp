@@ -1,4 +1,4 @@
-// CLIENT_BUILD 233b98cf09 2026-09-09T09:19:05.699Z v2.76
+// CLIENT_BUILD 8a84214c1d 2026-09-09T09:47:59.039Z v2.77
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -838,10 +838,10 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.76'
+    exports.CLIENT_VER = 'v2.77'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = '233b98cf09'
-    exports.CLIENT_BUILT_AT = '2026-09-09T09:19:05.699Z'
+    exports.CLIENT_BUILD = '8a84214c1d'
+    exports.CLIENT_BUILT_AT = '2026-09-09T09:47:59.039Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -4068,7 +4068,7 @@ window.__ModuleLoader__.load({
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
               disabled: spaceOff,
-              title: 'peer：send-message / mark-read / memory-search / world-state-get / request-local(→share-snapshot)；禁止 pair-*、space-token-*、idea-inject',
+              title: 'peer：… / request-local(→share-snapshot|space-token-status)；禁止 pair-*、space-token-issue、idea-inject',
               onClick: () => {
                 if (spaceOff) return
                 if (typeof window !== 'undefined' && window.confirm

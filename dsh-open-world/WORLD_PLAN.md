@@ -1,7 +1,7 @@
 # Open World · 「进世界」分层总规划（WORLD_PLAN）
 
 > 状态：**规划定稿草案** · 2026-09-09  
-> 前提：运行时 **v2.76** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
+> 前提：运行时 **v2.77** · 壳定稿 [SHELL_PLAN.md](./SHELL_PLAN.md) · 系统分层 [SYSOP_v0.1.md](./SYSOP_v0.1.md) · ACL/契约已落地  
 > 主航道（冻结）：**先进一个世界（体验）→ 再扩 peer 写（跨机）→ 元宇宙素材以后再说**  
 > **阶段 0–4 已落地**（进世界 · peer+memory-search · 世界包接口预留 · v2.73）
 
@@ -103,7 +103,8 @@ L0  稳定核（可测数学）     CapabilityGraph · DerivedMetrics · Gates
 - Pair 永远独立；枢纽双卡不合并。
 - **v2.72**：+`memory-search`（更深只读）。
 - **v2.74**：+`world-state-get`（更深只读 · 读 world-state）。
-- **v2.75**：+`request-local`（极窄本机动作；`PEER_LOCAL_REQUEST_ALLOWLIST`=`share-snapshot`）；下一刀另议。
+- **v2.75**：+`request-local`（极窄本机动作；`PEER_LOCAL_REQUEST_ALLOWLIST` 起步=`share-snapshot`）。
+- **v2.77**：本机白名单 +`space-token-status`（只读诊断）；下一刀另议。
 
 ### 阶段 4 · 元宇宙素材（后置）
 

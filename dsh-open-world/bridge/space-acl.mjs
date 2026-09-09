@@ -23,10 +23,13 @@ export const PEER_ACTION_ALLOWLIST = Object.freeze([
 
 /**
  * peer 经 request-local 可请求的本机 Host 动作（与 PEER_ACTION_ALLOWLIST 分家）
- * 默认仅 share-snapshot（密封 outbox 拓扑分享）；禁止 pair / 令牌 / 注入 / 写 world-state
+ * - share-snapshot：密封 outbox 拓扑分享
+ * - space-token-status：只读令牌状态（不揭明文、不签发）
+ * 禁止 pair / 令牌签发撤销 / 注入 / 写 world-state
  */
 export const PEER_LOCAL_REQUEST_ALLOWLIST = Object.freeze([
   'share-snapshot',
+  'space-token-status', // v2.77：只读诊断
 ])
 
 export function allowLocalRequest(localActionName) {

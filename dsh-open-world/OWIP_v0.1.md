@@ -79,7 +79,7 @@ curl -s http://127.0.0.1:<port>/api/open-world/messages | jq '.messages[0:5]'
 ```text
 POST /api/open-world/space/sse-ticket   → { ticket, expiresInSec, role }
 GET  /api/open-world/stream?ticket=…&role=second-screen
-POST /api/open-world/space/peer-action  → { action: "send-message"|"mark-read"|"memory-search"|"world-state-get"|"request-local", localAction?: "share-snapshot", … }
+POST /api/open-world/space/peer-action  → { action: "send-message"|"mark-read"|"memory-search"|"world-state-get"|"request-local", localAction?: "share-snapshot"|"space-token-status", … }
 ```
 
 实现真源：`bridge/space-acl.mjs` · `bridge/space-auth.mjs`（`SPACE_PROTOCOL = owip/0.3-draft`）。
