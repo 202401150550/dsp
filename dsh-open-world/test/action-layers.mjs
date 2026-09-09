@@ -34,6 +34,9 @@ ok(summary.ideaInjectPath.includes('Host') && summary.ideaInjectPath.includes('B
 ok(summary.host.actions.length >= 10, 'host action list non-empty')
 ok(summary.bridge.actions.length >= 10, 'bridge action list non-empty')
 ok(CORE_SHELL_HOST_ACTIONS.includes('idea-inject'), 'core shell has idea-inject')
+ok(HOST_ACTION_IDS.includes('world-enter'), 'host has world-enter')
+ok(CORE_SHELL_HOST_ACTIONS.includes('world-enter'), 'core shell has world-enter')
+ok(BRIDGE_ACTION_TYPES.includes('enter-world'), 'bridge has enter-world')
 ok(summary.host.coreShell && summary.host.coreShell.includes('send-message'), 'summary.coreShell present')
 ok(Array.isArray(summary.host.advanced) && summary.host.advanced.includes('rrm-session-apply'), 'advanced lists rrm apply')
 

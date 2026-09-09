@@ -190,7 +190,7 @@ const ui = await evalJson(`(async () => {
     actionsTab.click()
     await sleep(500)
   }
-  const text = shellRoot()?.innerText || document.body?.innerText || ''
+    const text = shellRoot()?.innerText || document.body?.innerText || ''
   return {
     text,
     title: document.title || '',
@@ -198,8 +198,20 @@ const ui = await evalJson(`(async () => {
     spaceCard: /观察\\/回写|签发只读令牌/.test(text),
     pairCard: /手机控工作区|生成配对码|停止 Pair/.test(text),
     peerBtn: /签发可回写/.test(text),
+    enterCta: /进入\\s*·\\s*任务|进入 · 任务/.test(text) || !!document.querySelector('[data-ow-enter-world]'),
+    worlds: null,
   }
 })()`)
+
+// also fetch worlds from shell snapshot for contract check
+const worldsPack = await evalJson(`(async () => {
+  const res = await fetch('/api/open-world/snapshot?view=shell')
+  const json = await res.json().catch(() => ({}))
+  return { worlds: json.worlds || null }
+})()`)
+ok(worldsPack.worlds && worldsPack.worlds.source === 'derived', 'shell worlds.source derived')
+ok(Array.isArray(worldsPack.worlds?.nodes) && worldsPack.worlds.nodes.length >= 1, 'shell worlds.nodes')
+
 const wmOk = !!ui.wm
 const fwOk = /^2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.version || ''))
 const cvOk = /^v2\.(5\d|[6-9]\d|\d{3,})/.test(String(snap.framework?.clientVer || ''))
@@ -208,8 +220,9 @@ ok(wmOk || fwOk || cvOk,
 ok(ui.spaceCard === true, 'hub Space dual-card visible')
 ok(ui.pairCard === true, 'hub Pair dual-card visible')
 ok(ui.peerBtn === true, 'hub peer issue button visible')
+ok(ui.enterCta === true, 'EnterWorldCta visible on status')
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.60；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.70；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

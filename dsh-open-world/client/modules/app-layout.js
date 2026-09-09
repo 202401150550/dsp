@@ -16,7 +16,7 @@ window.__ModuleLoader__.load({
 
     const { NODE_ZH, NODE_LAYOUT, EVENT_COLORS, QUICK_ACTIONS } = C
     const {
-      BridgeHealthBar, ShellGuide, ActionsEmptyState, EventsEmptyState, MemoryHub, StatusSummaryChips, LeftSidebarTabs,
+      BridgeHealthBar, ShellGuide, EnterWorldCta, ActionsEmptyState, EventsEmptyState, MemoryHub, StatusSummaryChips, LeftSidebarTabs,
       SocialPanel, IntegrationsPanel, pluginAction, socialChannelAction,
       tierBadge, FleetPanel, sourceTag,
     } = Shell
@@ -73,6 +73,16 @@ window.__ModuleLoader__.load({
                         ),
                         React.createElement(Sparkline, { values: hist.health, color: '#5eead4', height: 36 }),
                         React.createElement(StatusSummaryChips, { snapshot, plugins }),
+                        React.createElement(EnterWorldCta, {
+                          worlds: snapshot && snapshot.worlds,
+                          onEnter: (w) => runBridge({
+                            type: 'enter-world',
+                            worldId: (w && w.id) || 'tasks',
+                            panel: (w && w.panel) || 'task-board',
+                            label: (w && w.titleFull) ? `已进入${w.titleFull}` : '已进入任务世界',
+                          }),
+                          onOffline: (w) => setToast((w && w.howToEnable) || '任务扩展未在线'),
+                        }),
                         React.createElement(BridgeHealthBar, {
                           health: bridgeHealth,
                           onRefresh: () => {

@@ -13,6 +13,12 @@ import {
   satelliteFeatureIds,
 } from './bridge/capability-registry.mjs'
 import {
+  buildCapabilityGraph,
+  pickDefaultWorld,
+  worldDefById,
+  WORLD_DEFS,
+} from './bridge/capability-graph.mjs'
+import {
   SNAPSHOT_SCHEMA_VERSION,
   SNAPSHOT_SCHEMA_NOTES,
   classifyAction,
@@ -1482,7 +1488,7 @@ function frameworkVersion() {
     const m = String(pkg.version).match(/^(\d+\.\d+)/)
     return m ? m[1] : String(pkg.version)
   } catch {
-    return '2.60'
+    return '2.70'
   }
 }
 
@@ -2018,6 +2024,13 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader, opts = {}) {
       },
     },
     framework: buildFramework(config),
+    worlds: (() => {
+      const graph = buildCapabilityGraph(plugins)
+      return {
+        ...graph,
+        pick: pickDefaultWorld(graph),
+      }
+    })(),
     core: {
       healthScore: health,
       healthScoreSource: 'derived',
@@ -2103,6 +2116,26 @@ function slimSnapshotForShell(snap) {
       : undefined,
     core: snap.core,
     load: snap.load,
+    worlds: snap.worlds
+      ? {
+          source: snap.worlds.source,
+          defaultWorldId: snap.worlds.defaultWorldId,
+          default: snap.worlds.default,
+          pick: snap.worlds.pick || snap.worlds.default,
+          nodes: (snap.worlds.nodes || []).map((n) => ({
+            id: n.id,
+            title: n.title,
+            titleFull: n.titleFull,
+            panel: n.panel,
+            online: n.online,
+            enterable: n.enterable,
+            cost: n.cost,
+            cta: n.cta,
+            defaultAction: n.defaultAction,
+            howToEnable: n.howToEnable,
+          })),
+        }
+      : undefined,
     config: {
       default_view: snap.config?.default_view,
       rra: snap.config?.rra,
@@ -2308,6 +2341,30 @@ function buildActionRegistry() {
 
   registry.set('world-state-get', async (_parsed, env) => {
     return { status: 200, body: { ok: true, world: loadWorldState(env.home) } }
+  })
+
+  registry.set('world-enter', async (parsed, env) => {
+    const worldId = String(parsed.worldId || parsed.world || 'tasks')
+    const def = worldDefById(worldId) || WORLD_DEFS[0]
+    env.pushEvent('world', `进入 · ${def.titleFull}`, def.panel)
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        worldId: def.id,
+        panel: def.panel,
+        title: def.titleFull,
+        source: 'derived',
+      },
+    }
+  })
+
+  registry.set('world-leave', async (parsed, env) => {
+    const worldId = String(parsed.worldId || parsed.world || 'tasks')
+    const def = worldDefById(worldId)
+    const title = (def && def.titleFull) || worldId
+    env.pushEvent('world', `离开 · ${title}`, parsed.panel || (def && def.panel) || '')
+    return { status: 200, body: { ok: true, worldId: def ? def.id : worldId } }
   })
 
   registry.set('space-token-status', async (_parsed, env) => {
@@ -2916,7 +2973,7 @@ export async function apply(ctx) {
     },
   }), 'dsh-open-world: routes')
 
-  pushEvent('system', 'Open World v2.60 online', `${SPACE_PROTOCOL} · DSH 系统壳 · RRA 适配器默认关`)
+  pushEvent('system', 'Open World v2.70 online', `${SPACE_PROTOCOL} · 进世界 · RRA 适配器默认关`)
   try {
     const homeBoot = dshHome()
     const cfgBoot = loadOpenWorldConfig(homeBoot)
@@ -2954,6 +3011,9 @@ export const __test = {
   HOST_ACTION_IDS,
   BRIDGE_ACTION_TYPES,
   CORE_SHELL_HOST_ACTIONS,
+  buildCapabilityGraph,
+  pickDefaultWorld,
+  WORLD_DEFS,
   taskBoardMetrics,
   projectLiveMemory,
   mergeRrmConfig,

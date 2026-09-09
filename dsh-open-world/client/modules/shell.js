@@ -29,7 +29,7 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-shell-guide' },
         React.createElement('div', { className: 'ow-shell-guide-text' },
           React.createElement('strong', null, '三步上手'),
-          ' · ① 看稳不稳 · ② 点动作或中间圆点干活 · ③ 回来看刚才发生了什么',
+          ' · ① 看稳不稳 · ② 点「进入 · 任务」干活 · ③ 回来看刚才发生了什么',
         ),
         React.createElement('button', {
           type: 'button',
@@ -40,6 +40,47 @@ window.__ModuleLoader__.load({
             setDismissed(true)
           },
         }, '知道了'),
+      )
+    }
+
+    /** 60% 主路径：一键进入默认世界（通常任务看板） */
+    function EnterWorldCta({ worlds, onEnter, onOffline }) {
+      const pick = (worlds && (worlds.pick || worlds.default)) || null
+      const cta = (pick && pick.cta) || '进入 · 任务'
+      const hint = pick && pick.enterable
+        ? (pick.defaultAction || '进去办一件真事，再回来')
+        : ((pick && pick.howToEnable) || '任务扩展未在线时，点这里会提示怎么打开')
+      const disabled = !!(pick && pick.howToEnable && !pick.enterable && pick.online === false)
+      return React.createElement('div', {
+        className: 'ow-enter-world',
+        'data-ow-enter-world': (pick && pick.id) || 'tasks',
+        style: {
+          marginTop: 12,
+          padding: '10px 12px',
+          border: '1px solid rgba(94,234,212,.28)',
+          borderRadius: 8,
+          background: 'rgba(94,234,212,.06)',
+        },
+      },
+        React.createElement('div', {
+          style: { fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.45 },
+        }, hint),
+        React.createElement('button', {
+          type: 'button',
+          className: 'ow-msg-btn primary',
+          style: { width: '100%', padding: '10px 12px', fontSize: 14 },
+          title: pick && pick.howToEnable ? pick.howToEnable : cta,
+          onClick: () => {
+            if (pick && !pick.enterable) {
+              onOffline && onOffline(pick)
+              return
+            }
+            onEnter && onEnter(pick || { id: 'tasks', panel: 'task-board', titleFull: '任务世界' })
+          },
+        }, cta),
+        disabled && React.createElement('div', {
+          style: { marginTop: 6, fontSize: 10, color: '#fbbf24' },
+        }, pick.howToEnable || '扩展未启用'),
       )
     }
 
@@ -676,7 +717,7 @@ window.__ModuleLoader__.load({
       ]
       const hints = {
         status: '看现在稳不稳：健康 · 连接 · 进程 · 负载',
-        actions: '干活入口：扩展 · 更多 · 回退 · 试风格',
+        actions: '干活入口：进入任务世界 · 扩展 · 回退',
         events: '刚才发生了什么：记忆 · 日志 · 消息',
       }
       return React.createElement(React.Fragment, null,
@@ -935,9 +976,9 @@ window.__ModuleLoader__.load({
       )
     }
 
-    const SURFACE_META = {
-      'task-board': { title: '任务看板 · 内嵌', en: 'TASK BOARD' },
-      rewind: { title: '回退时间轴 · 内嵌', en: 'REWIND' },
+      const SURFACE_META = {
+      'task-board': { title: '任务世界', en: 'TASKS WORLD' },
+      rewind: { title: '回退世界', en: 'REWIND WORLD' },
       market: { title: '插件中心 · 内嵌', en: 'MARKET' },
       memory: { title: '长期记忆 · 内嵌', en: 'HINDSIGHT' },
       ssh: { title: 'SSH 远程 · 内嵌', en: 'SSH' },
@@ -1153,7 +1194,17 @@ window.__ModuleLoader__.load({
             React.createElement('strong', null, meta.title),
             React.createElement('span', { style: { marginLeft: 8, fontSize: 10, color: '#7c8ea6', letterSpacing: 1 } }, meta.en),
           ),
-          React.createElement('button', { type: 'button', className: 'ow-neural-btn', onClick: onClose }, '关闭'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ow-neural-btn',
+            onClick: () => {
+              const worldId = panel === 'rewind' ? 'rewind' : (panel === 'task-board' ? 'tasks' : panel)
+              try {
+                postOwAction({ action: 'world-leave', worldId, panel })
+              } catch { /* ignore */ }
+              onClose && onClose()
+            },
+          }, '返回开放世界'),
         ),
         React.createElement('div', { className: 'ow-embed-body' }, body),
       )
@@ -1162,6 +1213,7 @@ window.__ModuleLoader__.load({
     module.exports = {
       BridgeHealthBar,
       ShellGuide,
+      EnterWorldCta,
       ActionsEmptyState,
       EventsEmptyState,
       MemoryHub,

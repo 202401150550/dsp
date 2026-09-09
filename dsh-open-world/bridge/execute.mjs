@@ -465,6 +465,25 @@ export function createBridge(deps) {
       case 'embed':
         trySetEmbed(action.panel || 'task-board', action.label || `已进入 ${action.panel || '应用'}`)
         break
+      case 'enter-world': {
+        const panel = action.panel || 'task-board'
+        const worldId = action.worldId || (panel === 'rewind' ? 'rewind' : 'tasks')
+        const label = action.label || (worldId === 'tasks' ? '已进入任务世界' : `已进入 ${panel}`)
+        const ok = trySetEmbed(panel, label)
+        if (ok) {
+          recordBridgeOutcome('enter-world', { ok: true, strategy: 'embed', worldId, panel })
+          // 审计事件（Host）；失败不挡进场
+          try {
+            fetch('/api/open-world/action', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ action: 'world-enter', worldId, panel }),
+            }).catch(() => {})
+          } catch { /* ignore */ }
+        }
+        break
+      }
       case 'idea-panel':
         setView('idea')
         setToast('IDEA · 人格前缀试玩')

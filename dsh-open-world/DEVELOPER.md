@@ -1,7 +1,7 @@
 # Open World · 给开发者（一页）
 
 > 对接壳 API / 真机联调时看本页即可。产品用法见 [QUICKSTART.md](./QUICKSTART.md)；协议全文见 [OWIP_v0.1.md](./OWIP_v0.1.md)。  
-> 运行时：**v2.60** · 协议（space 开）：**owip/0.3-draft**
+> 运行时：**v2.70** · 协议（space 开）：**owip/0.3-draft** · 进世界：[WORLD_PLAN.md](./WORLD_PLAN.md)
 
 ---
 
@@ -72,7 +72,10 @@ npm run test:live-rra-cdp     # 直接 CDP 页内：snapshot / rra probe·sketch
 | `memory-search` | Hindsight 检索 |
 | `world-state-get` / `world-state-save` | 壳 UI 状态（页签 / 窗口模式） |
 | `space-token-issue` / `space-token-status` | Space 令牌（默认 `second-screen`；可显式 `role: peer`） |
+| `world-enter` / `world-leave` | 进世界审计事件（壳 CTA → 任务/回退世界） |
 | `pair-issue` / `pair-stop` | Pair 配对（需 remote-web-ui 在线） |
+
+**进世界（v2.70）**：状态页 CTA「进入 · 任务」→ Bridge `enter-world` → embed；图真源 `bridge/capability-graph.mjs`。
 
 **Space ACL（0.3）**：observer 禁写；peer 走 `POST /space/peer-action`；SSE 用 `POST /space/sse-ticket`。能力契约：`bridge/capability-registry.mjs`。
 
