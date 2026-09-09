@@ -50,3 +50,7 @@ _asar_tmp/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ── Phase 0：运行产物 / 本地计划稿（勿与源码基线混提）──
+dsh-desktop-toggle/last-apply.json
+.zcode/

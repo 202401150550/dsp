@@ -3,8 +3,9 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "DeepSeek Harness Desktop",
-    "subtitle": "本地 GUI · Agent Runtime · 多模型 Providers",
-    "output": "dsh-architecture.html"
+    "subtitle": "本地 GUI · Agent Runtime · 多模型 Providers（遗留图；全工作区六层以 ARCHITECTURE_PLAN.md 为准）",
+    "output": "dsh-architecture.html",
+    "superseded_by": "ARCHITECTURE_PLAN.md"
   },
   "components": [
     { "id": "users", "type": "external", "label": "用户", "sublabel": "浏览器 GUI", "pos": [40, 300], "size": [120, 60] },

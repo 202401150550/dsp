@@ -456,4 +456,4 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | **P2_SLICE0_ACTIVE** | Phase 0 全绿后：允许改 `dsh-self` 宿主写快照 |
 | **FEATURE_FREEZE** | 上述未满足时：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
 
-当前默认：**PLAN_LOCKED**。
+当前默认：**PHASE0_ACTIVE**（已开工：根 scripts / gitignore / `.gitmodules`；`rra-proto` dirty 仍待 A1 单独分轨）。

@@ -1,0 +1,12 @@
+[submodule "dsh-better-sidebar"]
+	path = dsh-better-sidebar
+	url = https://github.com/omdsh-dev/DSH-better-sidebar.git
+[submodule "dsh-ventus-progress"]
+	path = dsh-ventus-progress
+	url = https://github.com/mmzm0808/dsh-ventus-progress.git
+[submodule "dsh-ventus-search"]
+	path = dsh-ventus-search
+	url = https://github.com/mmzm0808/dsh-ventus-search.git
+[submodule "dsh-voice"]
+	path = dsh-voice
+	url = https://github.com/3274375092/dsh-voice.git

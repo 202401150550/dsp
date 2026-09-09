@@ -7,6 +7,14 @@
   },
   "license": "MIT",
   "version": "2026.8.21",
+  "scripts": {
+    "test:open-world": "npm --prefix dsh-open-world test",
+    "gate:rra": "npm --prefix rra-proto test",
+    "doctor": "node dsh-doctor/dsh-doctor.mjs check",
+    "status": "node dsh-desktop-toggle/apply.mjs list",
+    "preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge",
+    "check:bootstrap": "node dsh-desktop-toggle/patch-anchored-bootstrap.mjs --check"
+  },
   "openclaw": {
     "version": "v2026.6.1",
     "repo": "https://github.com/openclaw/openclaw.git",
