@@ -237,7 +237,7 @@ ok(ui.peerBtn === true, 'hub peer issue button visible')
 ok(ui.enterCta === true, 'EnterWorldCta visible on status')
 ok(ui.worldMap === true, 'world map present')
 if (!wmOk) {
-  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.77；当前以 framework.version 为准')
+  console.log('  · 提示：打开 ✦ 壳后 DOM 会出现 OPEN-WORLD v2.78；当前以 framework.version 为准')
 }
 
 try { ws.close() } catch { /* ignore */ }

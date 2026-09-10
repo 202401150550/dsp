@@ -10,7 +10,7 @@ window.__ModuleLoader__.load({
     exports.SNAPSHOT_FULL_URL = '/api/open-world/snapshot'
     exports.TASK_BOARD_URL = '/api/task-board/state'
     exports.POLL_MS = 2500
-    exports.CLIENT_VER = 'v2.77'
+    exports.CLIENT_VER = 'v2.78'
     /** compose 时写入内容哈希；源码里占位为 dev */
     exports.CLIENT_BUILD = 'dev'
     exports.CLIENT_BUILT_AT = ''

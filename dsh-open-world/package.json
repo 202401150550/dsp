@@ -1,6 +1,6 @@
 {
   "name": "dsh-open-world",
-  "version": "2.77.0",
+  "version": "2.78.0",
   "description": "DSH 系统壳 / 控制台：状态·动作·事件",
   "license": "MIT",
   "type": "module",

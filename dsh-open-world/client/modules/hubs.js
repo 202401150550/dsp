@@ -353,7 +353,7 @@ window.__ModuleLoader__.load({
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
               disabled: spaceOff,
-              title: 'peer：… / request-local(→share-snapshot|space-token-status)；禁止 pair-*、space-token-issue、idea-inject',
+              title: 'peer：… / request-local(→share-snapshot|space-token-status|notification-ack-all)；禁止 pair-*、签发、publish、idea-inject',
               onClick: () => {
                 if (spaceOff) return
                 if (typeof window !== 'undefined' && window.confirm
