@@ -1,6 +1,9 @@
 [submodule "dsh-better-sidebar"]
 	path = dsh-better-sidebar
 	url = https://github.com/omdsh-dev/DSH-better-sidebar.git
+[submodule "dsh-mic-input"]
+	path = dsh-mic-input
+	url = https://github.com/QT-Chen/dsh-mic-input.git
 [submodule "dsh-ventus-progress"]
 	path = dsh-ventus-progress
 	url = https://github.com/mmzm0808/dsh-ventus-progress.git

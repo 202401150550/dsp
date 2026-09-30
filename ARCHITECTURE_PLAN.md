@@ -63,11 +63,12 @@
 ### 0.2 嵌套 Git 决议（已落地）
 
 **曾况**：根索引 `mode 160000`（gitlink）但缺 `.gitmodules`。  
-**现况（Phase 0）**：根目录已有 `.gitmodules`，四库登记为真 submodule：
+**现况（Phase 0）**：根目录已有 `.gitmodules`，五库登记为真 submodule：
 
 | 路径 | remote |
 |---|---|
 | `dsh-better-sidebar` | `https://github.com/omdsh-dev/DSH-better-sidebar.git` |
+| `dsh-mic-input` | `https://github.com/QT-Chen/dsh-mic-input.git` |
 | `dsh-ventus-progress` | `https://github.com/mmzm0808/dsh-ventus-progress.git` |
 | `dsh-ventus-search` | `https://github.com/mmzm0808/dsh-ventus-search.git` |
 | `dsh-voice` | `https://github.com/3274375092/dsh-voice.git` |
