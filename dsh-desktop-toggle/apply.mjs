@@ -87,6 +87,30 @@ function linkSpec(link) {
   return `link:${toPosix(link)}`
 }
 
+/**
+ * Opt-in only: auto-promote to profile.bundles when package ships dsh.bundle.patch.
+ *
+ * Default OFF — many vendor web-ui packages declare bundle.patch but must stay as
+ * cordis.patch inserts on DSH Desktop 2.0.x (bundle mode resolves from the shell
+ * app root and fails with "Cannot find package 'schemastery'"). Features that
+ * truly need bundle mount already set `bundle:` explicitly in plugins.yml
+ * (open-world / rewind / ventus / better-sidebar / …). Set `infer_bundle: true`
+ * to restore the old auto-promote for a specific feature.
+ */
+function inferBundleFromPackage(feature) {
+  if (!feature.infer_bundle) return feature
+  if (feature.bundle || !feature.link || !feature.dep) return feature
+  const pkgPath = path.join(feature.link, 'package.json')
+  if (!fs.existsSync(pkgPath)) return feature
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+    if (pkg?.dsh?.bundle?.patch) {
+      return { ...feature, bundle: feature.dep }
+    }
+  } catch {}
+  return feature
+}
+
 function patchAnchoredBootstrap() {
   const script = path.join(ROOT, 'patch-anchored-bootstrap.mjs')
   if (!fs.existsSync(script)) return { skipped: true, reason: 'script-missing' }
@@ -387,6 +411,9 @@ function applyNow(opts = {}) {
   }
 
   const features = cfg.features || {}
+  for (const key of Object.keys(features)) {
+    features[key] = inferBundleFromPackage(features[key])
+  }
   const enabled = []
   const disabled = []
   const blocked = []

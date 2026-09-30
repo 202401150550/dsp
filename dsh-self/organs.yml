@@ -144,12 +144,12 @@ organs:
         title: 用量余额球
         status: fused
         impl: deepseek-usage
-        enabled: true
+        enabled: false
       usage-today:
         title: 今日 tokens
         status: fused
         impl: deepseek-usage
-        enabled: true
+        enabled: false
       live-throughput:
         title: 实时吞吐（对话栏 TPS）
         status: provider

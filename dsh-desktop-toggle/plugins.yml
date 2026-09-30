@@ -14,6 +14,7 @@
 # - 禁止 dsh-web-ui-all / 皮肤中心整包（会卡在 Loading plugins...）
 # - 只把 enabled 包写进 package.json（否则 dshmarket 会 hot-mount）
 # - 第三方 web-ui / injector 的 link 一律指向 D:/dsp/vendor（勿再链 Downloads）
+# - Desktop/Harness ≥0.2：勿开 web-ui-settings/task-board/live-stats/describe-image（dsh-settings 0.1→0.2 断裂）
 # - 刷新 vendor：node D:/dsp/vendor/sync-from-downloads.mjs
 # - 档位定义：presets.yml（daily 瘦身 / bridge 指挥舱 / full 全开）
 
@@ -67,6 +68,8 @@ features:
     title: 开放世界指挥中心
     group: web-ui
     note: NEXORA 风全屏界面；拓扑配置见 open-world.yml 或 ~/.dsh/open-world.yml
+    # 自带 dsh.bundle.patch → 必须走 bundles，勿再 cordis.patch insert（否则 duplicate loader）
+    bundle: dsh-open-world
     insert_id: dsh-open-world
     name: dsh-open-world
     dep: dsh-open-world
@@ -77,6 +80,7 @@ features:
     title: 对话回退 Rewind
     group: web-ui
     note: 消息旁 ↶ 回退；文件快照 ~/.dsh/rewind-snapshots；Open World 时间轴
+    bundle: dsh-rewind-plugin
     insert_id: dsh-rewind-plugin
     name: dsh-rewind-plugin
     dep: dsh-rewind-plugin
@@ -87,6 +91,7 @@ features:
     title: 子代理进度
     group: web-ui
     note: progress-json 分段进度条；顶栏「进度」悬停面板（Ventus 单插件）
+    bundle: dsh-ventus-progress
     insert_id: dsh-ventus-progress
     name: dsh-ventus-progress
     dep: dsh-ventus-progress
@@ -97,6 +102,8 @@ features:
     title: 右侧工作台
     group: web-ui
     note: VSCode 式侧栏：文件/编辑器/终端/Git/浏览器；ctx.betterSidebar 可扩展
+    # 自带 dsh.bundle.patch → 走 bundles，勿再 cordis.patch insert（否则与 infer 漂移）
+    bundle: dsh-better-sidebar
     insert_id: better-sidebar
     name: dsh-better-sidebar
     dep: dsh-better-sidebar
@@ -122,10 +129,10 @@ features:
     version: ^1.9.0
 
   web-ui-settings:
-    enabled: true
+    enabled: false
     title: Web UI 设置分组
     group: web-ui
-    note: "基础设施。已适配 Desktop 2.0.4（createSnapshotStore → dsh-client-store）"
+    note: "Desktop/Harness 0.2.x 不兼容：依赖 dsh-settings 0.1 register API；0.2 已改为 SettingsForms。勿开，否则 renderer-failed。"
     insert_id: web-ui-settings
     name: '@linxin666/dsh-client-ui-web-ui-settings'
     dep: '@linxin666/dsh-client-ui-web-ui-settings'
@@ -172,10 +179,10 @@ features:
     link: D:/dsp/vendor/dsh-web-ui/workspace-analyzer
 
   web-ui-task-board:
-    enabled: true
+    enabled: false
     title: 任务看板
     group: web-ui
-    note: "依赖 apiproxy-compat（ctx.apiProxy）；阶段 A"
+    note: "Desktop/Harness 0.2.x 不兼容：依赖 dsh-settings 0.1 register API；0.2 已改为 SettingsForms。勿开，否则 renderer-failed。 另依赖 apiproxy-compat。"
     insert_id: web-ui-task-board
     name: '@linxin666/dsh-client-ui-task-board'
     dep: '@linxin666/dsh-client-ui-task-board'
@@ -220,9 +227,10 @@ features:
     link: D:/dsp/vendor/dsh-web-ui/dsh-remote-web-ui
 
   web-ui-live-stats:
-    enabled: true
+    enabled: false
     title: 实时状态
     group: web-ui
+    note: "Desktop/Harness 0.2.x 不兼容：依赖 dsh-settings 0.1 register API；0.2 已改为 SettingsForms。勿开，否则 renderer-failed。"
     insert_id: web-ui-live-stats
     name: '@linxin666/dsh-live-stats'
     dep: '@linxin666/dsh-live-stats'
@@ -238,10 +246,10 @@ features:
     link: D:/dsp/vendor/dsh-web-ui/dsh-ssh
 
   web-ui-describe-image:
-    enabled: true
+    enabled: false
     title: 图片描述工具
     group: web-ui
-    note: 智谱 glm-4.6v-flash / ZHIPU_API_KEY
+    note: "Desktop/Harness 0.2.x 不兼容：依赖 dsh-settings 0.1 register API；0.2 已改为 SettingsForms。勿开，否则 renderer-failed。"
     insert_id: web-ui-describe-image
     name: '@linxin666/dsh-tool-describe-image'
     dep: '@linxin666/dsh-tool-describe-image'

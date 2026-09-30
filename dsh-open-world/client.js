@@ -1,4 +1,4 @@
-// CLIENT_BUILD d04346c3e0 2026-09-10T00:52:38.934Z v2.78
+// CLIENT_BUILD c142f73f6f 2026-09-29T13:11:45.549Z v2.78
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -840,8 +840,8 @@ window.__ModuleLoader__.load({
     exports.POLL_MS = 2500
     exports.CLIENT_VER = 'v2.78'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = 'd04346c3e0'
-    exports.CLIENT_BUILT_AT = '2026-09-10T00:52:38.934Z'
+    exports.CLIENT_BUILD = 'c142f73f6f'
+    exports.CLIENT_BUILT_AT = '2026-09-29T13:11:45.549Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -6408,7 +6408,10 @@ window.__ModuleLoader__.load({
       return React.createElement(SidebarSummaryView, { snapshot: snap })
     }
 
-    const inject = ['slots', 'sessions', 'betterSidebar']
+    // betterSidebar is optional: hard-inject blocks web-boot when the sidebar
+    // plugin is missing or still pending (e.g. waiting on rc.8+ `modules`).
+    // Nested ctx.inject activates the tab once the service appears.
+    const inject = ['slots', 'sessions']
 
     function apply(ctx) {
       sessionsBridge = ctx.sessions
@@ -6427,14 +6430,15 @@ window.__ModuleLoader__.load({
       register('sidebar.footer.action', 5)
       register('conversation.input.left', 2)
 
-      if (ctx.betterSidebar && typeof ctx.betterSidebar.registerTab === 'function') {
-        ctx.effect(() => ctx.betterSidebar.registerTab({
+      ctx.inject(['betterSidebar'], (scope) => {
+        if (typeof scope.betterSidebar.registerTab !== 'function') return
+        scope.effect(() => scope.betterSidebar.registerTab({
           id: 'open-world-summary',
           title: '开放世界',
           single: true,
           component: () => React.createElement(OpenWorldSummaryTab),
         }), 'dsh-open-world: better-sidebar-tab')
-      }
+      })
     }
 
     exports.inject = inject

@@ -291,7 +291,10 @@ window.__ModuleLoader__.load({
       return React.createElement(SidebarSummaryView, { snapshot: snap })
     }
 
-    const inject = ['slots', 'sessions', 'betterSidebar']
+    // betterSidebar is optional: hard-inject blocks web-boot when the sidebar
+    // plugin is missing or still pending (e.g. waiting on rc.8+ `modules`).
+    // Nested ctx.inject activates the tab once the service appears.
+    const inject = ['slots', 'sessions']
 
     function apply(ctx) {
       sessionsBridge = ctx.sessions
@@ -310,14 +313,15 @@ window.__ModuleLoader__.load({
       register('sidebar.footer.action', 5)
       register('conversation.input.left', 2)
 
-      if (ctx.betterSidebar && typeof ctx.betterSidebar.registerTab === 'function') {
-        ctx.effect(() => ctx.betterSidebar.registerTab({
+      ctx.inject(['betterSidebar'], (scope) => {
+        if (typeof scope.betterSidebar.registerTab !== 'function') return
+        scope.effect(() => scope.betterSidebar.registerTab({
           id: 'open-world-summary',
           title: '开放世界',
           single: true,
           component: () => React.createElement(OpenWorldSummaryTab),
         }), 'dsh-open-world: better-sidebar-tab')
-      }
+      })
     }
 
     exports.inject = inject

@@ -7,6 +7,9 @@
  * are off, tool-bootstrap falls back to "full catalog exposed" → huge prompts
  * → ~7s "回答时间过长" model retries on simple questions.
  *
+ * Also migrates legacy dsh-persona `text:` → required `prefix:` (DSH schema
+ * rename; otherwise preset mount fails: $.prefix missing required value).
+ *
  * Usage:
  *   node patch-anchored-bootstrap.mjs          # patch if needed
  *   node patch-anchored-bootstrap.mjs --check   # report only
@@ -58,6 +61,21 @@ function stripToolTokens(text, toolRe) {
   return out
 }
 
+/** DSH renamed dsh-persona `text` → required `prefix`; old key fails mount. */
+function needsPersonaPrefixRename(src) {
+  // Only the persona row's `text:` key (not arbitrary YAML elsewhere).
+  return /name:\s*['"]@deepseek-ai\/dsh-persona['"][\s\S]*?\n\s+text:\s/m.test(src)
+    && !/name:\s*['"]@deepseek-ai\/dsh-persona['"][\s\S]*?\n\s+prefix:\s/m.test(src)
+}
+
+function renamePersonaTextToPrefix(src) {
+  // Within the persona config block, rename the first `text:` to `prefix:`.
+  return src.replace(
+    /(name:\s*['"]@deepseek-ai\/dsh-persona['"]\s*\n\s*config:\s*\n(?:\s*#[^\n]*\n)*)(\s+)text:/m,
+    '$1$2prefix:',
+  )
+}
+
 function analyze() {
   const deps = readDeps()
   const depNames = Object.keys(deps)
@@ -75,6 +93,14 @@ function analyze() {
         tools,
       })
     }
+  }
+
+  if (exists && needsPersonaPrefixRename(text)) {
+    actions.push({
+      family: 'persona',
+      reason: 'legacy-text-key-needs-prefix',
+      tools: [],
+    })
   }
 
   return {
@@ -109,6 +135,11 @@ function patch() {
     if (fam.personaOld && fam.personaNew && fam.personaOld.test(text)) {
       text = text.replace(fam.personaOld, fam.personaNew)
     }
+  }
+
+  if (needsPersonaPrefixRename(text)) {
+    text = renamePersonaTextToPrefix(text)
+    removed.push('persona-text→prefix')
   }
 
   // Ensure comment near bootstrapTools

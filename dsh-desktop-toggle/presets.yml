@@ -8,42 +8,38 @@
 # enable 列表之外的 features 一律关掉；always_on 不动；forbidden 永关。
 # 注意：默认档不含 hindsight——9077 不通时每轮卡 ~25s，全模型超时。
 # OW 卫星集（与 dsh-open-world/bridge/capability-registry.mjs 对齐）：
-#   bridge/full：dsh-open-world + web-ui-rewind + web-ui-task-board + apiproxy-compat + ventus-progress
+#   bridge/full：dsh-open-world + web-ui-rewind + apiproxy-compat + ventus-progress（task-board 等暂关）
 #   web-ui-remote-web-ui / hindsight：默认关；枢纽显示「未安装/未启用」，勿假装已联动
+# Desktop/Harness ≥0.2：勿开 web-ui-settings / task-board / live-stats / describe-image
+#   （vendor 仍用 dsh-settings 0.1 register；壳已是 SettingsForms 0.2）
 
 presets:
   daily:
     title: 日常对话
-    note: 瘦身冷启——聊天底座 + 回退/进度/侧栏/看图；不开记忆/Open World/市场
+    note: 瘦身冷启——聊天底座 + 回退/进度/侧栏；不开记忆/Open World/市场；settings/看图暂关（0.2 不兼容）
     enable:
-      - web-ui-settings
       - web-ui-rewind
       - ventus-progress
       - better-sidebar
       - ventus-search
-      - web-ui-describe-image
       - archify
       - dsh-enable-image-input
 
   bridge:
     title: 指挥舱
-    note: Open World 卫星集（OW+看板+回退/进度/侧栏+apiproxy）；不开 remote/hindsight（先通 Pair 插件 / 9077 再单独 set）
+    note: Open World 卫星集（OW+回退/进度/侧栏+apiproxy）；看板/settings/live-stats/看图暂关（settings 0.2 不兼容）；不开 remote/hindsight
     enable:
       - apiproxy-compat
       - dsh-open-world
-      - web-ui-settings
       - web-ui-rewind
       - ventus-progress
       - better-sidebar
-      - web-ui-task-board
-      - web-ui-live-stats
-      - web-ui-describe-image
       - archify
       - dsh-enable-image-input
 
   full:
     title: 全开调试
-    note: 常用全集（仍默认不含 hindsight / remote-web-ui / 全家桶 / 皮肤中心；remote 需手动 set）
+    note: 常用全集（仍默认不含 hindsight / remote-web-ui / 全家桶 / 皮肤中心；settings 0.2 不兼容包已剔除；remote 需手动 set）
     enable:
       - apiproxy-compat
       - dsh-open-world
@@ -52,15 +48,11 @@ presets:
       - better-sidebar
       - ventus-search
       - dsh-market
-      - web-ui-settings
       - web-ui-conversation-exporter
       - web-ui-workspace-analyzer
-      - web-ui-task-board
       - web-ui-git-graph
       - web-ui-aionui-panel
-      - web-ui-live-stats
       - web-ui-ssh
-      - web-ui-describe-image
       - web-ui-liangshen
       - archify
       - dsh-enable-image-input
