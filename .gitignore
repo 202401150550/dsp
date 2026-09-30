@@ -6,9 +6,11 @@ node_modules/
 .build-tools/
 .freebuff/
 .workbuddy/
+.codex/
 
 # ── local scratch (tidy-workspace.ps1 会把根目录调试产物移入) ──
 _scratch/
+.tmp/
 
 # ── doctor / toggle / DSH 调试会话产物 ──
 _doctor-last.json
