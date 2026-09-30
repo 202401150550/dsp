@@ -14,7 +14,8 @@
     "status": "node dsh-desktop-toggle/apply.mjs list",
     "preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge",
     "check:bootstrap": "node dsh-desktop-toggle/patch-anchored-bootstrap.mjs --check",
-    "workspace:status": "node scripts/workspace-status.mjs"
+    "workspace:status": "node scripts/workspace-status.mjs",
+    "test:host-fs-write": "npm --prefix dsh-self run test:host-fs-write"
   },
   "openclaw": {
     "version": "v2026.6.1",

@@ -7,6 +7,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { commitBeforeSnapshot } from './host-rewind-bridge.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DSP = path.resolve(__dirname, '..')
@@ -93,13 +94,31 @@ function checkArgv(argv) {
   return { ok: true }
 }
 
+// TTL 去重（WorkBuddy 式 list 缓存）：ttl 内同键重复调用直接复用，避免反复 readdir / 解析 policy。
+// 键用解析后的真实路径，值带时间戳，过期自动失效。
+export function ttlCache(ttlMs) {
+  const store = new Map()
+  return function get(key, fn) {
+    const now = Date.now()
+    const hit = store.get(key)
+    if (hit && now - hit.at < ttlMs) return hit.value
+    const value = fn()
+    store.set(key, { at: now, value })
+    return value
+  }
+}
+
+const listCache = ttlCache(300)
+
 export function fsList(args = {}) {
   const got = resolveAllowed(args.path || DSP, { mustExist: true })
   if (!got.ok) return got
-  const st = fs.statSync(got.path)
-  if (!st.isDirectory()) return { ok: false, error: 'not-a-directory' }
-  const names = fs.readdirSync(got.path).slice(0, 200)
-  return { ok: true, path: got.path, entries: names }
+  return listCache(norm(got.real), () => {
+    const st = fs.statSync(got.path)
+    if (!st.isDirectory()) return { ok: false, error: 'not-a-directory' }
+    const names = fs.readdirSync(got.path).slice(0, 200)
+    return { ok: true, path: got.path, entries: names }
+  })
 }
 
 export function fsRead(args = {}) {
@@ -114,6 +133,33 @@ export function fsRead(args = {}) {
   return { ok: true, path: got.path, bytes: st.size, text: clip(text, policy.max_output_chars) }
 }
 
+export function previewFsWrite(args = {}) {
+  const got = resolveAllowed(args.path, { mustExist: false })
+  if (!got.ok) {
+    return {
+      ok: false,
+      will_snapshot: false,
+      error: got.error,
+      path: String(args.path || ''),
+      existed: false,
+      impact: [],
+    }
+  }
+  const existed = fs.existsSync(got.path) && fs.statSync(got.path).isFile()
+  return {
+    ok: true,
+    will_snapshot: true,
+    path: got.path,
+    existed,
+    callId: null,
+    impact: [{
+      path: got.path,
+      from: existed ? '(existing file)' : '(create)',
+      to: `write ${String(args.content ?? '').length} chars + before-snapshot`,
+    }],
+  }
+}
+
 export function fsWrite(args = {}) {
   const policy = loadPolicy()
   const got = resolveAllowed(args.path, { mustExist: false })
@@ -122,9 +168,66 @@ export function fsWrite(args = {}) {
   if (Buffer.byteLength(content, 'utf8') > policy.max_write_bytes) {
     return { ok: false, error: 'payload-too-large' }
   }
-  fs.mkdirSync(path.dirname(got.path), { recursive: true })
-  fs.writeFileSync(got.path, content, 'utf8')
-  return { ok: true, path: got.path, bytes: Buffer.byteLength(content, 'utf8') }
+
+  const existed = fs.existsSync(got.path) && fs.statSync(got.path).isFile()
+  let before = null
+  if (existed) {
+    try {
+      before = fs.readFileSync(got.path, 'utf8')
+    } catch (err) {
+      return {
+        ok: false,
+        error: 'snapshot-failed',
+        detail: `read-before-failed: ${err && err.message || err}`,
+        path: got.path,
+        will_snapshot: true,
+        existed: true,
+      }
+    }
+  }
+
+  // S1: snapshot failure refuses the write.
+  const snap = commitBeforeSnapshot({ filePath: got.path, before })
+  if (!snap.ok) {
+    return {
+      ok: false,
+      error: 'snapshot-failed',
+      detail: snap.detail || snap.error,
+      path: got.path,
+      will_snapshot: true,
+      existed,
+      callId: snap.callId,
+    }
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(got.path), { recursive: true })
+    fs.writeFileSync(got.path, content, 'utf8')
+  } catch (err) {
+    return {
+      ok: false,
+      error: 'write-failed',
+      detail: String(err && err.message || err),
+      path: got.path,
+      will_snapshot: true,
+      existed,
+      callId: snap.callId,
+      snapshot_path: snap.snapshot_path,
+      snapshot_id: snap.callId,
+    }
+  }
+
+  return {
+    ok: true,
+    path: got.path,
+    bytes: Buffer.byteLength(content, 'utf8'),
+    will_snapshot: true,
+    existed,
+    callId: snap.callId,
+    snapshot_id: snap.callId,
+    snapshot_path: snap.snapshot_path,
+    anchorSeq: snap.anchorSeq,
+  }
 }
 
 function spawnBin(bin, argv, cwd) {
@@ -247,11 +350,7 @@ export function gitCommit(args = {}) {
 }
 
 export function impactFsWrite(args = {}) {
-  return [{
-    path: String(args.path || '(missing)'),
-    from: '(file)',
-    to: `write ${String(args.content || '').length} chars`,
-  }]
+  return previewFsWrite(args).impact
 }
 
 export function impactShell(args = {}) {

@@ -21,6 +21,7 @@
     "wizard-vision.mjs",
     "host-agent.mjs",
     "host-runtime.mjs",
+    "host-rewind-bridge.mjs",
     "host-chat.mjs",
     "node-bin.mjs",
     "host-policy.yml",
@@ -45,7 +46,8 @@
     }
   },
   "scripts": {
-    "build:client": "node scripts/compose-client.mjs"
+    "build:client": "node scripts/compose-client.mjs",
+    "test:host-fs-write": "node test/host-fs-write-snapshot.mjs"
   },
   "peerDependencies": {
     "react": "^18.2.0"
