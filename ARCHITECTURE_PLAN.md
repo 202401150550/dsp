@@ -3,7 +3,8 @@
 > 范围：`D:\dsp` 全工作区  
 > 真源：`dsh-open-world` **v2.77.0** / `owip/0.3-draft` / snapshot schema **8**  
 > 配套：`dsh-open-world/SYSOP_v0.1.md` · `CHECKLIST.md` · `SHELL_PLAN.md` · `dsh-self/organs.yml` · `capability-registry.yml`  
-> 原则：**先收敛可治理，再加能力；Open World 是壳，不是第二套 Agent；RRA 研究轨后置。**
+> 原则：**先收敛可治理，再加能力；Open World 是壳，不是第二套 Agent；RRA 研究轨后置。**  
+> 最后核对：**2026-09-30** · Rewind×Host slice-0 已实现并提交（`3d46482`）；`organs.yml` 快照备注仍在工作区未提交。⚠️ OW 已发 **v2.78**，本文仍按 v2.77 锁定，待单独重基线。
 
 ---
 
@@ -55,7 +56,7 @@
 #### E. 下一切片纸面签字
 
 - [x] **E1** §0.3 Rewind×Host 草图已阅；实现范围 = `fs.write` only
-- [x] **E2** 用例 H1–H5 已定；**行动**须先写测再改 `host-runtime`（等主人开 `P2_SLICE0_ACTIVE`）
+- [x] **E2** 用例 H1–H5 已定并自动化绿（26 passed，commit `3d46482`）；`fsWrite` 已接入 `host-rewind-bridge`（S1 拒写）
 
 ---
 
@@ -77,7 +78,7 @@
 
 ---
 
-### 0.3 Rewind × Host 设计草图（纸面 · 未实现）
+### 0.3 Rewind × Host（已实现 · commit `3d46482`）
 
 #### 0.3.1 问题
 
@@ -182,7 +183,7 @@
 | 默认关 | hindsight、openviking、remote/ssh/market、voice、super-injector、skin-center、web-ui-all… |
 | dsh-self | iteration **9**：运维/对话大量 fused；`host-agent` 已有 catalog / dry-run / confirm / 预算会话 |
 | 记忆防护 | 9077 不通拒开 Hindsight；`patch-anchored-bootstrap` 防孤儿 `hindsight_*` 倾倒工具表（已合入） |
-| 最大技术缺口 | **`host-runtime.fsWrite` 直写文件，不进 DSH 写工具 → Rewind 漏快照** |
+| 最大技术缺口 | 组合校验最小闭环（§12.2 `plan.validate`）；原「Rewind×Host」缺口已在 `3d46482` 闭合 |
 | 仓库形态缺口 | 嵌套 Git 无 `.gitmodules`；`last-apply.json` 与源码混；根目录无统一 scripts |
 | RRA | 玩具门禁可绿，生产 apply 仍应被真实 checkpoint 阻塞 |
 
@@ -249,22 +250,23 @@
   "gate:rra": "npm --prefix rra-proto test",
   "doctor": "node dsh-doctor/dsh-doctor.mjs check",
   "status": "node dsh-desktop-toggle/apply.mjs list",
-  "preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge"
+  "preset:bridge": "node dsh-desktop-toggle/apply.mjs preset bridge",
+  "test:host-fs-write": "npm --prefix dsh-self run test:host-fs-write"
 }
 ```
 
 3. `.gitignore`：`dsh-desktop-toggle/last-apply.json`（或移到 `baselines/` 显式快照）。  
 4. 嵌套库：二选一写进本文验收——`.gitmodules` **或** vendor 拷贝并删内嵌 `.git`。
 
-### 5.2 Phase 2 切片 0 — Rewind × Host（**最该补的技术闭环**）
+### 5.2 Phase 2 切片 0 — Rewind × Host（**已完成** · commit `3d46482`）
 
-**纸面设计见 §0.3（已定路径 C′ + 失败策略 S1 + 用例 H1–H5）。** 此处保留摘要：
+**设计见 §0.3（路径 C′ + 失败策略 S1 + 用例 H1–H5）。** 已落地：
 
-**问题**：`dsh-self/host-runtime.mjs` → `fsWrite` 直接 `fs.writeFileSync`；`dsh-rewind-plugin` 只钩 DSH 写类工具 → 宿主写入不可回退。
+- `host-rewind-bridge.mjs` + `fsWrite` 接入 before-snapshot，备份失败 S1 拒写
+- 用例 H1–H5 自动化绿（26 passed）
+- dry-run/审计暴露 `will_snapshot` / `callId` / `snapshot_id` / `snapshot_path`
 
-**实现摘要**：写盘前写入与 Rewind 同构的 `CheckpointEntry` JSON；备份失败则拒绝写入；dry-run/审计暴露 `will_snapshot` / `callId`。
-
-**不做**：重写 rewind 内核；本切片不含 shell/git；不伪造 tool/call 事件。
+**没做**：重写 rewind 内核；本切片不含 shell/git；不伪造 tool/call 事件。
 
 ### 5.3 Phase 1 — Open World 产品化（守成）
 
@@ -365,8 +367,8 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | `dsh-desktop-toggle/plugins.yml` + `presets.yml` | 装机镜像与档位 |
 | `rra-proto` 包内文档 | 研究轨边界 |
 
-**现在：Phase 0 门禁已绿（A–E 纸面勾选完成）。**  
-**下一行动开关**：主人说「开始 Rewind×Host」或「开 P2 切片 0」→ `P2_SLICE0_ACTIVE`（先写 H1–H5 测，再改 `fsWrite`）。  
+**现在：Phase 0 门禁已绿（A–E 勾选完成）；P2 切片 0（Rewind×Host）已实现并提交（`3d46482`）。**  
+**下一行动开关**：主人说「开始组合校验」→ 打开 §12.2 切片 1。  
 在此之前：**FEATURE_FREEZE** 仍禁止新插件 / 开记忆进日常档。
 
 ---
@@ -388,9 +390,9 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 
 ### 12.1 切片 0 — Rewind × Host（见 §0.3）
 
-- [ ] **P2-0a** 落地 `host-rewind-bridge.mjs` + 改 `fsWrite`（S1 拒写）  
-- [ ] **P2-0b** 用例 H1–H5 自动化绿  
-- [ ] **P2-0c** `organs.yml` / 宿主文档注明「宿主写可快照」  
+- [x] **P2-0a** 落地 `host-rewind-bridge.mjs` + 改 `fsWrite`（S1 拒写）  
+- [x] **P2-0b** 用例 H1–H5 自动化绿（26 passed）  
+- [x] **P2-0c** `organs.yml` 已注明「宿主写可快照」（工作区未提交，见 §10 提醒）  
 
 ### 12.2 切片 1 — 组合校验最小闭环
 
@@ -437,8 +439,8 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | 状态 | 含义 |
 |---|---|
 | **PLAN_LOCKED** | 规划纸面冻结期（已完成） |
-| **PHASE0_DONE** | 根 scripts / gitignore / gitmodules / 门禁复跑绿（当前） |
-| **P2_SLICE0_ACTIVE** | 允许改 `dsh-self` 宿主写快照（未开） |
-| **FEATURE_FREEZE** | 未开 P2 切片前：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
+| **PHASE0_DONE** | 根 scripts / gitignore / gitmodules / 门禁复跑绿（已完成） |
+| **P2_SLICE0_DONE** | Rewind×Host 宿主写快照已落地并提交（`3d46482`，当前） |
+| **FEATURE_FREEZE** | 未开 P2 切片 1 前：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
 
-当前默认：**PHASE0_DONE** + **FEATURE_FREEZE**（等主人开 Rewind×Host / P2 切片 0）。
+当前默认：**P2_SLICE0_DONE** + **FEATURE_FREEZE**（等主人开组合校验 / P2 切片 1）。
