@@ -241,10 +241,11 @@ organs:
         impl: host-runtime
         enabled: true
       fs-write:
-        title: 白名单写文件（需确认）
+        title: 白名单写文件（需确认；写前 Rewind 同构快照，失败拒写）
         status: fused
         impl: host-runtime
         enabled: true
+        note: host-rewind-bridge · S1 snapshot-failed 拒写 · 用例 H1–H5
       shell-param:
         title: 参数化 git/node/pnpm
         status: fused
