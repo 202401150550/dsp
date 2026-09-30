@@ -1,10 +1,10 @@
-# DSH 工作区整体架构与完整规划（v2.77 口径）
+# DSH 工作区整体架构与完整规划（v2.78 口径）
 
 > 范围：`D:\dsp` 全工作区  
-> 真源：`dsh-open-world` **v2.77.0** / `owip/0.3-draft` / snapshot schema **8**  
+> 真源：`dsh-open-world` **v2.78.0** / `owip/0.3-draft` / snapshot schema **8**  
 > 配套：`dsh-open-world/SYSOP_v0.1.md` · `CHECKLIST.md` · `SHELL_PLAN.md` · `dsh-self/organs.yml` · `capability-registry.yml`  
 > 原则：**先收敛可治理，再加能力；Open World 是壳，不是第二套 Agent；RRA 研究轨后置。**  
-> 最后核对：**2026-09-30** · Rewind×Host slice-0 已实现并提交（`3d46482`）；`organs.yml` 快照备注仍在工作区未提交。⚠️ OW 已发 **v2.78**，本文仍按 v2.77 锁定，待单独重基线。
+> 最后核对：**2026-09-30** · Rewind×Host slice-0 已实现并提交（`3d46482`）；本文重基线至 OW **v2.78**。
 
 ---
 
@@ -42,7 +42,7 @@
 
 #### C. 事实源
 
-- [x] **C1** 本文保持 v2.77 口径
+- [x] **C1** 本文保持 v2.78 口径
 - [x] **C2** `AGENTS.md` 入口指向本文
 - [x] **C3** `dsh-architecture.json` meta 已注 `superseded_by: ARCHITECTURE_PLAN.md`
 
@@ -179,7 +179,7 @@
 
 | 项 | 事实 |
 |---|---|
-| Open World | **v2.77.0**；peer local allowlist 含 `space-token-status`；世界包 opt-in 诚实占位（v2.76）；CHECKLIST 主路径大量已勾 |
+| Open World | **v2.78.0**；peer local allowlist（含 `space-token-status`、notification-ack-all）；世界包 opt-in 诚实占位（v2.76）；CHECKLIST 主路径大量已勾 |
 | 档位 | `active-preset=bridge`：OW + rewind + task-board + ventus-progress + better-sidebar + live-stats + describe-image + archify + apiproxy-compat + image-input |
 | 默认关 | hindsight、openviking、remote/ssh/market、voice、super-injector、skin-center、web-ui-all… |
 | dsh-self | iteration **9**：运维/对话大量 fused；`host-agent` 已有 catalog / dry-run / confirm / 预算会话 |
@@ -271,7 +271,7 @@
 
 ### 5.3 Phase 1 — Open World 产品化（守成）
 
-以 CHECKLIST v2.77 为真源：冷启 ≤90s、主路径无 Host/OWIP 术语暴露给用户、关任意可选世界壳仍可用、`check:client` 拦未 rebuild、CDP live 作发布门禁。新动作必须进 `framework.actionLayers` + CapabilityRegistry。
+以 CHECKLIST v2.78 为真源：冷启 ≤90s、主路径无 Host/OWIP 术语暴露给用户、关任意可选世界壳仍可用、`check:client` 拦未 rebuild、CDP live 作发布门禁。新动作必须进 `framework.actionLayers` + CapabilityRegistry。
 
 ### 5.4 Phase 2 — 宿主信任层（完整）
 
@@ -306,11 +306,11 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | 方向 | 为什么值得 | 前提 |
 |---|---|---|
 | **可证明执行** | 个人 Agent 差异化不在「更多插件」，在「写了能回退、越界能拦、失败能归因」 | Rewind×Host + 组合校验 |
-| **系统壳体验** | 60% 用户 5 分钟只用壳三问 + 两世界，心智成本低于插件丛林 | 守 v2.77 主路径，克制 L3 |
+| **系统壳体验** | 60% 用户 5 分钟只用壳三问 + 两世界，心智成本低于插件丛林 | 守 v2.78 主路径，克制 L3 |
 | **带外自愈** | Desktop 必卡；doctor/baseline 是存活率 | L3b 永不塞进卡死 UI |
 | **受治理市场** | 生态要扩展但不能再踩全家桶 | Phase 3 manifest+签名 |
 | **诚实记忆** | 长期记忆是生产力也是超时炸弹 | 健康门 + 置信度，不做「伪神经」 |
-| **跨设备观察** | Space peer 白名单已到 v2.77；Pair 后置 | 协议分界不合并 |
+| **跨设备观察** | Space peer 白名单已到 v2.78；Pair 后置 | 协议分界不合并 |
 | **研究期权 RRA** | 有 checkpoint 才是资产；现在是期权 | 玩具绿 ≠ 生产 |
 
 **不优先突破**：更多皮肤、更多隐喻视图、语音抢日常档、IM 全开、假 decoder。
@@ -382,7 +382,7 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 - [ ] **P1-2** 世界地图：任务 / 回退可进可回；关 task-board 或 rewind 后壳不崩（灰态诚实）  
 - [ ] **P1-3** `npm run check:client`：改 client 未 compose 必失败  
 - [ ] **P1-4** 新 Host action 若有：必须登记 CapabilityRegistry + actionLayers；禁止无 registry 直加  
-- [ ] **P1-5** QUICKSTART 只保留日常三步；与 SYSOP/CHECKLIST 版本号一致（2.77）  
+- [ ] **P1-5** QUICKSTART 只保留日常三步；与 SYSOP/CHECKLIST 版本号一致（2.78）  
 - [ ] **P1-6**（发版）`test:live-cdp` 至少一条 snapshot/shell/coreShell 绿  
 
 ---
