@@ -60,3 +60,10 @@ dsh-desktop-toggle/last-apply.json
 # ── dsh-self 宿主运行时状态（会话预算 / 审计日志，每次运行即变）──
 dsh-self/host-session.json
 dsh-self/host-audit.jsonl
+
+# github upload hygiene (2026-10-02)
+/open-world/
+logs/
+dsh-voice/
+pelican-bike.html
+vendor/
