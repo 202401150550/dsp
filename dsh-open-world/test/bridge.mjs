@@ -96,7 +96,7 @@ ok(afterInject.outcomes['inject-message'].ok === true, 'inject outcome ok')
 ok(afterInject.outcomes['inject-message'].strategy === 'session-api', 'inject outcome strategy')
 
 const rewind = await bridge.execRewindViaSession(42, 'chat')
-ok(rewind.ok === true, 'execRewindViaSession ok')
+ok(rewind.ok === false && rewind.error === 'rewind-compatibility-unverified', 'direct rewind helper fails closed')
 
 // 探针说 session、实跑走 DOM → probeStale
 const staleStore = {
@@ -210,8 +210,23 @@ await rewindChat.bridgeExecute(
   { type: 'rewind-open', preferChat: true },
   { onClose: () => {}, setView: () => {}, setToast: () => {}, setEmbed: () => {} },
 )
-ok(rewindPrompts[0] === '/rewind', 'preferChat uses session.prompt')
-ok(rewindChat.readBridgeHealth().outcomes['rewind-exec'].strategy === 'session-prompt', 'preferChat session-prompt outcome')
+ok(rewindPrompts.length === 0, 'preferChat cannot submit an unverified rewind command')
+ok(rewindChat.readBridgeHealth().outcomes['rewind-exec'].strategy === 'unavailable', 'preferChat reports compatibility unavailable')
+
+// Fail closed even if an implicit active Session exposes a working command method.
+const calls = [], deniedToasts = []
+const guarded = createBridge({
+  getSessionsBridge: () => ({ list: { getSnapshot: () => ({ current: 'unrelated-session' }) }, binding: () => ({ session: { command: async cmd => { calls.push(cmd); return { ok: true, value: { matched: true } } } } }) }),
+  storage: { data: {}, getItem(k) { return this.data[k] || null }, setItem(k, v) { this.data[k] = v } },
+})
+let closes = 0
+await guarded.bridgeExecute({ type: 'rewind-exec', seq: 7, mode: 'both', sessionId: 'claimed-target' }, { onClose() { closes++ }, setView() {}, setToast(t) { deniedToasts.push(t) } })
+ok(calls.length === 0, 'blocked rewind never calls the active Session')
+ok(closes === 0, 'blocked rewind leaves the world open')
+ok(guarded.readBridgeHealth().outcomes['rewind-exec'].ok === false, 'blocked rewind records failure, not success')
+ok(deniedToasts.some(t => t.includes('暂不可执行')), 'blocked rewind explains compatibility limit')
+ok((await guarded.execRewindViaSession(7, 'both')).ok === false, 'direct helper cannot bypass the gate')
+ok(guarded.checkBridgeCapabilities()['rewind-exec'].strategy === 'unavailable', 'capability probe does not advertise unverified rollback')
 
 console.log(`\n=== bridge: ${passed} passed, ${failed} failed ===\n`)
 process.exit(failed > 0 ? 1 : 0)

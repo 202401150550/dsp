@@ -22,135 +22,124 @@ window.__ModuleLoader__.load({
       return data
     }
 
-    function MessageHub({ mailbox, hub, onSend, onRead, onShare, onInjectAgent, onSearchMemory }) {
-      const [body, setBody] = useState('')
-      const [to, setTo] = useState('broadcast')
-      const [attachTopo, setAttachTopo] = useState(true)
-      const [attachMem, setAttachMem] = useState(false)
-      const [memQuery, setMemQuery] = useState('')
-      const [memHits, setMemHits] = useState([])
-      const [memSource, setMemSource] = useState(null)
-      const [sending, setSending] = useState(false)
+    // ── 信箱（原「消息总线」的阅读面）────────────────────────────────────
+    // 投递动作已并入聊天坞的对话框（一排目标小按钮）；这里保留侧栏用的阅读面：
+    //   快速扫记录、点未读、全部已读、分享快照，需要继续操作就跳聊天坞。
+    const MBOX_TO_LABEL = {
+      broadcast: '全体广播', sessions: '全部会话', remote: '跨机外发',
+      agent: '官方聊天', clipboard: '复制分享包', external: '导出外发文件',
+    }
+
+    function mboxAgo(ts) {
+      const d = new Date(ts || Date.now())
+      const sec = (Date.now() - (ts || 0)) / 1000
+      const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      if (sec < 60) return '刚刚'
+      if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`
+      if (new Date().toDateString() === d.toDateString()) return hhmm
+      return `${d.getMonth() + 1}/${d.getDate()} ${hhmm}`
+    }
+
+    function MessageHub({ mailbox, hub, onRead, onShare, onOpenChat }) {
+      const [filter, setFilter] = useState('all')
+      const [q, setQ] = useState('')
+      const [expanded, setExpanded] = useState(false)
       const messages = (mailbox && mailbox.messages) || []
       const unread = (mailbox && mailbox.unread) || 0
       const remoteReady = hub && hub.pair && (hub.pair.paired || hub.remoteMessaging?.paired)
 
-      const searchMem = async () => {
-        if (!onSearchMemory) return
-        const data = await onSearchMemory(memQuery)
-        setMemHits((data && data.items) || [])
-        setMemSource((data && data.source) || (data && data.daemon ? 'daemon' : 'offline'))
-        setAttachMem(true)
+      const filtered = messages
+        .filter((m) => (filter === 'unread' ? m.direction === 'in' && !m.read
+          : filter === 'out' ? m.direction !== 'in' : true))
+        .filter((m) => !q.trim() || String(m.body || '').toLowerCase().includes(q.trim().toLowerCase()))
+      const shown = filtered.slice(0, expanded ? 60 : 6)
+
+      const attsOf = (m) => {
+        const out = []
+        const payloadAtts = (m.payload && m.payload.attachments) || []
+        for (const a of payloadAtts) {
+          if (a.type === 'memory') out.push(`Hindsight · ${(a.items || []).length} 条`)
+          else if (a.type === 'snapshot') out.push('拓扑快照')
+          else out.push(a.type || '附件')
+        }
+        if (m.payload && m.payload.snapshot && !payloadAtts.some((a) => a.type === 'snapshot')) out.push('拓扑快照')
+        if (m.kind === 'notification') out.push('通知中心')
+        return out
       }
 
-      const send = async () => {
-        if (!body.trim() || sending) return
-        setSending(true)
-        try {
-          const attachments = []
-          if (attachMem && memHits.length > 0) {
-            attachments.push({ type: 'memory', items: memHits.slice(0, 5), source: memSource || 'hindsight' })
-          }
-          if (to === 'agent') {
-            const memNote = attachMem && memHits.length
-              ? `\n\n[Hindsight 附件 · ${memSource || '—'}]\n${memHits.slice(0, 3).map((m) => m.text).join('\n')}`
-              : ''
-            await onInjectAgent(body + memNote)
-          } else if (to === 'clipboard') {
-            const data = await onSend({
-              action: 'send-message', to: 'clipboard', body, attachSnapshot: attachTopo, attachments,
-            })
-            if (data.share && navigator.clipboard) {
-              await navigator.clipboard.writeText(JSON.stringify(data.share, null, 2))
-            }
-          } else {
-            await onSend({
-              action: 'send-message',
-              to,
-              body,
-              attachSnapshot: attachTopo,
-              attachments,
-              attachMemory: attachMem && memHits.length ? memHits.slice(0, 5) : undefined,
-            })
-          }
-          setBody('')
-        } finally { setSending(false) }
-      }
-
-      return React.createElement('div', { className: 'ow-msg-hub' },
-        React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } },
-          `信箱 · ${messages.length} 条 · 未读 ${unread}${remoteReady ? ' · 跨机就绪' : ''}`),
-        React.createElement('textarea', {
-          placeholder: '输入消息… 可广播、跨机、投递到官方聊天、附记忆/拓扑',
-          value: body,
-          onChange: (ev) => setBody(ev.target.value),
-        }),
-        React.createElement('div', { className: 'ow-msg-row' },
-          React.createElement('input', {
-            className: 'ow-msg-select', style: { flex: 1, minWidth: 100 },
-            placeholder: 'Hindsight 检索…', value: memQuery,
-            title: '走 /memory/search · 非本地 RRM 归档',
-            onChange: (ev) => setMemQuery(ev.target.value),
-            onKeyDown: (ev) => { if (ev.key === 'Enter') searchMem() },
-          }),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn', onClick: searchMem,
-            title: 'Hindsight daemon/cache · 与 MemoryBrief「搜归档」不是同一通路',
-          }, '搜 Hindsight'),
-        ),
-        React.createElement('div', {
-          style: { fontSize: 9, color: '#64748b', marginTop: 2 },
-        }, memSource
-          ? `来源 · Hindsight · ${memSource} · 非本地 RRM 归档`
-          : '来源 · Hindsight（daemon/cache/offline）· 本地归档请用上方 MemoryBrief「搜归档」'),
-        memHits.length > 0 && React.createElement('div', { className: 'ow-hub-mem' },
-          memHits.slice(0, 3).map((m) => React.createElement('div', { key: m.id }, `· ${m.text.slice(0, 80)}`)),
-        ),
-        React.createElement('div', { className: 'ow-msg-row' },
-          React.createElement('select', {
-            className: 'ow-msg-select', value: to,
-            onChange: (ev) => setTo(ev.target.value),
-          },
-            React.createElement('option', { value: 'broadcast' }, '全体广播'),
-            React.createElement('option', { value: 'sessions' }, '全部会话'),
-            remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发（本地 outbox，非手机实时）'),
-            React.createElement('option', { value: 'agent' }, '投递到官方聊天'),
-            React.createElement('option', { value: 'clipboard' }, '复制分享包'),
-            React.createElement('option', { value: 'external' }, '导出外发文件'),
-          ),
-          React.createElement('label', { style: { fontSize: 10, color: '#7c8ea6' } },
-            React.createElement('input', {
-              type: 'checkbox', checked: attachTopo,
-              onChange: (ev) => setAttachTopo(ev.target.checked),
-              style: { marginRight: 4 },
-            }),
-            '附拓扑'),
-          React.createElement('label', { style: { fontSize: 10, color: '#7c8ea6' } },
-            React.createElement('input', {
-              type: 'checkbox', checked: attachMem,
-              onChange: (ev) => setAttachMem(ev.target.checked),
-              style: { marginRight: 4 },
-            }),
-            '附 Hindsight'),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn primary', onClick: send, disabled: sending,
-          }, sending ? '…' : '发送'),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn', onClick: () => onShare(),
-          }, '分享快照'),
-        ),
-        messages.slice(0, 8).map((m) => React.createElement('div', {
-          key: m.id,
-          className: `ow-msg-item ${m.direction === 'in' && !m.read ? 'unread' : ''}`,
-          onClick: () => m.direction === 'in' && !m.read && onRead([m.id]),
+      const entry = (m) => {
+        const isIn = m.direction === 'in'
+        const unseen = isIn && !m.read
+        const atts = attsOf(m)
+        return React.createElement('div', {
+          key: m.id, className: `card ${isIn ? 'ag' : 'me'}`,
+          style: { cursor: unseen ? 'pointer' : 'default', opacity: unseen ? 1 : 0.86 },
+          title: unseen ? '点击标记为已读' : undefined,
+          onClick: () => { if (unseen && onRead) onRead([m.id]) },
         },
-          React.createElement('div', { style: { color: '#e6f1ff' } }, m.body),
-          m.payload && m.payload.attachments && React.createElement('div', { className: 'ow-msg-attach' }, '📎 含附件'),
-          m.kind === 'notification' && React.createElement('div', { className: 'ow-msg-attach' }, '🔔 通知中心'),
-          React.createElement('div', { className: 'ow-msg-meta' },
-            `${m.direction === 'in' ? '收' : '发'} · ${m.toLabel || m.to} · ${new Date(m.ts).toLocaleTimeString('zh-CN')}`),
-        )),
-      )
+          React.createElement('div', { className: 'meta' },
+            React.createElement('span', { className: isIn ? 'info' : 'warn' }, isIn ? '收' : '发'),
+            React.createElement('span', null, m.toLabel || MBOX_TO_LABEL[m.to] || m.to || '本地'),
+            React.createElement('span', null, mboxAgo(m.ts)),
+            unseen ? React.createElement('span', { className: 'badge' }, '未读') : null),
+          React.createElement('div', { className: 'ln' }, m.body || '（空消息）'),
+          atts.length > 0 && React.createElement('div', { style: { paddingTop: 5 } },
+            atts.map((t, i) => React.createElement('span', {
+              key: `${m.id}-a-${i}`, className: 'chip att', style: { marginRight: 5 },
+            }, t))))
+      }
+
+      return React.createElement('div', { className: 'owd' },
+        React.createElement('style', { dangerouslySetInnerHTML: { __html: C.OW_SKIN_ACTIVE || '' } }),
+        React.createElement('div', { className: 'panel', style: { padding: '8px 9px 9px' } },
+          React.createElement('div', { className: 'head', style: { margin: '-8px -9px 6px', borderBottom: '1px solid var(--am1)' } },
+            React.createElement('span', { className: remoteReady ? 'sig' : 'sig red' }),
+            React.createElement('span', { className: 'zh' }, '信箱'),
+            React.createElement('span', { className: 'en' }, 'MAILBOX'),
+            React.createElement('span', { className: 'tag' }, `${messages.length} 条${unread ? ` · 未读 ${unread}` : ''}`)),
+
+          onOpenChat && React.createElement('button', {
+            type: 'button', className: 'btn primary', style: { width: '100%', marginBottom: 7 },
+            title: '投递与对话都在聊天坞里完成',
+            onClick: onOpenChat,
+          }, '在聊天坞继续 →'),
+
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingBottom: 5 } },
+            React.createElement('span', {
+              className: `chip${filter === 'all' ? ' on' : ''}`, onClick: () => setFilter('all'),
+            }, `全部 ${messages.length}`),
+            React.createElement('span', {
+              className: `chip${filter === 'unread' ? ' on' : ''}`, onClick: () => setFilter('unread'),
+            }, `未读 ${unread}`),
+            React.createElement('span', {
+              className: `chip${filter === 'out' ? ' on' : ''}`, onClick: () => setFilter('out'),
+            }, '我发的'),
+            React.createElement('input', {
+              className: 'inp', type: 'search', value: q, placeholder: '搜索…',
+              style: { flex: 1, minWidth: 70 }, onChange: (ev) => setQ(ev.target.value),
+            })),
+
+          shown.length === 0 && React.createElement('div', {
+            className: 'muted', style: { fontSize: 10.5, padding: '10px 0', textAlign: 'center' },
+          }, '这里还没有记录'),
+          shown.map(entry),
+          filtered.length > shown.length && React.createElement('button', {
+            type: 'button', className: 'btn', style: { width: '100%', marginTop: 4 },
+            onClick: () => setExpanded(true),
+          }, `展开更多（还有 ${filtered.length - shown.length} 条）`),
+
+          React.createElement('div', { className: 'divider' }),
+          React.createElement('div', { style: { display: 'flex', gap: 6 } },
+            unread > 0 && onRead && React.createElement('button', {
+              type: 'button', className: 'btn', style: { flex: 1 },
+              onClick: () => onRead(messages.filter((m) => m.direction === 'in' && !m.read).map((m) => m.id)),
+            }, '全部已读'),
+            onShare && React.createElement('button', {
+              type: 'button', className: 'btn', style: { flex: 1 }, onClick: () => onShare(),
+            }, '分享快照')),
+          React.createElement('div', { className: 'foot', style: { borderTop: 'none', padding: '6px 0 0' } },
+            React.createElement('span', null, remoteReady ? '跨机就绪' : '本机'),
+            React.createElement('span', { style: { marginLeft: 'auto' } }, 'mailbox.json'))))
     }
 
     function IntegrationsHub({ hub, space, onAction, onEmbedArchify, onToast }) {
@@ -181,7 +170,7 @@ window.__ModuleLoader__.load({
         }
       }, [space && space.token_ttl_hours])
       if (!hub) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '集成层加载中…')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '集成层加载中…')
       }
       const pair = hub.pair || {}
       const notif = hub.notifications || {}
@@ -322,7 +311,7 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-hub' },
         React.createElement('div', {
           className: 'ow-hub-sec',
-          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(94,234,212,.2)', borderRadius: 6 },
+          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(231,178,75,.2)', borderRadius: 6 },
         },
           React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 观察/回写（Space）'),
           React.createElement('div', { className: 'ow-hub-stat' },
@@ -335,7 +324,7 @@ window.__ModuleLoader__.load({
             className: 'ow-hub-row',
             style: { marginTop: 6, gap: 4, flexWrap: 'wrap', alignItems: 'center' },
           },
-            React.createElement('span', { style: { fontSize: 10, color: '#7c8ea6' } }, '签发 TTL'),
+            React.createElement('span', { style: { fontSize: 10, color: '#A3A3A8' } }, '签发 TTL'),
             TTL_CHOICES.map((c) => React.createElement('button', {
               key: String(c.hours),
               type: 'button',
@@ -390,7 +379,7 @@ window.__ModuleLoader__.load({
           ),
           spaceTok && !spaceOff && React.createElement('div', { className: 'ow-hub-link' }, spaceTok),
           !spaceOff && (sp.issuedAt || sp.expiresAt) && React.createElement('div', {
-            style: { marginTop: 4, fontSize: 10, color: '#7c8ea6' },
+            style: { marginTop: 4, fontSize: 10, color: '#A3A3A8' },
           }, [
             sp.issuedAt ? `签发 ${sp.issuedAt}` : null,
             sp.expiresAt ? ` · 过期 ${sp.expiresAt}` : ' · 无过期',
@@ -404,7 +393,7 @@ window.__ModuleLoader__.load({
           React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 手机控工作区（Pair）'),
           React.createElement('div', { className: 'ow-hub-stat' },
             '由 dsh-remote-web-ui 负责 /m；OW 只代理状态与入口，不重写 Pair Host。'),
-          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4, color: pair.available ? '#7c8ea6' : '#fbbf24' } },
+          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4, color: pair.available ? '#A3A3A8' : '#fbbf24' } },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
               : (pairOfflineHint || 'remote-web-ui 未安装/未启用')),
@@ -434,8 +423,8 @@ window.__ModuleLoader__.load({
         notif.available && React.createElement('div', { className: 'ow-hub-sec' },
           React.createElement('div', { className: 'ow-hub-title' }, `通知中心 · 未读 ${notif.unreadCount || 0}`),
           (notif.notifications || []).slice(0, 3).map((n) => React.createElement('div', { key: n.id, className: 'ow-hub-item' },
-            React.createElement('div', { style: { color: '#e6f1ff' } }, n.title),
-            React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } }, n.body),
+            React.createElement('div', { style: { color: '#F2F2F4' } }, n.title),
+            React.createElement('div', { style: { fontSize: 10, color: '#A3A3A8' } }, n.body),
           )),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn', style: { marginTop: 6 },
@@ -461,7 +450,7 @@ window.__ModuleLoader__.load({
             }, '搜 Hindsight'),
           ),
           memSource && React.createElement('div', {
-            style: { fontSize: 9, color: '#94a3b8', marginTop: 4 },
+            style: { fontSize: 9, color: '#A3A3A8', marginTop: 4 },
           }, `来源 · ${memSource}`),
           memItems.slice(0, 4).map((m) => React.createElement('div', { key: m.id, className: 'ow-hub-mem' }, m.text.slice(0, 120))),
         ),
@@ -485,6 +474,7 @@ window.__ModuleLoader__.load({
     function RewindTimelinePanel({ rewind, plugins, onAction, onToast, compact }) {
       const plug = (plugins || []).find((p) => p.id === 'rewind')
       const stats = rewind || {}
+      const blocked = '回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。'
       const available = !!(stats.available || (plug && plug.online))
       const points = (stats.timeline && stats.timeline.points) || []
       if (!available) {
@@ -515,7 +505,8 @@ window.__ModuleLoader__.load({
       }
       if (compact) {
         return React.createElement('div', { className: 'ow-hub' },
-          React.createElement('div', { className: 'ow-hub-stat' },
+          React.createElement('p', { role: 'status', 'data-rewind-readonly': true }, blocked),
+        React.createElement('div', { className: 'ow-hub-stat' },
             `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 快照 · ${stats.sessions || 0} 会话`),
           React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } },
             '摘要 · 完整时间轴只在壳内展开一处'),
@@ -526,57 +517,36 @@ window.__ModuleLoader__.load({
             }, '展开回退'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
-              onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
-            }, '聊天里 /rewind'),
+              disabled: true, title: blocked,
+            }, '执行回退（暂不可用）'),
           ),
         )
       }
       return React.createElement('div', { className: 'ow-hub' },
+        React.createElement('p', { role: 'status', 'data-rewind-readonly': true }, blocked),
         React.createElement('div', { className: 'ow-hub-stat' },
           `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 文件快照 · ${stats.sessions || 0} 会话`),
         React.createElement('div', { className: 'ow-rewind-actions' },
           React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn primary',
-            onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
-          }, '壳内时间轴'),
-          React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
-            onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
-          }, '聊天里 /rewind'),
+            disabled: true, title: blocked,
+          }, '执行回退（暂不可用）'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             onClick: () => onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
           }, '设置'),
         ),
         points.length === 0
-          ? React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6', marginTop: 8 } },
+          ? React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginTop: 8 } },
             '暂无快照 · 在对话里用写类工具后会自动记录锚点')
           : React.createElement('div', { className: 'ow-rewind-tl', style: { marginTop: 8 } },
             points.map((p) => React.createElement('div', {
               key: p.id,
               className: `ow-rewind-item ${p.active ? 'active' : ''}`,
             },
-              React.createElement('div', { style: { color: '#e6f1ff' } }, p.label),
+              React.createElement('div', { style: { color: '#F2F2F4' } }, p.label),
               React.createElement('div', { className: 'ow-rewind-meta' },
                 `${p.fileCount} 文件 · ${new Date(p.ts).toLocaleString('zh-CN')}${p.active ? ' · 当前会话' : ''}`),
-              React.createElement('div', { className: 'ow-rewind-actions' },
-                p.anchorSeq != null && React.createElement('button', {
-                  type: 'button', className: 'ow-msg-btn',
-                  onClick: (ev) => {
-                    ev.stopPropagation()
-                    onAction({ type: 'rewind-exec', anchorSeq: p.anchorSeq, mode: 'chat' })
-                    onToast && onToast(`回退对话 @${p.anchorSeq}`)
-                  },
-                }, '仅对话'),
-                p.anchorSeq != null && React.createElement('button', {
-                  type: 'button', className: 'ow-msg-btn primary',
-                  onClick: (ev) => {
-                    ev.stopPropagation()
-                    onAction({ type: 'rewind-exec', anchorSeq: p.anchorSeq, mode: 'both' })
-                    onToast && onToast(`回退对话+文件 @${p.anchorSeq}`)
-                  },
-                }, '对话+文件'),
-              ),
             )),
           ),
       )

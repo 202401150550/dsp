@@ -146,16 +146,9 @@ export function createBridge(deps) {
     } catch { return null }
   }
 
-  async function execRewindViaSession(seq, mode) {
-    const session = getActiveSessionFace()
-    if (!session || typeof session.command !== 'function') {
-      return { ok: false, error: 'session-api-unavailable' }
-    }
-    const result = await session.command(`/rewind @${seq} ${mode}`)
-    if (!result?.ok || result.value?.matched !== true) {
-      return { ok: false, error: result?.value?.message || 'command-not-matched' }
-    }
-    return { ok: true }
+  async function execRewindViaSession() {
+    // Do not resolve the desktop's implicit active Session for a historical anchor.
+    return { ok: false, error: 'rewind-compatibility-unverified' }
   }
 
   async function sendViaSession(text, { submit = true } = {}) {
@@ -355,12 +348,7 @@ export function createBridge(deps) {
 
     results['inject-message'] = enrichCap(injectStrategy)
     results['agent-prompt'] = enrichCap(injectStrategy)
-    results['rewind-exec'] = enrichCap(
-      hasSession ? 'session-api' : (hasTextarea ? 'dom-open-only' : 'unavailable'),
-      {
-        note: 'rewind-open 默认壳内 embed；preferChat 时 session.prompt → DOM',
-      },
-    )
+    results['rewind-exec'] = enrichCap('unavailable', { note: '回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。' })
     results.settings = enrichCap('event', {
       note: '默认关壳 + dsh-open-settings；带 settingsHint/forceDom 才 DOM 点标签',
     })
@@ -409,7 +397,9 @@ export function createBridge(deps) {
 
   async function bridgeExecute(action, ctx) {
     if (!action) return
-    const cap = bridgeCapabilityFor(action)
+    // Rewind navigation and its execution denial are handled below, independent
+    // of cached capability health (including health saved by older builds).
+    const cap = ['rewind-open', 'rewind-exec'].includes(action.type) ? null : bridgeCapabilityFor(action)
     if (cap && !cap.available) {
       recordBridgeOutcome(action.type, { ok: false, strategy: 'unavailable', error: 'capability-unavailable' })
       const meta = describeBridgeStrategy(cap.strategy)
@@ -431,7 +421,7 @@ export function createBridge(deps) {
     const afterClose = async (fn) => {
       onClose()
       await delay(180)
-      if (fn) fn()
+      if (fn) await fn()
     }
     switch (action.type) {
       case 'close':
@@ -718,65 +708,14 @@ export function createBridge(deps) {
           }
           break
         }
-        const face = getActiveSessionFace()
-        if (face && typeof face.prompt === 'function') {
-          await afterClose(async () => {
-            try {
-              await face.prompt('/rewind')
-              recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'session-prompt' })
-              setToast('已经 session.prompt 打开 /rewind')
-            } catch (err) {
-              recordBridgeOutcome('rewind-exec', {
-                ok: false,
-                strategy: 'session-prompt',
-                error: (err && err.message) || 'prompt-failed',
-              })
-              setToast(`打开 /rewind 失败：${(err && err.message) || err}`)
-            }
-          })
-          break
-        }
-        await afterClose(async () => {
-          const result = await _fillAndSubmit('/rewind', { submit: true })
-          if (!result.ok) {
-            recordBridgeOutcome('rewind-exec', {
-              ok: false,
-              strategy: 'dom',
-              error: 'no-composer',
-            })
-            setToast('打不开回退菜单：找不到输入框（DOM）')
-            return
-          }
-          recordBridgeOutcome('rewind-exec', {
-            ok: !!result.ok,
-            strategy: 'dom',
-          })
-          setToast(result.ok ? '已打开 /rewind 候选面板（DOM）' : '已填入 /rewind，请按回车')
-        })
+        // preferChat/forceDom must not bypass compatibility by submitting /rewind.
+        recordBridgeOutcome('rewind-exec', { ok: false, strategy: 'unavailable', error: 'rewind-compatibility-unverified' })
+        setToast('回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。')
         break
       }
       case 'rewind-exec': {
-        const mode = action.mode === 'chat' ? 'chat' : 'both'
-        const seq = action.seq ?? action.anchorSeq ?? action.index
-        if (seq == null) {
-          setToast('回退失败：缺少锚点 seq')
-          break
-        }
-        await afterClose(async () => {
-          const viaSession = await execRewindViaSession(seq, mode)
-          if (viaSession.ok) {
-            recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'session-api' })
-            setToast(`已执行回退 @${seq} (${mode})`)
-            notifyPulse(['storage->core', 'storage->task-board'])
-            return
-          }
-          recordBridgeOutcome('rewind-exec', {
-            ok: false,
-            strategy: 'unavailable',
-            error: viaSession.error || 'rewind-failed',
-          })
-          setToast('回退请用消息旁 ↶ 按钮，或先点「打开 /rewind」选锚点')
-        })
+        recordBridgeOutcome('rewind-exec', { ok: false, strategy: 'unavailable', error: 'rewind-compatibility-unverified' })
+        setToast('回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。')
         break
       }
       default:

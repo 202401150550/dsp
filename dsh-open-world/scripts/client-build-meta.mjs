@@ -4,7 +4,7 @@
  */
 import { createHash } from 'node:crypto'
 import { readFileSync, existsSync, statSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -12,6 +12,9 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const MODULE_ORDER = [
   'constants.js',
   'styles.js',
+  'conversation.js',
+  'history.js',
+  'chat.js',
   'runtime.js',
   'shell.js',
   'idea.js',
@@ -20,6 +23,7 @@ export const MODULE_ORDER = [
   'views-space.js',
   'ati-view.js',
   'chrome.js',
+  'garden-view.js',
   'app-layout.js',
   'portal.js',
   'hooks.js',
@@ -34,13 +38,15 @@ export function sourcePaths() {
   return paths.filter((p) => existsSync(p))
 }
 
-export function hashSources(paths = sourcePaths()) {
+export function hashSources(paths = sourcePaths(), root = ROOT) {
   const h = createHash('sha256')
-  const sorted = [...paths].sort((a, b) => a.localeCompare(b))
-  for (const p of sorted) {
-    h.update(p.replace(/\\/g, '/'))
+  // Checkouts differ in location, drive casing and Git line endings, not code.
+  const entries = paths.map(p => ({ p, key: relative(root, p).replace(/\\/g, '/') }))
+    .sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  for (const { p, key } of entries) {
+    h.update(key)
     h.update('\0')
-    h.update(readFileSync(p))
+    h.update(readFileSync(p, 'utf8').replace(/\r\n/g, '\n'))
     h.update('\0')
   }
   return h.digest('hex').slice(0, 10)

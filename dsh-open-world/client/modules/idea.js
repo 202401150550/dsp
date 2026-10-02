@@ -41,7 +41,7 @@ window.__ModuleLoader__.load({
       }
 
       if (!idea || idea.enabled === false) {
-        return React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6' } },
+        return React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8' } },
           'IDEA Lab 已关闭 · 可在 open-world.yml 设 idea.enabled: true')
       }
 
@@ -54,7 +54,7 @@ window.__ModuleLoader__.load({
         ),
         React.createElement('div', {
           className: 'ow-hub-stat',
-          style: { marginBottom: compact ? 6 : 10, color: '#f5d67a', lineHeight: 1.5 },
+          style: { marginBottom: compact ? 6 : 10, color: '#F0C674', lineHeight: 1.5 },
         },
           '把人格前缀包进消息，再投递到官方聊天。',
           ' 不是切换 Agent；要换真预设请点「真换 Agent 预设」。',

@@ -202,7 +202,7 @@ window.__ModuleLoader__.load({
 
     function NodeDetailCard({ node, synapses, events, usage, onAction, onClose, onOfflineHint }) {
       if (!node) return null
-      const layout = NODE_LAYOUT[node.id] || { en: node.label, color: node.color || '#5eead4' }
+      const layout = NODE_LAYOUT[node.id] || { en: node.label, color: node.color || '#E7B24B' }
       const edgeCount = synapses.filter((s) => s.from === node.id || s.to === node.id).length
       const related = events.filter((e) => (e.detail || '').includes(node.id) || (e.title || '').includes(NODE_ZH[node.id] || '')).slice(0, 3)
       const today = usage && usage.today
@@ -242,7 +242,7 @@ window.__ModuleLoader__.load({
               ? Number(today.requests).toLocaleString('zh-CN')
               : '—')),
         ),
-        related.length > 0 && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#7c8ea6' } },
+        related.length > 0 && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#A3A3A8' } },
           related.map((e) => React.createElement('div', { key: e.id }, e.title))),
         React.createElement('div', { className: 'ow-detail-actions' },
           node.action && React.createElement('button', {

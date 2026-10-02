@@ -72,6 +72,7 @@ space:
 # 可选世界包（WORLD_PLAN 阶段4 · 后置接口）
 # 默认全关；不进 60% 世界地图；选开也不装素材，直至有真实包
 worlds:
+  garden: true
   packs:
     all-in-all: false
 

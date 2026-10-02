@@ -55,6 +55,7 @@ export const BRIDGE_ACTION_TYPES = Object.freeze([
   'agent-prompt',
   'rewind-exec',
   'rewind-open',
+  'rewind-panel', // 遗留别名（= embed:rewind）；execute.mjs 有分支、注册表此前漏登记（census 2026-10-01）
   'task-run',
   'task-create',
   'session-focus',

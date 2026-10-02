@@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
     const Idea = require('dsh-open-world/idea')
     const Hubs = require('dsh-open-world/hubs')
     const AtiView = require('dsh-open-world/ati-view')
+    const Garden = require('dsh-open-world/garden-view')
     const Chrome = require('dsh-open-world/chrome')
     const Runtime = require('dsh-open-world/runtime')
 
@@ -49,10 +50,10 @@ window.__ModuleLoader__.load({
                               React.createElement('defs', null,
                                 React.createElement('linearGradient', { id: 'owHealthGrad', x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
                                   React.createElement('stop', { offset: '0%', stopColor: '#bfe38e' }),
-                                  React.createElement('stop', { offset: '100%', stopColor: '#5eead4' }),
+                                  React.createElement('stop', { offset: '100%', stopColor: '#E7B24B' }),
                                 ),
                               ),
-                              React.createElement('circle', { cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeWidth: 3 }),
+                              React.createElement('circle', { cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeWidth: 3 }),
                               React.createElement('circle', {
                                 cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'url(#owHealthGrad)', strokeWidth: 3,
                                 strokeLinecap: 'round', strokeDasharray: `${healthCirc} ${2 * Math.PI * 48}`,
@@ -71,7 +72,7 @@ window.__ModuleLoader__.load({
                           ),
                           React.createElement('div', { className: 'ow-health-label-sub' }, 'HEALTH SCORE'),
                         ),
-                        React.createElement(Sparkline, { values: hist.health, color: '#5eead4', height: 36 }),
+                        React.createElement(Sparkline, { values: hist.health, color: '#E7B24B', height: 36 }),
                         React.createElement(StatusSummaryChips, { snapshot, plugins }),
                         React.createElement(EnterWorldCta, {
                           worlds: snapshot && snapshot.worlds,
@@ -146,7 +147,7 @@ window.__ModuleLoader__.load({
                         }),
                       ),
                       React.createElement(Panel, { titleZh: '说话风格', titleEn: 'PERSONA', icon: 'config', last: true },
-                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#94a3b8', lineHeight: 1.55 } },
+                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#A3A3A8', lineHeight: 1.55 } },
                           React.createElement('div', null, '加一段人格前缀，再发到官方聊天里试一句。'),
                           React.createElement('div', { style: { marginTop: 4, color: '#64748b' } },
                             '不会真的换掉 Agent；完整面板只在中间打开一次。'),
@@ -182,7 +183,7 @@ window.__ModuleLoader__.load({
                       ),
                       React.createElement('details', { className: 'ow-adv-fold', style: { margin: '0 0 8px' } },
                         React.createElement('summary', {
-                          style: { fontSize: 11, color: '#7c8ea6', cursor: 'pointer', padding: '6px 0' },
+                          style: { fontSize: 11, color: '#A3A3A8', cursor: 'pointer', padding: '6px 0' },
                         }, '高级 · 社交层'),
                         React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
                           React.createElement(SocialPanel, {
@@ -192,11 +193,12 @@ window.__ModuleLoader__.load({
                           }),
                         ),
                       ),
-                      React.createElement(Panel, { titleZh: '消息总线', titleEn: 'MESSAGES', icon: 'network', last: true },
+                      React.createElement(Panel, { titleZh: '信箱', titleEn: 'MAILBOX', icon: 'network', last: true },
                         React.createElement(MessageHub, {
                           mailbox: mailbox || (snapshot && snapshot.mailbox),
                           hub,
                           onSend: handleSendMessage,
+                          onOpenChat: () => runBridge({ type: 'embed', label: '聊天坞', panel: 'chat' }),
                           onRead: handleMarkRead,
                           onShare: handleShareSnapshot,
                           onInjectAgent: handleInjectAgent,
@@ -210,6 +212,7 @@ window.__ModuleLoader__.load({
     function CenterStage({
       view, setView,
       idea, handleIdeaInject, handleIdeaCompare, runBridge,
+      handleSendMessage, handleSearchMemory,
       viewport, nodes, synapses, ati, selected, setSelected, tick,
       atiPreset, onAtiPresetChange, pulseBoost, lab,
       archifyEmbed, setArchifyEmbed,
@@ -217,14 +220,27 @@ window.__ModuleLoader__.load({
       events, usage, embed, setEmbed, tasks, snapshot, plugins, hub, setToast, taskState,
     }) {
       return React.createElement('div', { className: 'ow-center' },
-                    view === 'idea' && React.createElement(IdeaLabWorkspace, {
+                    embed && renderEmbedSurface(embed, {
+                      tasks, snapshot, plugins, hub, memory: snapshot && snapshot.memory, setEmbed, runBridge,
+                    }),
+                    !embed && view === 'idea' && React.createElement(IdeaLabWorkspace, {
                       idea,
                       compact: false,
                       onInject: handleIdeaInject,
                       onCompare: handleIdeaCompare,
                       onAction: runBridge,
                     }),
-                    view === 'ati' && React.createElement(React.Fragment, null,
+                    !embed && view === 'garden' && React.createElement(Garden.GardenView, {
+                      snapshot,
+                      events,
+                      runBridge,
+                      setToast,
+                      handleIdeaInject,
+                      handleIdeaCompare,
+                      handleSendMessage,
+                      handleSearchMemory,
+                    }),
+                    !embed && view === 'ati' && React.createElement(React.Fragment, null,
                       React.createElement(ViewportWrap, {
                         vp: viewport.vp,
                         onWheel: viewport.onWheel,
@@ -235,7 +251,7 @@ window.__ModuleLoader__.load({
                       },
                         React.createElement(AtiCortex, {
                           nodes, synapses, ati, selected, onSelect: setSelected, tick,
-                          onActivate: runBridge, preset: atiPreset, onPresetChange: onAtiPresetChange, pulseBoost, lab,
+                          onActivate: runBridge, pulseBoost,
                         }),
                       ),
                       archifyEmbed && React.createElement(ArchifyEmbed, {
@@ -246,9 +262,6 @@ window.__ModuleLoader__.load({
                       detailOpen && selectedNode && React.createElement(NodeDetailCard, {
                         node: selectedNode, synapses, events, usage, onAction: runBridge, onClose: () => setDetailOpen(false),
                         onOfflineHint: (msg) => setToast(msg),
-                      }),
-                      embed && renderEmbedSurface(embed, {
-                        tasks, snapshot, plugins, hub, memory: snapshot && snapshot.memory, setEmbed, runBridge,
                       }),
                       selectedNode && React.createElement('div', { className: 'ow-orbit-hint' },
                         React.createElement('span', null, `ATI · ${NODE_ZH[selectedNode.id] || selectedNode.label} · ${selectedNode.metric}%`),
@@ -261,21 +274,21 @@ window.__ModuleLoader__.load({
                         ),
                       ),
                     ),
-                    view === 'monitor' && React.createElement('div', { className: 'ow-monitor' },
+                    !embed && view === 'monitor' && React.createElement('div', { className: 'ow-monitor' },
                       React.createElement('pre', null, JSON.stringify({ snapshot, taskState }, null, 2)),
                     ),
-                    view === 'topology' && React.createElement('div', { className: 'ow-topo' },
+                    !embed && view === 'topology' && React.createElement('div', { className: 'ow-topo' },
                       nodes.map((n) => React.createElement('div', {
                         key: n.id, className: 'ow-topo-card', onClick: () => setSelected(n.id),
                         onDoubleClick: () => {
                           if (n.status === 'offline' && n.howToEnable) setToast(n.howToEnable)
                           else if (n.action) runBridge(n.action)
                         },
-                        style: { outline: selected === n.id ? '1px solid #5eead4' : 'none' },
+                        style: { outline: selected === n.id ? '1px solid #E7B24B' : 'none' },
                       },
-                        React.createElement('strong', { style: { color: '#e6f1ff' } }, NODE_ZH[n.id] || n.label),
-                        React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6', marginTop: 4 } }, NODE_LAYOUT[n.id] && NODE_LAYOUT[n.id].en),
-                        React.createElement('div', { style: { fontSize: 12, color: '#5eead4', marginTop: 6 } }, `${n.metric}% · ${n.status}`),
+                        React.createElement('strong', { style: { color: '#F2F2F4' } }, NODE_ZH[n.id] || n.label),
+                        React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginTop: 4 } }, NODE_LAYOUT[n.id] && NODE_LAYOUT[n.id].en),
+                        React.createElement('div', { style: { fontSize: 12, color: '#E7B24B', marginTop: 6 } }, `${n.metric}% · ${n.status}`),
                       )),
                     ),
                   )
@@ -289,7 +302,7 @@ window.__ModuleLoader__.load({
                     React.createElement(Panel, { titleZh: '任务队列', titleEn: 'TASK QUEUE', more: '更多 ›' },
                       React.createElement('div', { className: 'ow-task-list' },
                         tasks.length === 0
-                          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无任务 · task-board 离线')
+                          ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '暂无任务 · task-board 离线')
                           : tasks.slice(0, 5).map((t, i) => {
                             const pct = taskProgress(t)
                             const running = t.running || t.status === 'running'

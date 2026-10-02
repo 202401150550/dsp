@@ -40,6 +40,12 @@ const row = enrichPluginWithRegistry({
 })
 ok(row.insertId === 'web-ui-remote-web-ui', 'enrich insertId')
 ok(row.defaultInPresets.length === 0, 'remote defaultInPresets empty')
+const office = CAPABILITY_REGISTRY.find((c) => c.featureId === 'dsh-office')
+ok(office, 'office capability declared')
+ok(Array.isArray(office.tools) && office.tools.length >= 2, 'office tools[] granular decl (A2)')
+const orow = enrichPluginWithRegistry({ id: 'dsh-office', featureId: 'dsh-office', online: false })
+ok(Array.isArray(orow.tools) && orow.tools.length >= 2, 'enrich maps tools')
+ok(office.defaultInPresets.length === 0, 'office opt-in only')
 
 console.log(`\n=== capability-registry: ${passed} passed, ${failed} failed ===\n`)
 process.exit(failed > 0 ? 1 : 0)

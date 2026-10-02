@@ -720,6 +720,8 @@ function taskBoardMetrics(home) {
   if (allTasks.length === 0) {
     return {
       available: installed,
+      source: 'profile-dependencies',
+      runtimeVerified: false,
       total: 0,
       running: 0,
       queued: 0,
@@ -736,7 +738,10 @@ function taskBoardMetrics(home) {
   const queued = allTasks.filter((t) => t.status === 'queued' || t.status === 'pending').length
   const done = allTasks.filter((t) => t.status === 'done' || t.status === 'succeeded').length
   return {
-    available: true,
+    // Persisted tasks survive plugin removal; they must not reactivate a missing service.
+    available: installed,
+    source: 'persisted-ledger',
+    runtimeVerified: false,
     total: allTasks.length,
     running,
     queued,
@@ -745,7 +750,7 @@ function taskBoardMetrics(home) {
     scheduler: ledger && ledger.scheduler || null,
     power: ledger && ledger.power || null,
     tasks: allTasks.slice(0, 12),
-    installed: true,
+    installed,
     allTasks,
   }
 }
@@ -2035,6 +2040,7 @@ async function buildSnapshot(ctx, pulseEdges = [], hostHeader, opts = {}) {
       messaging: config.messaging,
       integrations: config.integrations,
       idea: config.idea,
+      worlds: config.worlds,
       rrm: {
         enabled: config.rrm?.enabled !== false,
         tau_ms: rrm.tau_ms,
@@ -2166,6 +2172,7 @@ function slimSnapshotForShell(snap) {
       default_view: snap.config?.default_view,
       rra: snap.config?.rra,
       idea: snap.config?.idea,
+      worlds: snap.config?.worlds,
     },
     integrations: snap.integrations,
     plugins: (snap.plugins || []).map((p) => ({
@@ -3058,6 +3065,115 @@ export async function apply(ctx) {
           session: resolved.session,
         }, note: compare.note })
         return
+      }
+
+      // ── 聊天坞 /api/open-world/chat/*（消息与附件落本地文件） ──────────
+      if (sub.startsWith('/chat/')) {
+        const chat = await import('./bridge/chat-store.mjs')
+        const chatReadRaw = async (req2, max) => {
+          const chunks = []
+          let total = 0
+          for await (const c of req2) {
+            total += c.length
+            if (total > max) throw new Error('payload-too-large')
+            chunks.push(c)
+          }
+          return Buffer.concat(chunks)
+        }
+        try {
+          if (sub === '/chat/threads' || sub === '/chat/threads/') {
+            if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            sendJson(res, 200, { ok: true, threads: chat.listThreads(home), stats: chat.chatStats(home) })
+            return
+          }
+          if (sub === '/chat/messages' || sub === '/chat/messages/') {
+            if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            const threadId = url.searchParams.get('thread') || 'main'
+            const limit = Number(url.searchParams.get('limit')) || 200
+            const since = Number(url.searchParams.get('since')) || 0
+            const out = chat.listMessages(home, threadId, { limit, since })
+            sendJson(res, out.ok ? 200 : 400, out)
+            return
+          }
+          if (sub === '/chat/post' || sub === '/chat/post/') {
+            if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            let body = {}
+            try { body = JSON.parse(await readBody(req) || '{}') } catch { body = {} }
+            const out = chat.appendMessage(home, {
+              // Accept threadId (client) or thread (query-style alias)
+              threadId: body.threadId || body.thread || 'main',
+              role: body.role === 'agent' ? 'agent' : (body.role === 'system' ? 'system' : 'user'),
+              text: body.text || '',
+              attachments: Array.isArray(body.attachments) ? body.attachments : [],
+            })
+            if (!out.ok) { sendJson(res, 400, out); return }
+            if (out.message.role === 'user') {
+              try {
+                if (!config.messaging || config.messaging.enabled !== false) {
+                  sendMailboxMessage(home, config, {
+                    to: 'agent',
+                    body: out.message.text || `[文件] ${(out.message.attachments || []).map((a) => a.name).join(', ')}`,
+                    kind: 'chat',
+                  }, null)
+                  notifyStream(home)
+                }
+              } catch { /* 信箱不可用不影响聊天坞自身 */ }
+            }
+            pushEvent('chat', `聊天 · ${out.message.role}`, (out.message.text || '').slice(0, 40))
+            sendJson(res, 200, { ok: true, message: out.message, thread: out.thread })
+            return
+          }
+          if (sub === '/chat/read' || sub === '/chat/read/') {
+            if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            let body = {}
+            try { body = JSON.parse(await readBody(req) || '{}') } catch { body = {} }
+            sendJson(res, 200, chat.markRead(home, body.threadId || body.thread || 'main'))
+            return
+          }
+          if (sub === '/chat/upload' || sub === '/chat/upload/') {
+            if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            const threadId = url.searchParams.get('thread') || 'main'
+            const name = url.searchParams.get('name') || 'file'
+            let buf
+            try {
+              buf = await chatReadRaw(req, chat.MAX_UPLOAD_BYTES)
+            } catch (err) {
+              sendJson(res, 413, { ok: false, error: 'file-too-large', max: chat.MAX_UPLOAD_BYTES })
+              return
+            }
+            const out = chat.storeFile(home, threadId, name, buf, req.headers['content-type'])
+            sendJson(res, out.ok ? 200 : 400, out)
+            return
+          }
+          if (sub === '/chat/file' || sub === '/chat/file/') {
+            if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'method-not-allowed' }); return }
+            const got = chat.resolveFile(home, url.searchParams.get('thread') || 'main', url.searchParams.get('id'))
+            if (!got.ok) { sendJson(res, 404, { ok: false, error: got.error }); return }
+            const download = url.searchParams.get('download') === '1'
+            const buf = readFileSync(got.path)
+            res.writeHead(200, {
+              'content-type': got.mime,
+              'content-length': buf.length,
+              'cache-control': 'no-store',
+              'content-disposition': `${download ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(got.name)}`,
+            })
+            res.end(buf)
+            return
+          }
+          if (sub === '/chat/view' || sub === '/chat/view/') {
+            const htmlPath = join(PLUGIN_DIR, 'bridge', 'chat-view.html')
+            if (!existsSync(htmlPath)) { sendJson(res, 404, { ok: false, error: 'chat-view-missing' }); return }
+            const html = readFileSync(htmlPath, 'utf8')
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-length': Buffer.byteLength(html) })
+            res.end(html)
+            return
+          }
+          sendJson(res, 404, { ok: false, error: 'chat-route-not-found', sub })
+          return
+        } catch (err) {
+          sendJson(res, 500, { ok: false, error: 'chat-failed', detail: String(err && err.message || err) })
+          return
+        }
       }
 
       sendJson(res, 404, { ok: false, error: 'not-found' })

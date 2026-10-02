@@ -39,14 +39,16 @@ void main(){
   vec2 uv = vUv;
   vec2 c = uv - 0.5;
   float dist = length(c);
-  vec3 col = vec3(0.01, 0.015, 0.04);
+  // 550C amber CRT field (warm phosphor, not teal nebula)
+  vec3 col = vec3(0.02, 0.015, 0.01);
   float ang = atan(c.y, c.x);
   float field = sin(ang * 5.0 + dist * 22.0 - uTime * 0.35) * 0.5 + 0.5;
   field *= exp(-dist * 1.8);
-  col += vec3(0.35, 0.15, 0.65) * field * 0.35;
-  col += vec3(0.1, 0.55, 0.5) * field * 0.2 * sin(uTime * 0.5 + dist * 8.0);
+  col += vec3(0.91, 0.63, 0.13) * field * 0.38;
+  col += vec3(1.0, 0.75, 0.26) * field * 0.16 * sin(uTime * 0.5 + dist * 8.0);
+  col += vec3(0.88, 0.31, 0.19) * field * 0.08 * (0.5 + 0.5 * sin(uTime * 0.25 + ang * 2.0));
   float grid = abs(sin(uv.x * uRes.x * 0.04 + uTime * 0.1)) * abs(sin(uv.y * uRes.y * 0.04));
-  col += vec3(0.05, 0.12, 0.2) * grid * 0.08 * exp(-dist * 2.0);
+  col += vec3(0.18, 0.10, 0.03) * grid * 0.10 * exp(-dist * 2.0);
   fragColor = vec4(col, 1.0);
 }`)
         gl.compileShader(vs)

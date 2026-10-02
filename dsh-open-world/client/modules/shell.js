@@ -6,6 +6,7 @@ window.__ModuleLoader__.load({
     const exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
     const React = require('react')
+    const { RewindTimelinePanel } = require('dsh-open-world/hubs')
     const { useState, useEffect } = React
     const C = require('dsh-open-world/constants')
     const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, MEMORY_SEARCH_URL, OW_ACTION_URL, SHELL_GUIDE_KEY } = C
@@ -88,13 +89,13 @@ window.__ModuleLoader__.load({
         style: {
           marginTop: 12,
           padding: '10px 12px',
-          border: '1px solid rgba(94,234,212,.28)',
+          border: '1px solid rgba(231,178,75,.28)',
           borderRadius: 8,
-          background: 'rgba(94,234,212,.06)',
+          background: 'rgba(231,178,75,.06)',
         },
       },
         React.createElement('div', {
-          style: { fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.45 },
+          style: { fontSize: 11, color: '#A3A3A8', marginBottom: 8, lineHeight: 1.45 },
         }, hint),
         React.createElement('div', {
           className: 'ow-world-map',
@@ -235,7 +236,7 @@ window.__ModuleLoader__.load({
         ),
         tab === 'local' && React.createElement(MemoryBrief, { memory, onToast }),
         tab === 'hindsight' && React.createElement('div', { className: 'ow-hub' },
-          React.createElement('div', { style: { fontSize: 10, color: '#64748b', marginBottom: 6 } },
+          React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginBottom: 6 } },
             '长期记忆搜索 · 需本机 Hindsight；与本地 RRM 归档不是同一条路'),
           React.createElement('div', { className: 'ow-msg-row' },
             React.createElement('input', {
@@ -248,7 +249,7 @@ window.__ModuleLoader__.load({
               type: 'button', className: 'ow-msg-btn primary', disabled: busy, onClick: search,
             }, busy ? '…' : '搜索'),
           ),
-          source && React.createElement('div', { style: { fontSize: 9, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
+          source && React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
           hits.slice(0, 5).map((m, i) => React.createElement('div', {
             key: (m && m.id) || i,
             style: { fontSize: 11, color: '#cbd5e1', marginTop: 6, lineHeight: 1.4 },
@@ -330,14 +331,14 @@ window.__ModuleLoader__.load({
         }),
         React.createElement('span', {
           className: 'ow-bridge-summary',
-          style: { fontSize: 9, color: '#94a3b8', marginLeft: 4, fontFamily: 'var(--ow-mono)' },
+          style: { fontSize: 11, color: '#A3A3A8', marginLeft: 4, fontFamily: 'var(--ow-mono)' },
           title: surfaceTitle,
         }, `${apiN}通 · ${degN}弱 · ${badN}无`),
         lastText && React.createElement('span', {
           className: 'ow-bridge-last',
           style: {
-            fontSize: 9, marginLeft: 6, fontFamily: 'var(--ow-mono)',
-            color: last.ok ? '#5eead4' : '#ff9090',
+            fontSize: 11, marginLeft: 6, fontFamily: 'var(--ow-mono)',
+            color: last.ok ? '#E7B24B' : '#ff9090',
           },
           title: last.error
             ? `最近实跑：${last.action} · ${last.error}`
@@ -360,11 +361,11 @@ window.__ModuleLoader__.load({
       return React.createElement('span', {
         className: `ow-source-tag ow-source-${source}`,
         style: {
-          fontSize: 7, padding: '1px 4px', marginLeft: 6, borderRadius: 2,
+          fontSize: 11, padding: '2px 7px', marginLeft: 6, borderRadius: 999,
           verticalAlign: 'middle', fontFamily: 'var(--ow-mono)',
-          background: source === 'metaphor' ? 'rgba(244,114,182,.15)' : 'rgba(94,234,212,.12)',
-          color: source === 'metaphor' ? '#f472b6' : '#5eead4',
-          border: `1px solid ${source === 'metaphor' ? 'rgba(244,114,182,.25)' : 'rgba(94,234,212,.2)'}`,
+          background: source === 'metaphor' ? 'rgba(255,159,10,.15)' : 'rgba(231,178,75,.12)',
+          color: source === 'metaphor' ? '#FF9F0A' : '#E7B24B',
+          border: `1px solid ${source === 'metaphor' ? 'rgba(255,159,10,.25)' : 'rgba(231,178,75,.2)'}`,
         },
         title: source === 'metaphor' ? '叙事隐喻，非实时 ML/DL' : '由真实状态推算',
       }, label)
@@ -425,7 +426,7 @@ window.__ModuleLoader__.load({
 
       const view = overlay ? { ...memory, ...overlay } : memory
       if (!view || !view.meta) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, 'RRM 记忆未就绪')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, 'RRM 记忆未就绪')
       }
       const m = view.meta
       const f = view.falsify || {}
@@ -566,15 +567,15 @@ window.__ModuleLoader__.load({
         )
       }
 
-      return React.createElement('div', { className: 'ow-memory-brief', style: { fontSize: 11, color: '#7c8ea6', lineHeight: 1.55 } },
-        React.createElement('div', { style: { color: '#5eead4', marginBottom: 6 } }, view.hint || '事件记忆'),
+      return React.createElement('div', { className: 'ow-memory-brief', style: { fontSize: 11, color: '#A3A3A8', lineHeight: 1.55 } },
+        React.createElement('div', { style: { color: '#E7B24B', marginBottom: 6 } }, view.hint || '事件记忆'),
         React.createElement('div', {
-          style: { fontSize: 9, color: '#64748b', marginBottom: 6 },
+          style: { fontSize: 11, color: '#64748b', marginBottom: 6 },
         }, '本地 RRM 壳层 · ≠ Hindsight（信箱/集成枢纽走「搜 Hindsight」）'),
         React.createElement('div', null, `精确 ${m.exact} · 压缩 ${m.compressed} · 地标 ${m.landmarks}`),
         f.bytesSaved != null && React.createElement('div', null, `证伪节省 ${f.bytesSaved}B · 比 ${f.ratio}`),
         (act.tau_ms != null || act.byte_budget != null) && React.createElement('div', {
-          style: { marginTop: 8, fontFamily: 'var(--ow-mono)', fontSize: 10, color: sessionOn ? '#fbbf24' : '#94a3b8' },
+          style: { marginTop: 8, fontFamily: 'var(--ow-mono)', fontSize: 11, color: sessionOn ? '#fbbf24' : '#A3A3A8' },
         },
           `生效 · α=${act.alpha ?? '—'} · τ=${act.tau_ms ?? '—'}ms · B=${act.byte_budget ?? '—'}`,
           React.createElement('div', { style: { marginTop: 2 } },
@@ -583,29 +584,29 @@ window.__ModuleLoader__.load({
               : '来源 · open-world.yml',
           ),
         ),
-        mb && mb.meta && React.createElement('div', { style: { marginTop: 8, color: '#94a3b8' } },
+        mb && mb.meta && React.createElement('div', { style: { marginTop: 8, color: '#A3A3A8' } },
           mb.hint || '信箱',
           ` · 未读钉住 ${mb.meta.unreadPinned || 0}`,
         ),
-        view.tasks && view.tasks.meta && React.createElement('div', { style: { marginTop: 6, color: '#94a3b8' } },
+        view.tasks && view.tasks.meta && React.createElement('div', { style: { marginTop: 6, color: '#A3A3A8' } },
           view.tasks.hint || '任务',
           ` · 热钉住 ${view.tasks.hotPinned || view.tasks.meta.hotPinned || 0}`,
         ),
-        archives && React.createElement('div', { style: { marginTop: 8, color: '#94a3b8' } },
-          React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, archives.hint || '归档'),
+        archives && React.createElement('div', { style: { marginTop: 8, color: '#A3A3A8' } },
+          React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, archives.hint || '归档'),
           archLine('事件', archives.events),
           archLine('信箱', archives.mailbox),
           archLine('任务', archives.tasks),
           archives.recent && React.createElement('div', { style: { marginTop: 6 } },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, '最近归档（尾预览）'),
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, '最近归档（尾预览）'),
             ['events', 'mailbox', 'tasks'].map((ch) => {
               const zh = ch === 'events' ? '事件' : ch === 'mailbox' ? '信箱' : '任务'
               const list = (archives.recent[ch] || []).slice(-3)
               if (!list.length) {
-                return React.createElement('div', { key: ch, style: { fontSize: 9, opacity: 0.7 } }, `${zh} · —`)
+                return React.createElement('div', { key: ch, style: { fontSize: 11, opacity: 0.7 } }, `${zh} · —`)
               }
               return React.createElement('div', { key: ch, style: { marginBottom: 4 } },
-                React.createElement('div', { style: { fontSize: 9, color: '#64748b' } }, zh),
+                React.createElement('div', { style: { fontSize: 11, color: '#64748b' } }, zh),
                 list.map((it, i) => React.createElement('div', {
                   key: `${ch}-${it.id || i}`,
                   style: { fontFamily: 'var(--ow-mono)', fontSize: 9 },
@@ -613,7 +614,7 @@ window.__ModuleLoader__.load({
               )
             }),
             archives.recent.note && React.createElement('div', {
-              style: { marginTop: 2, fontSize: 9, color: '#64748b' },
+              style: { marginTop: 2, fontSize: 11, color: '#64748b' },
             }, archives.recent.note),
           ),
           React.createElement('div', {
@@ -626,8 +627,8 @@ window.__ModuleLoader__.load({
               onChange: (e) => setArchQ(e.target.value),
               onKeyDown: (e) => { if (e.key === 'Enter') searchArchives() },
               style: {
-                flex: '1 1 120px', minWidth: 100, fontSize: 10, padding: '2px 6px',
-                background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 3,
+                flex: '1 1 120px', minWidth: 100, fontSize: 11, padding: '2px 6px',
+                background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', color: '#F2F2F4', borderRadius: 9,
               },
             }),
             React.createElement('button', {
@@ -640,9 +641,9 @@ window.__ModuleLoader__.load({
             }, archBusy ? '检索中…' : '搜归档'),
           ),
           archHits && archHits.channels && React.createElement('div', {
-            style: { marginTop: 6, fontSize: 9, color: '#94a3b8' },
+            style: { marginTop: 6, fontSize: 11, color: '#A3A3A8' },
           },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } },
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } },
               archHits.note || '归档命中'),
             ['events', 'mailbox', 'tasks'].map((ch) => {
               const zh = ch === 'events' ? '事件' : ch === 'mailbox' ? '信箱' : '任务'
@@ -666,7 +667,7 @@ window.__ModuleLoader__.load({
         ),
         React.createElement('div', { style: { marginTop: 10 } },
           React.createElement('div', {
-            style: { color: '#5eead4', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+            style: { color: '#E7B24B', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
           },
             '参数证伪对照',
             React.createElement('button', {
@@ -714,15 +715,15 @@ window.__ModuleLoader__.load({
           cmp && cmp.rows && cmp.rows.map((row) => React.createElement('div', {
             key: row.label,
             style: {
-              fontFamily: 'var(--ow-mono)', fontSize: 10,
+              fontFamily: 'var(--ow-mono)', fontSize: 11,
               opacity: cmp.winner && cmp.winner.label === row.label ? 1 : 0.75,
-              color: cmp.winner && cmp.winner.label === row.label ? '#5eead4' : undefined,
+              color: cmp.winner && cmp.winner.label === row.label ? '#E7B24B' : undefined,
             },
           }, `${row.label}: α=${row.alpha} τ=${row.tau_ms} · ${row.liveBytes}B / ${row.naiveBytes}B = ${row.ratio}`)),
           cmp && cmp.channels && React.createElement('div', {
-            style: { marginTop: 8, fontSize: 10, color: '#94a3b8' },
+            style: { marginTop: 8, fontSize: 11, color: '#A3A3A8' },
           },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, '三通道旁注'),
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, '三通道旁注'),
             cmp.channels.mailbox && cmp.channels.mailbox.winner && React.createElement('div', null,
               `信箱胜出 · ${cmp.channels.mailbox.winner.label} · 比 ${cmp.channels.mailbox.winner.ratio}`,
             ),
@@ -730,25 +731,25 @@ window.__ModuleLoader__.load({
               `任务胜出 · ${cmp.channels.tasks.winner.label} · 比 ${cmp.channels.tasks.winner.ratio}`,
             ),
             !cmp.channels.mailbox && !cmp.channels.tasks && React.createElement('div', {
-              style: { fontSize: 9, color: '#64748b' },
+              style: { fontSize: 11, color: '#64748b' },
             }, '信箱/任务暂无样本可对照'),
           ),
           cmp && cmp.note && React.createElement('div', {
-            style: { marginTop: 4, fontSize: 9, color: '#64748b' },
+            style: { marginTop: 4, fontSize: 11, color: '#64748b' },
           }, cmp.note),
           !cmp && React.createElement('div', { style: { fontSize: 10 } }, '尚无对照 · 点刷新或等下一帧 snapshot'),
         ),
-        view.neuralStub && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#64748b' } },
+        view.neuralStub && React.createElement('div', { style: { marginTop: 8, fontSize: 11, color: '#64748b' } },
           `神经 RRA：未实现（${view.neuralStub.stage || 'L0'} · ${view.neuralStub.protocol || 'stub'}）`,
           view.neuralStub.adapter && React.createElement('div', {
-            style: { marginTop: 2, fontSize: 9, color: '#475569' },
+            style: { marginTop: 2, fontSize: 11, color: '#475569' },
           },
             view.neuralStub.adapter.probe
               ? `适配器 · 已探测${view.neuralStub.adapter.proto && view.neuralStub.adapter.proto.version ? ` rra-proto@${view.neuralStub.adapter.proto.version}` : ''}${view.neuralStub.adapter.error ? ` · ${view.neuralStub.adapter.error}` : ''} · 神经仍关`
               : '适配器 · 未探测（rra.probe=false）· 神经仍关',
           ),
           view.neuralStub.nextCut && React.createElement('div', {
-            style: { marginTop: 2, fontSize: 9, color: '#475569' },
+            style: { marginTop: 2, fontSize: 11, color: '#475569' },
           }, `下一刀 · ${view.neuralStub.nextCut}`),
         ),
       )
@@ -757,11 +758,11 @@ window.__ModuleLoader__.load({
     function tierBadge(tier) {
       const label = tier === 'exact' ? '精确' : tier === 'compressed' ? '压缩' : tier === 'landmark' ? '地标' : ''
       if (!label) return null
-      const color = tier === 'exact' ? '#5eead4' : tier === 'compressed' ? '#fbbf24' : '#a78bfa'
+      const color = tier === 'exact' ? '#E7B24B' : tier === 'compressed' ? '#fbbf24' : '#64D2FF'
       return React.createElement('span', {
         className: 'ow-tier-badge',
         style: {
-          fontSize: 9, padding: '1px 5px', borderRadius: 3, marginRight: 6,
+          fontSize: 11, padding: '2px 8px', borderRadius: 999, marginRight: 6,
           border: `1px solid ${color}55`, color, fontFamily: 'var(--ow-mono)',
         },
       }, label)
@@ -823,7 +824,7 @@ window.__ModuleLoader__.load({
 
     function SocialPanel({ social, onChannel, onSession }) {
       if (!social) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '社交层加载中…')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '社交层加载中…')
       }
       const presence = social.presence || []
       const channels = social.channels || []
@@ -831,7 +832,7 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-social-list' },
         React.createElement('div', { className: 'ow-social-tag' }, social.tagline),
         presence.length > 0 && React.createElement('div', { style: { marginTop: 8 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, `在线会话 · ${social.presenceCount}`),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, `在线会话 · ${social.presenceCount}`),
           presence.map((p) => React.createElement('div', {
             key: p.id,
             className: `ow-social-presence ${p.active ? 'active' : ''}`,
@@ -846,24 +847,24 @@ window.__ModuleLoader__.load({
           )),
         ),
         React.createElement('div', { style: { marginTop: 10 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, `社交频道 · ${social.channelCount}`),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, `社交频道 · ${social.channelCount}`),
           channels.map((ch) => React.createElement('div', {
             key: ch.id,
             className: `ow-social-channel ${ch.installed ? '' : 'off'}`,
             onClick: () => ch.installed && onChannel(ch.id),
           },
             React.createElement('span', null, ch.title),
-            React.createElement('span', { style: { fontSize: 9, color: ch.online ? '#5eead4' : '#7c8ea6' } },
+            React.createElement('span', { style: { fontSize: 11, color: ch.online ? '#E7B24B' : '#A3A3A8' } },
               ch.online ? '在线' : (ch.installed ? '就绪' : '未装')),
           )),
         ),
         feed.length > 0 && React.createElement('div', { style: { marginTop: 10 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, '动态流'),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, '动态流'),
           feed.slice(0, 5).map((item) => React.createElement('div', { key: item.id, className: 'ow-social-feed-item' },
             React.createElement('span', { className: 'ow-social-kind' }, item.kind),
             React.createElement('span', null,
-              React.createElement('div', { style: { color: '#e6f1ff' } }, item.title),
-              item.detail && React.createElement('div', { style: { color: '#7c8ea6', fontSize: 10 } }, item.detail),
+              React.createElement('div', { style: { color: '#F2F2F4' } }, item.title),
+              item.detail && React.createElement('div', { style: { color: '#A3A3A8', fontSize: 10 } }, item.detail),
             ),
           )),
         ),
@@ -880,7 +881,7 @@ window.__ModuleLoader__.load({
       }
       return React.createElement('div', { className: 'ow-integ-list' },
         list.length === 0
-          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '扫描插件目录…')
+          ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '扫描插件目录…')
           : list.map((p) => React.createElement('div', {
             key: p.id,
             className: `ow-integ-item ${p.online ? '' : 'offline'}`,
@@ -911,8 +912,8 @@ window.__ModuleLoader__.load({
 
     function SidebarSummaryView({ snapshot }) {
       const s = buildSidebarSummary(snapshot)
-      return React.createElement('div', { className: 'ow-sidebar-summary', style: { padding: 12, fontSize: 12, color: '#7c8ea6' } },
-        React.createElement('div', { style: { color: '#5eead4', marginBottom: 8, letterSpacing: 1 } }, '开放世界摘要'),
+      return React.createElement('div', { className: 'ow-sidebar-summary', style: { padding: 12, fontSize: 12, color: '#A3A3A8' } },
+        React.createElement('div', { style: { color: '#F2F2F4', fontSize: 13, fontWeight: 590, marginBottom: 8, letterSpacing: 0 } }, '开放世界摘要'),
         React.createElement('div', null, `健康 ${s.health} · 会话 ${s.sessions}`),
         React.createElement('div', { style: { marginTop: 4 } }, `插件在线 ${s.plugins}`),
       )
@@ -974,7 +975,7 @@ window.__ModuleLoader__.load({
           ? React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 6 } },
             '摘要 · 点「展开舰队」看进程列表与操作')
           : (list.length === 0
-            ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
+            ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '暂无进程')
             : list.slice(0, 24).map((p) => {
               const clickable = (p.kind === 'session' && p.sessionId)
                 || (p.kind === 'task' && p.taskId)
@@ -1037,6 +1038,7 @@ window.__ModuleLoader__.load({
       const SURFACE_META = {
       'task-board': { title: '任务世界', en: 'TASKS WORLD' },
       rewind: { title: '回退世界', en: 'REWIND WORLD' },
+      chat: { title: '聊天坞 · 内嵌', en: 'CHAT' },
       'all-in-all': { title: '元宇宙世界包 · 占位', en: 'ALL-IN-ALL' },
       market: { title: '插件中心 · 内嵌', en: 'MARKET' },
       memory: { title: '长期记忆 · 内嵌', en: 'HINDSIGHT' },
@@ -1054,7 +1056,6 @@ window.__ModuleLoader__.load({
     }) {
       const meta = SURFACE_META[panel] || { title: panel || '应用', en: 'APP' }
       const rewind = (snapshot && snapshot.rewind) || {}
-      const timeline = (rewind.timeline && rewind.timeline.anchors) || rewind.anchors || []
       const sessions = (snapshot && snapshot.sessions) || {}
       const core = (snapshot && snapshot.core) || {}
       const integ = (snapshot && snapshot.integrations) || {}
@@ -1070,7 +1071,7 @@ window.__ModuleLoader__.load({
       if (panel === 'task-board') {
         body = React.createElement(React.Fragment, null,
           (tasks || []).length === 0
-            ? React.createElement('div', { style: { color: '#7c8ea6', fontSize: 12 } },
+            ? React.createElement('div', { style: { color: '#A3A3A8', fontSize: 12 } },
               integ.taskBoard ? '暂无任务' : '任务看板离线 · 可点下方到官方入口')
             : (tasks || []).map((t) => React.createElement('div', {
               key: t.id,
@@ -1090,56 +1091,10 @@ window.__ModuleLoader__.load({
           ),
         )
       } else if (panel === 'rewind') {
-        const items = Array.isArray(timeline) ? timeline.slice(0, 12) : []
-        const offlineHint = (plug.find((p) => p.id === 'rewind') || {}).howToEnable
-          || '对话回退未启用 · 在 plugins.yml 将 web-ui-rewind: enabled 设为 true，运行 apply.cmd 后重启 Desktop'
-        body = React.createElement(React.Fragment, null,
-          React.createElement('div', {
-            style: { fontSize: 12, color: rewind.available ? '#7c8ea6' : '#fbbf24', marginBottom: 8, lineHeight: 1.5 },
-          },
-            rewind.available
-              ? `${rewind.anchors || items.length || 0} 锚点 · ${rewind.snapshots || 0} 快照`
-              : offlineHint),
-          !rewind.available
-            ? React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-              React.createElement('button', {
-                type: 'button', className: 'ow-neural-btn',
-                onClick: () => {
-                  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(offlineHint)
-                },
-              }, '复制说明'),
-              React.createElement('button', {
-                type: 'button', className: 'ow-neural-btn',
-                onClick: () => onAction && onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
-              }, '打开设置'),
-            )
-            : React.createElement(React.Fragment, null,
-              items.length === 0
-                ? React.createElement('div', { style: { color: '#7c8ea6', fontSize: 12 } }, '暂无锚点 · 可在对话里用 /rewind')
-                : items.map((a, i) => React.createElement('div', {
-                  key: a.seq != null ? a.seq : i,
-                  className: 'ow-task-item',
-                  style: { marginBottom: 8 },
-                },
-                  React.createElement('div', { className: 'ow-task-head' },
-                    React.createElement('span', { className: 'ow-task-name' }, a.title || a.preview || `锚点 @${a.seq}`),
-                    React.createElement('span', { className: 'ow-task-pct' }, a.seq != null ? `@${a.seq}` : ''),
-                  ),
-                  a.seq != null && React.createElement('button', {
-                    type: 'button',
-                    className: 'ow-neural-btn',
-                    style: { marginTop: 6 },
-                    onClick: () => onAction && onAction({ type: 'rewind-exec', seq: a.seq, mode: 'both' }),
-                  }, '回退到此'),
-                )),
-              React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' } },
-                officialBtn('聊天里打开 /rewind', { type: 'rewind-open', preferChat: true, label: '聊天里打开 /rewind' }),
-              ),
-            ),
-        )
+        body = React.createElement(RewindTimelinePanel, { rewind, plugins: plug, onAction, compact: false })
       } else if (panel === 'market') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8', marginBottom: 8 } },
             `插件 ${plug.filter((p) => p.online).length}/${plug.length} 在线`),
           React.createElement('div', { className: 'ow-integ-list' },
             plug.slice(0, 16).map((p) => React.createElement('div', {
@@ -1158,20 +1113,36 @@ window.__ModuleLoader__.load({
         )
       } else if (panel === 'memory') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginBottom: 8 } },
             '双通路：上方本地 RRM（刷新记忆 / 搜归档）；Hindsight 长期记忆在集成枢纽或事件页信箱「搜 Hindsight」。'),
           React.createElement(MemoryBrief, { memory: memory || (snapshot && snapshot.memory) }),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             integ.hindsightDaemon ? 'Hindsight daemon 在线' : (integ.hindsight ? 'Hindsight 已装' : 'Hindsight 未启用')),
           React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8 } },
             officialBtn('到设置找 Hindsight', { type: 'settings', label: 'Hindsight', settingsHint: '插件' }),
           ),
         )
+      } else if (panel === 'chat') {
+        const ChatLib = require('dsh-open-world/chat')
+        const ChatDock = ChatLib && ChatLib.ChatDock
+        body = ChatDock
+          ? React.createElement(ChatDock, {
+            compact: false,
+            mailbox: snapshot && snapshot.mailbox,
+            hub,
+            onAction,
+            setToast: (msg) => onAction && onAction({ type: 'toast', label: msg }),
+            onInject: (text) => onAction && onAction({
+              type: 'inject-message', body: text, label: '已注入当前会话',
+            }),
+          })
+          : React.createElement('div', { style: { fontSize: 12, color: '#8b95a7' } },
+            '聊天模块未加载：先运行 npm run build:client')
       } else if (panel === 'ssh') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#e6f1ff', lineHeight: 1.6 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#F2F2F4', lineHeight: 1.6 } },
             'SSH 会话仍由官方面板承载。这里保留壳内入口，避免把指挥舱关掉才找按钮。'),
-          React.createElement('div', { style: { marginTop: 10, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 10, fontSize: 12, color: '#A3A3A8' } },
             `网络节点 · sessions ${sessions.count != null ? sessions.count : (core.sessionCount || 0)}`),
           React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' } },
             officialBtn('打开官方 SSH', { type: 'panel', label: 'SSH', panel: 'ssh', selector: '[data-dsh-ssh-entry]' }),
@@ -1181,13 +1152,13 @@ window.__ModuleLoader__.load({
       } else if (panel === 'remote') {
         const space = (snapshot && snapshot.space) || {}
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#e6f1ff', lineHeight: 1.6 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#F2F2F4', lineHeight: 1.6 } },
             '移动端 / Pair 远程由 Host 驱动提供。LAN 第二屏：/api/open-world/space/view（SSE 同步）。'),
-          hub && hub.pair && React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#7c8ea6' } },
+          hub && hub.pair && React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#A3A3A8' } },
             hub.pair.available
               ? `Pair · ${hub.pair.paired ? '已配对' : '未配对'} · 在线 ${hub.pair.onlineCount || 0}`
               : 'Pair 不可用'),
-          React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#5eead4' } },
+          React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#E7B24B' } },
             space.enabled === false
               ? 'Space 未启用'
               : `Space · ${space.hasToken ? '令牌就绪' : '待签发'} · ${space.protocol || 'owip/0.3-draft'}${space.sync === false ? '' : ' · sync'}`),
@@ -1224,7 +1195,7 @@ window.__ModuleLoader__.load({
             React.createElement('span', null, 'RSS'), React.createElement('span', null, `${load.rssMb || '—'} MB`)),
           React.createElement('div', { className: 'ow-detail-row' },
             React.createElement('span', null, 'Uptime'), React.createElement('span', null, `${load.uptimeSec || '—'} s`)),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             '完整监视仍看左栏「状态」；进程列表见「进程舰队」。'),
           React.createElement('div', { style: { marginTop: 12 } },
             React.createElement('button', {
@@ -1249,7 +1220,7 @@ window.__ModuleLoader__.load({
           'data-mode': 'placeholder',
           style: { fontSize: 13, color: '#cbd5e1', lineHeight: 1.55 },
         },
-          React.createElement('div', { style: { fontSize: 15, color: '#5eead4', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 15, color: '#E7B24B', marginBottom: 8 } },
             opted ? 'ALL-IN-ALL · 诚实占位' : 'ALL-IN-ALL · 默认关闭'),
           React.createElement('div', null,
             opted
@@ -1261,7 +1232,7 @@ window.__ModuleLoader__.load({
       } else {
         body = React.createElement(React.Fragment, null,
           React.createElement(SidebarSummaryView, { snapshot }),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             'better-sidebar 的开放世界 Tab 也可看摘要。'),
         )
       }
@@ -1270,7 +1241,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'ow-embed-head' },
           React.createElement('div', null,
             React.createElement('strong', null, meta.title),
-            React.createElement('span', { style: { marginLeft: 8, fontSize: 10, color: '#7c8ea6', letterSpacing: 1 } }, meta.en),
+            React.createElement('span', { style: { marginLeft: 8, fontSize: 10.5, color: '#6B6B72', letterSpacing: '.1em' } }, meta.en),
           ),
           React.createElement('button', {
             type: 'button',

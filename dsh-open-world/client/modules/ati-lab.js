@@ -8,7 +8,16 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const { useState, useEffect, useCallback, useMemo, useRef } = React
     const C = require('dsh-open-world/constants')
-    const { DL_STACK, ACI_PHASES, ATI_STAGES_FALLBACK } = C
+    const { ACI_PHASES, ATI_STAGES_FALLBACK } = C
+    // 本地兜底：服务端未给 dl.stack 时也能渲染（原实现从 constants 解构 DL_STACK，而它并未导出）
+    const DL_STACK = [
+      { label: 'TOKENIZER', zh: '词元化', node: 'user-hub' },
+      { label: 'EMBEDDING', zh: '嵌入层', node: 'network' },
+      { label: 'ATTENTION', zh: '多头注意力', node: 'ai-engine' },
+      { label: 'FFN', zh: '前馈网络', node: 'storage' },
+      { label: 'OPTIMIZER', zh: '优化器', node: 'analytics' },
+      { label: 'OUTPUT', zh: '输出', node: 'task-queue' },
+    ]
 
     function hexRing(cx, cy, r) {
       return Array.from({ length: 6 }, (_, i) => {
@@ -51,11 +60,11 @@ window.__ModuleLoader__.load({
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: R + r + 4, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeDasharray: '2 6' }),
-        React.createElement('ellipse', { cx, cy, rx: R + r, ry: (R + r) * 0.46, fill: 'rgba(8,12,24,.35)', stroke: 'rgba(167,139,250,.25)' }),
+        React.createElement('circle', { cx, cy, r: R + r + 4, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeDasharray: '2 6' }),
+        React.createElement('ellipse', { cx, cy, rx: R + r, ry: (R + r) * 0.46, fill: 'rgba(0,0,0,.25)', stroke: 'rgba(100,210,255,.25)' }),
         rings,
-        React.createElement('text', { x: cx + R, y: cy + 8, fill: '#5eead4', fontSize: 8, fontFamily: 'Consolas,monospace' }, 'T² = S¹ × S¹'),
-        React.createElement('text', { x: cx - R - 10, y: cy - 8, textAnchor: 'end', fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, 'g = 1 · χ = 0'),
+        React.createElement('text', { x: cx + R, y: cy + 8, fill: '#E7B24B', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, 'T² = S¹ × S¹'),
+        React.createElement('text', { x: cx - R - 10, y: cy - 8, textAnchor: 'end', fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, 'g = 1 · χ = 0'),
       )
     }
 
@@ -80,10 +89,10 @@ window.__ModuleLoader__.load({
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('ellipse', { cx, cy, rx: 190, ry: 105, fill: 'rgba(8,12,24,.4)', stroke: 'rgba(244,114,182,.18)' }),
+        React.createElement('ellipse', { cx, cy, rx: 190, ry: 105, fill: 'rgba(0,0,0,.28)', stroke: 'rgba(255,159,10,.18)' }),
         rows,
-        React.createElement('text', { x: cx - 150, y: cy + 118, fill: '#f472b6', fontSize: 8, fontFamily: 'Consolas,monospace' }, '单面 · 单边 · 不可定向'),
-        React.createElement('text', { x: cx + 90, y: cy - 110, fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, 'χ = 0 · H₁ = ℤ'),
+        React.createElement('text', { x: cx - 150, y: cy + 118, fill: '#FF9F0A', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, '单面 · 单边 · 不可定向'),
+        React.createElement('text', { x: cx + 90, y: cy - 110, fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, 'χ = 0 · H₁ = ℤ'),
       )
     }
 
@@ -113,15 +122,15 @@ window.__ModuleLoader__.load({
           key: `kl-${vi}`,
           points: pts.join(' '),
           className: 'ow-lab-wire',
-          stroke: vi % 2 ? '#a78bfa' : '#5eead4',
+          stroke: vi % 2 ? '#64D2FF' : '#E7B24B',
           opacity: 0.14 + 0.55 * (0.4 + maxZ / 3),
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: 118, fill: 'rgba(8,12,24,.35)', stroke: 'rgba(167,139,250,.2)' }),
+        React.createElement('circle', { cx, cy, r: 118, fill: 'rgba(0,0,0,.25)', stroke: 'rgba(100,210,255,.2)' }),
         loops,
-        React.createElement('text', { x: cx - 108, y: cy + 118, fill: '#a78bfa', fontSize: 8, fontFamily: 'Consolas,monospace' }, '自交必须发生在 ℝ⁴'),
-        React.createElement('text', { x: cx + 60, y: cy - 108, fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, '不可定向 · 边界为空'),
+        React.createElement('text', { x: cx - 108, y: cy + 118, fill: '#64D2FF', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, '自交必须发生在 ℝ⁴'),
+        React.createElement('text', { x: cx + 60, y: cy - 108, fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, '不可定向 · 边界为空'),
       )
     }
 
@@ -147,16 +156,15 @@ window.__ModuleLoader__.load({
         dots.push(React.createElement('circle', {
           key: `geo-dot-${i}`,
           cx: dot.x, cy: dot.y, r: 2.4,
-          fill: '#5eead4', opacity: 0.9,
-          style: { filter: 'drop-shadow(0 0 4px #5eead4)' },
+          fill: '#E7B24B', opacity: 0.9,
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: R, fill: 'rgba(8,12,24,.5)', stroke: 'rgba(94,234,212,.4)', strokeWidth: 1.4 }),
-        React.createElement('circle', { cx, cy, r: R - 8, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeDasharray: '1 5' }),
+        React.createElement('circle', { cx, cy, r: R, fill: 'rgba(0,0,0,.3)', stroke: 'rgba(231,178,75,.4)', strokeWidth: 1.4 }),
+        React.createElement('circle', { cx, cy, r: R - 8, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeDasharray: '1 6' }),
         arcs,
         dots,
-        React.createElement('text', { x: cx, y: cy + 26, textAnchor: 'middle', fill: '#5eead4', fontSize: 8, fontFamily: 'Consolas,monospace', letterSpacing: 2 }, 'ℍ² 双曲测地线'),
+        React.createElement('text', { x: cx, y: cy + 26, textAnchor: 'middle', fill: '#E7B24B', fontSize: 10.5, fontFamily: 'Consolas,monospace', letterSpacing: 2 }, 'ℍ² 双曲测地线'),
       )
     }
 
@@ -188,7 +196,7 @@ window.__ModuleLoader__.load({
         x1: p.x, y1: p.y,
         x2: steps[i + 1].x, y2: steps[i + 1].y,
         className: 'ow-lab-grad-arrow',
-        strokeDasharray: '5 4',
+        strokeDasharray: '4 5',
         opacity: 0.55 + i * 0.09,
       }))
       const history = (ml.history && ml.history.length > 2)
@@ -209,7 +217,7 @@ window.__ModuleLoader__.load({
       return React.createElement('g', { className: 'ow-ati-stage' },
         contours,
         arrows,
-        React.createElement('circle', { cx: minX, cy: minY, r: 5 + bounce * 0.1, fill: '#f5d67a', style: { filter: 'drop-shadow(0 0 6px #f5d67a)' } }),
+        React.createElement('circle', { cx: minX, cy: minY, r: 5 + bounce * 0.1, fill: '#F0C674' }),
         React.createElement('text', { x: minX + 16, y: minY - 16, className: 'ow-lab-title dim' }, 'θ* GLOBAL MIN'),
         React.createElement('polygon', { points: lossArea, className: 'ow-lab-loss-area' }),
         React.createElement('polyline', { points: lossPts.join(' '), className: 'ow-lab-loss' }),
@@ -226,22 +234,23 @@ window.__ModuleLoader__.load({
       const rows = (dl.attention && dl.attention.length)
         ? dl.attention
         : [
-          { token: '会', values: [0.9, 0.4, 0.2, 0.1, 0.1, 0.1] },
-          { token: '任', values: [0.4, 0.9, 0.4, 0.2, 0.1, 0.1] },
-          { token: '记', values: [0.2, 0.4, 0.9, 0.4, 0.2, 0.1] },
-          { token: '网', values: [0.1, 0.2, 0.4, 0.9, 0.4, 0.2] },
-          { token: '插', values: [0.1, 0.1, 0.2, 0.4, 0.9, 0.4] },
-          { token: '安', values: [0.1, 0.1, 0.1, 0.2, 0.4, 0.9] },
+          { token: '会话', values: [0.9, 0.4, 0.2, 0.1, 0.1, 0.1] },
+          { token: '任务', values: [0.4, 0.9, 0.4, 0.2, 0.1, 0.1] },
+          { token: '记忆', values: [0.2, 0.4, 0.9, 0.4, 0.2, 0.1] },
+          { token: '网络', values: [0.1, 0.2, 0.4, 0.9, 0.4, 0.2] },
+          { token: '插件', values: [0.1, 0.1, 0.2, 0.4, 0.9, 0.4] },
+          { token: '安全', values: [0.1, 0.1, 0.1, 0.2, 0.4, 0.9] },
         ]
       const stack = (dl.stack && dl.stack.length) ? dl.stack : DL_STACK
       const cell = 44
       const gap = 3
       const gx0 = 596
-      const gy0 = 66
+      const gy0 = 108
+      const short = (s) => (String(s || '').length > 4 ? `${String(s).slice(0, 4)}…` : String(s || ''))
       const cells = []
       rows.forEach((row, ri) => {
         row.values.forEach((v, ci) => {
-          const alpha = 0.06 + v * 0.9
+          const alpha = 0.08 + v * 0.88
           const isDiag = ri === ci
           cells.push(React.createElement('rect', {
             key: `att-${ri}-${ci}`,
@@ -250,13 +259,21 @@ window.__ModuleLoader__.load({
             width: cell, height: cell,
             rx: 2,
             className: 'ow-lab-att-cell',
-            fill: isDiag ? `rgba(94,234,212,${alpha})` : `rgba(167,139,250,${alpha})`,
+            fill: isDiag ? `rgba(231,178,75,${0.1 + v * 0.55})` : `rgba(100,210,255,${0.06 + v * 0.42})`,
           }))
+          cells.push(React.createElement('text', {
+            key: `att-v-${ri}-${ci}`,
+            x: gx0 + ci * (cell + gap) + cell / 2,
+            y: gy0 + ri * (cell + gap) + cell / 2 + 4,
+            textAnchor: 'middle',
+            className: 'ow-lab-att-value',
+            fill: v > 0.5 ? '#120c03' : '#F2F2F4',
+          }, v.toFixed(2)))
         })
       })
-      const scanY = gy0 + ((tick * 2.2) % (rows.length * (cell + gap)))
+      const focusRow = Math.floor((tick / 3) % Math.max(1, rows.length))
       const stackNodes = stack.map((layer, i) => {
-        const y = 74 + i * 72
+        const y = 120 + i * 72
         const node = nodeMap[layer.node]
         const active = !node || node.status !== 'offline'
         return React.createElement('g', {
@@ -265,36 +282,47 @@ window.__ModuleLoader__.load({
           onClick: () => layer.node && node && node.id,
         },
           React.createElement('rect', {
-            x: 26, y: y - 20, width: 104, height: 40, rx: 4,
+            x: 26, y: y - 20, width: 116, height: 42, rx: 4,
             className: `ow-ati-dl-box ${i === 2 ? 'hl' : ''}`,
             opacity: active ? 1 : 0.4,
           }),
-          React.createElement('text', { x: 78, y: y - 6, textAnchor: 'middle', className: 'ow-ati-dl-label' }, layer.label),
-          React.createElement('text', { x: 78, y: y + 8, textAnchor: 'middle', className: 'ow-ati-dl-zh' }, layer.zh),
-          node && React.createElement('text', { x: 78, y: y + 18, textAnchor: 'middle', className: 'ow-ati-metric' }, `${node.metric}%`),
+          React.createElement('text', { x: 84, y: y - 5, textAnchor: 'middle', className: 'ow-ati-dl-label' }, layer.label),
+          React.createElement('text', { x: 84, y: y + 10, textAnchor: 'middle', className: 'ow-ati-dl-zh' }, layer.zh),
+          node && React.createElement('text', { x: 84, y: y + 21, textAnchor: 'middle', className: 'ow-ati-metric' }, `${node.metric}%`),
         )
       })
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('text', { x: 26, y: 42, className: 'ow-lab-title' }, 'TRANSFORMER STACK'),
-        React.createElement('text', { x: gx0, y: 42, className: 'ow-lab-title' }, 'MULTI-HEAD ATTENTION'),
+        React.createElement('text', { x: 26, y: 46, className: 'ow-lab-title' }, 'TRANSFORMER STACK'),
+        React.createElement('text', { x: 26, y: 62, className: 'ow-lab-sub' }, '数据从下往上流过各层，右侧是该层是否在线'),
+        React.createElement('text', { x: gx0, y: 46, className: 'ow-lab-title' }, '多头注意力 · 谁在看谁'),
+        React.createElement('text', { x: gx0, y: 62, className: 'ow-lab-sub' }, '行 = 一个词 · 列 = 它看向的词 · 越亮权重越大（softmax 归一）'),
+        // 图例
+        React.createElement('g', null,
+          React.createElement('text', { x: gx0, y: 80, className: 'ow-lab-sub' }, '权重'),
+          [0.15, 0.5, 0.85].map((v, i) => React.createElement('rect', {
+            key: `lg-${i}`, x: gx0 + 42 + i * 26, y: 71, width: 22, height: 11, rx: 2,
+            fill: `rgba(231,178,75,${0.08 + v * 0.88})`,
+          })),
+          React.createElement('text', { x: gx0 + 42 + 3 * 26 + 4, y: 80, className: 'ow-lab-sub' }, '低 → 高'),
+          React.createElement('text', { x: gx0 + 190, y: 80, className: 'ow-lab-tick' }, '示意数据 · METAPHOR（非真实模型输出）')),
         stackNodes,
         cells,
         React.createElement('rect', {
-          x: gx0 - 4, y: scanY, width: rows.length * (cell + gap) + 2, height: 1.2,
-          fill: '#5eead4', opacity: 0.8,
-          style: { filter: 'drop-shadow(0 0 4px #5eead4)' },
+          x: gx0 - 6, y: gy0 + focusRow * (cell + gap) - 2,
+          width: rows.length * (cell + gap) + 4, height: cell + 4,
+          fill: 'none', stroke: 'rgba(231,178,75,.45)', strokeWidth: 1, rx: 6,
         }),
         rows.map((row, ri) => React.createElement('text', {
           key: `tok-r-${ri}`,
-          x: gx0 - 10, y: gy0 + ri * (cell + gap) + cell / 2 + 3,
+          x: gx0 - 10, y: gy0 + ri * (cell + gap) + cell / 2 + 4,
           textAnchor: 'end', className: 'ow-lab-att-token',
-        }, row.token)),
+        }, short(row.token))),
         rows.map((row, ci) => React.createElement('text', {
           key: `tok-c-${ci}`,
-          x: gx0 + ci * (cell + gap) + cell / 2, y: gy0 - 8,
+          x: gx0 + ci * (cell + gap) + cell / 2, y: gy0 - 10,
           textAnchor: 'middle', className: 'ow-lab-att-token',
-        }, row.token)),
-        React.createElement('text', { x: gx0, y: gy0 + rows.length * (cell + gap) + 16, className: 'ow-lab-tick' },
+        }, short(row.token))),
+        React.createElement('text', { x: gx0, y: gy0 + rows.length * (cell + gap) + 18, className: 'ow-lab-tick' },
           `heads ${dl.heads ?? 8} · depth ${dl.depth ?? 6} · ${dl.params != null ? (dl.params >= 1000 ? `${(dl.params / 1000).toFixed(1)}K` : dl.params) : '—'} params · ${dl.flashAttention ? 'FA✓' : 'MHA'}`),
         React.createElement('text', { x: 26, y: 474, className: 'ow-lab-tick' },
           `temperature ${dl.temperature ?? '—'} · dropout ${dl.dropout ?? '—'}`),
@@ -328,7 +356,7 @@ window.__ModuleLoader__.load({
         const px = hx + 118 * Math.cos(a)
         const py = hy + 96 * Math.sin(a)
         const metaNode = nodeMap[el.node]
-        const color = el.category === 'metal' ? '#f4a261' : (el.category === 'carbon' ? '#a78bfa' : '#5eead4')
+        const color = el.category === 'metal' ? '#FF9F0A' : (el.category === 'carbon' ? '#64D2FF' : '#E7B24B')
         return React.createElement('g', { key: `atom-${el.symbol}` },
           React.createElement('line', {
             x1: hx + 46 * Math.cos(a), y1: hy + 46 * Math.sin(a),
@@ -340,7 +368,7 @@ window.__ModuleLoader__.load({
           React.createElement('circle', { cx: px, cy: py, r: 13, className: 'ow-lab-atom', stroke: color }),
           React.createElement('text', {
             x: px, y: py + 4, className: 'ow-lab-elem-symbol',
-            fill: color, fontSize: 9,
+            fill: color, fontSize: 11,
           }, el.symbol),
           React.createElement('text', { x: px, y: py - 18, className: 'ow-lab-elem-name' }, metaNode ? `${metaNode.metric}%` : '—'),
         )
@@ -351,7 +379,7 @@ window.__ModuleLoader__.load({
         ring.map((p, i) => React.createElement('circle', {
           key: `ring-c-${i}`,
           cx: p[0], cy: p[1], r: 4.5,
-          fill: 'rgba(8,12,24,.85)', stroke: '#34d399', strokeWidth: 1.2,
+          fill: 'rgba(20,20,22,.85)', stroke: '#30D158', strokeWidth: 1.2,
         })),
         electrons,
         atoms,
@@ -374,14 +402,14 @@ window.__ModuleLoader__.load({
         const row = Math.floor(i / 4)
         const x = 108 + col * 175
         const y = 92 + row * 132
-        const color = el.category === 'metal' ? '#f4a261' : (el.category === 'carbon' ? '#a78bfa' : '#5eead4')
+        const color = el.category === 'metal' ? '#FF9F0A' : (el.category === 'carbon' ? '#64D2FF' : '#E7B24B')
         const pulse = 0.5 + 0.5 * Math.sin(tick * 0.05 + i)
         return React.createElement('g', { key: `pe-${el.symbol}`, className: 'ow-nn-node' },
           React.createElement('rect', {
             x: x - 34, y: y - 30, width: 68, height: 68,
             rx: 4,
             className: `ow-lab-elem ${el.category}`,
-            fill: 'rgba(8,12,24,.55)',
+            fill: 'rgba(20,20,22,.55)',
             opacity: el.metric > 0 ? 1 : 0.45,
           }),
           React.createElement('text', { x: x + 26, y: y - 18, className: 'ow-lab-elem-z' }, String(el.z)),
@@ -391,7 +419,7 @@ window.__ModuleLoader__.load({
           React.createElement('circle', {
             cx: x + 26, cy: y + 26, r: 3,
             fill: color, opacity: 0.35 + pulse * 0.65,
-            style: { filter: `drop-shadow(0 0 4px ${color})` },
+
           }),
         )
       })
@@ -427,7 +455,7 @@ window.__ModuleLoader__.load({
       })
       const circ = 2 * Math.PI * 230
       const prog = evo ? evo.progress : 0
-      const arcColor = '#a78bfa'
+      const arcColor = '#64D2FF'
       const particles = Array.from({ length: 26 }, (_, i) => {
         const a = i * (2 * Math.PI / 26) + tick * 0.008 * (1 + (i % 3) * 0.2)
         const r = 40 + ((i * 37 + tick * 1.2) % 190)
@@ -436,7 +464,7 @@ window.__ModuleLoader__.load({
           cx: cx + Math.cos(a) * r,
           cy: cy + Math.sin(a) * r * 0.92,
           r: 1.2 + (i % 3) * 0.6,
-          fill: i % 2 ? '#a78bfa' : '#5eead4',
+          fill: i % 2 ? '#64D2FF' : '#E7B24B',
           opacity: 0.2 + (i % 5) * 0.12,
         })
       })
@@ -445,15 +473,14 @@ window.__ModuleLoader__.load({
         particles,
         React.createElement('circle', {
           cx, cy, r: 230, fill: 'none',
-          stroke: 'rgba(167,139,250,.25)', strokeWidth: 6,
+          stroke: 'rgba(100,210,255,.25)', strokeWidth: 6,
           strokeDasharray: `${circ * prog} ${circ * (1 - prog)}`,
           strokeLinecap: 'round',
           transform: `rotate(-90 ${cx} ${cy})`,
-          style: { filter: 'drop-shadow(0 0 8px rgba(167,139,250,.6))' },
         }),
-        React.createElement('circle', { cx, cy, r: 58 + Math.sin(tick * 0.05) * 4, fill: 'rgba(167,139,250,.15)', stroke: arcColor, strokeWidth: 1.2 }),
+        React.createElement('circle', { cx, cy, r: 58 + Math.sin(tick * 0.05) * 4, fill: 'rgba(100,210,255,.15)', stroke: arcColor, strokeWidth: 1.2 }),
         React.createElement('circle', { cx, cy, r: 24, fill: 'none', stroke: '#fff', strokeWidth: 1, opacity: 0.7 }),
-        React.createElement('circle', { cx, cy, r: 8, fill: '#fff', style: { filter: 'drop-shadow(0 0 10px #fff)' } }),
+        React.createElement('circle', { cx, cy, r: 8, fill: '#fff' }),
         React.createElement('text', { x: cx, y: cy - 70, textAnchor: 'middle', className: 'ow-lab-title' }, 'ATI EVOLUTION'),
         React.createElement('text', { x: cx, y: cy + 40, textAnchor: 'middle', className: 'ow-lab-evo-val' }, `${readiness}`),
         React.createElement('text', { x: cx, y: cy + 54, textAnchor: 'middle', className: 'ow-lab-evo-label on' }, `/ 100 · ${evo ? evo.stage.zh : '拓扑胚'}`),
@@ -501,7 +528,7 @@ window.__ModuleLoader__.load({
           strokeWidth: isActive ? 2 : 1,
           strokeDasharray: isActive ? undefined : '4 6',
           opacity: isActive ? 0.9 : 0.3,
-          style: isActive ? { filter: `drop-shadow(0 0 6px ${cur.color})` } : undefined,
+          style: undefined,
         }))
         // 流动粒子
         if (isActive) {
@@ -511,22 +538,22 @@ window.__ModuleLoader__.load({
           edgesBetween.push(React.createElement('circle', {
             key: `pulse-${i}`,
             cx: px, cy: py, r: 4, fill: cur.color,
-            style: { filter: `drop-shadow(0 0 6px ${cur.color})` },
+
           }))
         }
       }
 
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('ellipse', { cx, cy, rx: R + 30, ry: R * 0.72 + 30, fill: 'rgba(8,12,24,.5)', stroke: 'rgba(94,234,212,.1)' }),
+        React.createElement('ellipse', { cx, cy, rx: R + 30, ry: R * 0.72 + 30, fill: 'rgba(0,0,0,.3)', stroke: 'rgba(231,178,75,.1)' }),
         // 阶段节点
         nodes.map((n) => React.createElement('g', { key: `phase-${n.id}` },
           React.createElement('circle', {
             cx: n.x, cy: n.y,
             r: n.idx === activePhase ? 28 : 20,
-            fill: n.idx === activePhase ? `${n.color}22` : 'rgba(8,12,24,.7)',
+            fill: n.idx === activePhase ? `${n.color}22` : 'rgba(20,20,22,.7)',
             stroke: n.color,
             strokeWidth: n.idx === activePhase ? 2.5 : 1,
-            style: n.idx === activePhase ? { filter: `drop-shadow(0 0 12px ${n.color})` } : undefined,
+            style: undefined,
           }),
           React.createElement('text', {
             x: n.x, y: n.y - 2, textAnchor: 'middle',
@@ -535,7 +562,7 @@ window.__ModuleLoader__.load({
           }, n.en),
           React.createElement('text', {
             x: n.x, y: n.y + 10, textAnchor: 'middle',
-            fill: '#7c8ea6', fontSize: 7,
+            fill: '#A3A3A8', fontSize: 10,
           }, n.zh),
         )),
         edgesBetween,
@@ -544,7 +571,7 @@ window.__ModuleLoader__.load({
           key: `pt-${i}`, cx: p.x, cy: p.y, r: 2, fill: p.color, opacity: 0.5,
         })),
         // 中心：当前阶段指示器 + 分数
-        React.createElement('circle', { cx, cy, r: 52, fill: 'rgba(8,12,24,.85)', stroke: 'rgba(94,234,212,.25)', strokeWidth: 1 }),
+        React.createElement('circle', { cx, cy, r: 52, fill: 'rgba(20,20,22,.85)', stroke: 'rgba(231,178,75,.25)', strokeWidth: 1 }),
         React.createElement('text', {
           x: cx, y: cy - 14, textAnchor: 'middle',
           fill: phases[activePhase].color, fontSize: 11,
@@ -557,7 +584,7 @@ window.__ModuleLoader__.load({
         }, score != null ? String(score) : '—'),
         React.createElement('text', {
           x: cx, y: cy + 16, textAnchor: 'middle',
-          fill: '#7c8ea6', fontSize: 7,
+          fill: '#A3A3A8', fontSize: 10,
         }, trend || 'ACI READYNESS'),
         // 底部标签
         React.createElement('text', {
@@ -619,7 +646,7 @@ window.__ModuleLoader__.load({
               })),
               React.createElement('text', {
                 x: cx + 220, y: cy - 74, textAnchor: 'middle',
-                fill: '#34d399', fontSize: 8, fontFamily: 'Consolas,monospace', letterSpacing: 2,
+                fill: '#30D158', fontSize: 10.5, fontFamily: 'Consolas,monospace', letterSpacing: 0,
               }, 'C₆ MEMORY RING'),
             )
           })(),

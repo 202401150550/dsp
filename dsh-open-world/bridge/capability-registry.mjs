@@ -2,6 +2,7 @@
  * Open World ↔ Desktop 插件能力注册表（契约真源）
  * featureId = plugins.yml key · insertId = cordis insert · packageName = dep
  * owSurfaces = 壳内表面 id · embedIds = setEmbed 面板名 · defaultInPresets = presets.yml
+ * tools = 插件 agent 工具清单（A2 粒度声明，选填；成文能力在此挂账）
  */
 import { howToEnableHint } from './manifest.mjs'
 import { worldPackByPanel } from './world-packs.mjs'
@@ -13,7 +14,7 @@ export const CAPABILITY_REGISTRY = Object.freeze([
     packageName: 'dsh-open-world',
     title: '开放世界',
     probe: 'openWorld',
-    owSurfaces: ['shell', 'hub', 'space'],
+    owSurfaces: ['shell', 'hub', 'space', 'garden'],
     hostActions: ['*'],
     embedIds: ['sidebar'],
     defaultInPresets: ['bridge', 'full'],
@@ -117,6 +118,20 @@ export const CAPABILITY_REGISTRY = Object.freeze([
     satellite: false,
     worldPack: true,
   },
+  {
+    // Tianshu 甄别 #6 · office 成文（借生态不造轮子）：@huiliyi37/dsh-office，npm 依赖 apply 自动安装
+    featureId: 'dsh-office',
+    insertId: 'dsh-office',
+    packageName: '@huiliyi37/dsh-office',
+    title: 'Office 成文',
+    probe: null,
+    owSurfaces: [],
+    hostActions: [],
+    embedIds: [],
+    defaultInPresets: [], // 意象克制：不进预设；聊天坞「成文」按钮按需投递
+    satellite: true,
+    tools: ['docx_create', 'docx_patches', 'docx_read', 'xlsx_write', 'xlsx_read', 'xlsx_edit', 'xlsx_audit', 'xlsx_recalc', 'pdf_create', 'pdf_read', 'pdf_merge', 'pdf_split', 'pdf_cli', 'pptx_create', 'pptx_read', 'pptx_edit'],
+  },
 ])
 
 /** embed 面板 → 负责探测的 plugin catalog id（与 PLUGIN_CATALOG.id 对齐） */
@@ -198,5 +213,6 @@ export function enrichPluginWithRegistry(row) {
     defaultInPresets: cap.defaultInPresets || [],
     satellite: !!cap.satellite,
     owSurfaces: cap.owSurfaces || [],
+    tools: cap.tools || [],
   }
 }

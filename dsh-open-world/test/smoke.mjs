@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** OWIP smoke tests — no browser, no DSH process required */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { __test } from '../index.js'
@@ -82,11 +82,13 @@ assertEq(fw.version, '2.78', 'framework.version')
   assertEq(meta.clientVer, 'v2.78', 'Host clientVer aligned')
   assert(fw.clientBuild === meta.clientBuild, 'framework.clientBuild matches disk')
   assert(constantsSrc.includes('MEMORY_ARCHIVES_URL'), 'constants MEMORY_ARCHIVES_URL')
+  assert(constantsSrc.includes('exports.NODE_ZH') && constantsSrc.includes('exports.NODE_LAYOUT') && constantsSrc.includes('exports.EVENT_COLORS'), 'constants client node exports present')
+  assert(clientJs.includes('exports.NODE_ZH') && clientJs.includes('exports.NODE_LAYOUT'), 'client.js carries NODE_ZH/NODE_LAYOUT')
   const bridgeSrc = readFileSync(join(root, 'bridge/execute.mjs'), 'utf8')
   assert(bridgeSrc.includes('summarizeBridgeSurface'), 'summarizeBridgeSurface in execute.mjs')
   assert(bridgeSrc.includes('preferChat'), 'rewind-open preferChat path')
   assert(bridgeSrc.includes("case 'enter-world'") || bridgeSrc.includes('enter-world'), 'bridge enter-world')
-  assert(hubsSrc.includes('壳内时间轴') || hubsSrc.includes('preferChat'), 'hubs rewind embed-first')
+  assert(hubsSrc.includes("worldId: 'rewind', panel: 'rewind'"), 'hubs rewind navigation stays embedded')
   const aclSrc = readFileSync(join(root, 'bridge/space-acl.mjs'), 'utf8')
   assert(aclSrc.includes("'memory-search'"), 'PEER allowlist includes memory-search')
   assert(aclSrc.includes("'world-state-get'"), 'PEER allowlist includes world-state-get')
@@ -146,8 +148,6 @@ assertEq(fw.version, '2.78', 'framework.version')
   assert(shellSrc.includes('rra.probe') || shellSrc.includes('适配器'), 'shell RRA adapter note')
   assert(existsSync(join(root, 'RRA_NEURAL.md')), 'RRA_NEURAL.md present')
   assert(existsSync(join(root, 'bridge/rra-adapter.mjs')), 'rra-adapter.mjs present')
-  assert(existsSync(join(root, '../rra-proto/package.json')), 'rra-proto package present')
-  assert(existsSync(join(root, '../rra-proto/src/l4-longctx.mjs')), 'rra-proto l4-longctx.mjs')
   const neural = __test.describeNeuralRra()
   assertEq(neural.implemented, false, 'neural still unimplemented')
   assertEq(neural.stage, 'L6-M4', 'neural stage L6-M4')
@@ -402,6 +402,26 @@ assert(merged[0].featureId === 'web-ui-task-board', 'task-board featureId')
 assert(merged[1].howToEnable && merged[1].howToEnable.includes('web-ui-rewind'), 'offline hint cites plugins.yml id')
 assert(typeof __test.howToEnableHint === 'function', 'howToEnableHint exported')
 assert(typeof __test.taskBoardMetrics === 'function', 'taskBoardMetrics exported')
+// A historical ledger is not evidence that its plugin is installed or serving routes.
+const presenceHome = mkdtempSync(join(tmpdir(), 'ow-task-presence-'))
+try {
+  assert(__test.taskBoardMetrics(presenceHome).available === false, 'empty home has no task service')
+  mkdirSync(join(presenceHome, 'task-board'), { recursive: true })
+  writeFileSync(join(presenceHome, 'task-board', 'ledger-v2.json'), JSON.stringify({ tasks: [{ id: 'fixture-task', title: 'fixture', status: 'running', executions: [{}] }] }))
+  const orphan = __test.taskBoardMetrics(presenceHome)
+  assert(orphan.installed === false, 'orphan ledger cannot invent an installed plugin')
+  assert(orphan.available === false, 'orphan ledger cannot enable task-world entry')
+  assert(orphan.total === 1 && orphan.tasks[0].id === 'fixture-task', 'historical task records remain visible')
+  const plugins = __test.mergePluginResults({ catalog: __test.PLUGIN_CATALOG, probes: { taskBoard: orphan.available }, deps: new Set(), manifests: [] })
+  assert(plugins.find(p => p.id === 'task-board')?.online === false, 'orphan task plugin stays offline in catalog')
+  assert(orphan.source === 'persisted-ledger' && orphan.runtimeVerified === false, 'persisted task counts are not claimed as live runtime evidence')
+  mkdirSync(join(presenceHome, 'profiles', 'desktop'), { recursive: true })
+  writeFileSync(join(presenceHome, 'profiles', 'desktop', 'package.json'), JSON.stringify({ dependencies: { '@linxin666/dsh-client-ui-task-board': '*' } }))
+  const configured = __test.taskBoardMetrics(presenceHome)
+  assert(configured.installed === true && configured.available === true, 'registered plugin keeps existing availability behavior')
+  writeFileSync(join(presenceHome, 'task-board', 'ledger-v2.json'), JSON.stringify({ tasks: [] }))
+  assert(__test.taskBoardMetrics(presenceHome).available === true, 'registered plugin does not require historical tasks')
+} finally { rmSync(presenceHome, { recursive: true, force: true }) }
 assert(typeof __test.projectLiveMemory === 'function', 'projectLiveMemory exported')
 assert(__test.describeNeuralRra().implemented === false, 'neural RRA stub off')
 
@@ -501,103 +521,13 @@ const fleetSample = __test.buildFleetView({
 assert(fleetSample.counts.sessions === 1, 'fleet sessions')
 assert(fleetSample.counts.tasks === 1, 'fleet tasks')
 
-// M4：sketch 默认关；显式开可跑草图且不宣称 implemented
+// The optional prototype has its own fail-closed integration gate.
 {
-  const skipped = await __test.tryApplyRraSketch({
-    q: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    queryPos: 3,
-    causal: true,
-    k_layers: { exact: [] },
-  }, { sketch: false })
+  const skipped = await __test.tryApplyRraSketch({}, { sketch: false })
   assert(skipped.skipped === true && skipped.ok === false, 'M4 sketch default-off skips')
-  const ran = await __test.tryApplyRraSketch({
-    q: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    queryPos: 0,
-    causal: true,
-    k_layers: {
-      exact: [{
-        vec: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-        pos: 0,
-      }],
-    },
-  }, { sketch: true })
-  assert(ran.ok === true && ran.sketch === true, 'M4 sketch opt-in runs')
-  assert(ran.implemented === false && ran.fullNeuralRra === false, 'M4 sketch stays honest')
-  assert(ran.output && ran.output.meta && ran.output.meta.sketch === true, 'M4 sketch meta tag')
-  assert(ran.output.meta.compressWeightsLoaded !== true, 'M4 sketch without weights flag')
-}
-
-// M5：可选 compressWeights → readAt；dim 不符必拒
-{
-  const { writeFileSync, mkdtempSync, rmSync } = await import('node:fs')
-  const { join } = await import('node:path')
-  const { tmpdir } = await import('node:os')
-  const { pathToFileURL } = await import('node:url')
-  const dir = __test.resolveRraProtoDir()
-  assert(!!dir, 'rra-proto dir for compress weights')
-  const compressUrl = pathToFileURL(join(dir, 'src', 'compress.mjs')).href
-  const { createCompressModel, snapshotCompressModel, trainToySteps } = await import(compressUrl)
-  const model = createCompressModel({ dim: 16, compressedDim: 4, seedScale: 0.05 })
-  trainToySteps(model, { steps: 8, lr: 0.08, blockSize: 4, batchBlocks: 2 })
-  const tmp = mkdtempSync(join(tmpdir(), 'ow-m5w-'))
-  const wpath = join(tmp, 'compress-weights.json')
-  writeFileSync(wpath, JSON.stringify(snapshotCompressModel(model)))
-  const q16 = Array.from({ length: 16 }, (_, i) => 0.01 * (i + 1))
-  const withW = await __test.tryApplyRraSketch({
-    q: q16,
-    queryPos: 4,
-    causal: true,
-    k_layers: {
-      exact: [{ vec: q16, pos: 4 }],
-      compressed: [{
-        code: Array.from({ length: 4 }, () => 0.1),
-        pooled: q16,
-        meanPos: 1,
-        count: 4,
-      }],
-    },
-  }, { sketch: true, compressWeights: wpath })
-  assert(withW.ok === true, 'M5 compressWeights sketch ok')
-  assert(withW.weights && withW.weights.dim === 16, 'M5 weights meta dim')
-  assert(withW.output?.meta?.compressWeightsLoaded === true, 'M5 compressWeightsLoaded meta')
-  assert(withW.implemented === false && withW.fullNeuralRra === false, 'M5 weights stay honest')
-
-  const badDim = await __test.tryApplyRraSketch({
-    q: Array.from({ length: 8 }, (_, i) => 0.01 * (i + 1)),
-    queryPos: 2,
-    causal: true,
-    k_layers: { exact: [] },
-  }, { sketch: true, compressWeights: wpath })
-  assert(badDim.ok === false, 'M5 dim mismatch rejects')
-  assert(String(badDim.error || '').includes('dim'), `M5 dim mismatch message (${badDim.error})`)
-
-  const missing = await __test.tryApplyRraSketch({
-    q: q16,
-    queryPos: 1,
-    causal: true,
-    k_layers: { exact: [] },
-  }, { sketch: true, compressWeights: join(tmp, 'no-such.json') })
-  assert(missing.ok === false && String(missing.error || '').includes('not found'), 'M5 missing weights rejects')
-
-  const fakePath = join(tmp, 'fake-prod.json')
-  writeFileSync(fakePath, JSON.stringify({
-    protocol: 'rra/1.0-full-neural',
-    dim: 16,
-    compressedDim: 4,
-    implemented: true,
-    fullNeuralRra: true,
-    Wdown: Array(4 * 16).fill(0),
-    Wup: Array(16 * 4).fill(0),
-  }))
-  const fake = await __test.tryApplyRraSketch({
-    q: q16,
-    queryPos: 1,
-    causal: true,
-    k_layers: { exact: [] },
-  }, { sketch: true, compressWeights: fakePath })
-  assert(fake.ok === false && String(fake.error || '').includes('contract'), `M5-D rejects fake prod (${fake.error})`)
-
-  rmSync(tmp, { recursive: true, force: true })
+  const unavailable = __test.buildNeuralStub({ probe: true }, { deepResult: { ok: false, dir: null, proto: null, error: 'rra-proto absent' } })
+  assert(unavailable.adapter.error === 'rra-proto absent', 'missing optional prototype is visible')
+  assert(unavailable.implemented === false && unavailable.fullNeuralRra === false, 'missing prototype never claims neural support')
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`)

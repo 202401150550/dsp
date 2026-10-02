@@ -1,4 +1,4 @@
-// CLIENT_BUILD c142f73f6f 2026-09-29T13:11:45.549Z v2.78
+// CLIENT_BUILD 8e56218a81 2026-10-02T07:29:31.765Z v2.78
 // dsh-open-world · Client — composed from client/modules + client-main
 // Run: npm run build:client  |  Check: npm run check:client
 
@@ -157,16 +157,9 @@ window.__ModuleLoader__.load({
         } catch { return null }
       }
     
-      async function execRewindViaSession(seq, mode) {
-        const session = getActiveSessionFace()
-        if (!session || typeof session.command !== 'function') {
-          return { ok: false, error: 'session-api-unavailable' }
-        }
-        const result = await session.command(`/rewind @${seq} ${mode}`)
-        if (!result?.ok || result.value?.matched !== true) {
-          return { ok: false, error: result?.value?.message || 'command-not-matched' }
-        }
-        return { ok: true }
+      async function execRewindViaSession() {
+        // Do not resolve the desktop's implicit active Session for a historical anchor.
+        return { ok: false, error: 'rewind-compatibility-unverified' }
       }
     
       async function sendViaSession(text, { submit = true } = {}) {
@@ -366,12 +359,7 @@ window.__ModuleLoader__.load({
     
         results['inject-message'] = enrichCap(injectStrategy)
         results['agent-prompt'] = enrichCap(injectStrategy)
-        results['rewind-exec'] = enrichCap(
-          hasSession ? 'session-api' : (hasTextarea ? 'dom-open-only' : 'unavailable'),
-          {
-            note: 'rewind-open 默认壳内 embed；preferChat 时 session.prompt → DOM',
-          },
-        )
+        results['rewind-exec'] = enrichCap('unavailable', { note: '回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。' })
         results.settings = enrichCap('event', {
           note: '默认关壳 + dsh-open-settings；带 settingsHint/forceDom 才 DOM 点标签',
         })
@@ -420,7 +408,9 @@ window.__ModuleLoader__.load({
     
       async function bridgeExecute(action, ctx) {
         if (!action) return
-        const cap = bridgeCapabilityFor(action)
+        // Rewind navigation and its execution denial are handled below, independent
+        // of cached capability health (including health saved by older builds).
+        const cap = ['rewind-open', 'rewind-exec'].includes(action.type) ? null : bridgeCapabilityFor(action)
         if (cap && !cap.available) {
           recordBridgeOutcome(action.type, { ok: false, strategy: 'unavailable', error: 'capability-unavailable' })
           const meta = describeBridgeStrategy(cap.strategy)
@@ -442,7 +432,7 @@ window.__ModuleLoader__.load({
         const afterClose = async (fn) => {
           onClose()
           await delay(180)
-          if (fn) fn()
+          if (fn) await fn()
         }
         switch (action.type) {
           case 'close':
@@ -729,65 +719,14 @@ window.__ModuleLoader__.load({
               }
               break
             }
-            const face = getActiveSessionFace()
-            if (face && typeof face.prompt === 'function') {
-              await afterClose(async () => {
-                try {
-                  await face.prompt('/rewind')
-                  recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'session-prompt' })
-                  setToast('已经 session.prompt 打开 /rewind')
-                } catch (err) {
-                  recordBridgeOutcome('rewind-exec', {
-                    ok: false,
-                    strategy: 'session-prompt',
-                    error: (err && err.message) || 'prompt-failed',
-                  })
-                  setToast(`打开 /rewind 失败：${(err && err.message) || err}`)
-                }
-              })
-              break
-            }
-            await afterClose(async () => {
-              const result = await _fillAndSubmit('/rewind', { submit: true })
-              if (!result.ok) {
-                recordBridgeOutcome('rewind-exec', {
-                  ok: false,
-                  strategy: 'dom',
-                  error: 'no-composer',
-                })
-                setToast('打不开回退菜单：找不到输入框（DOM）')
-                return
-              }
-              recordBridgeOutcome('rewind-exec', {
-                ok: !!result.ok,
-                strategy: 'dom',
-              })
-              setToast(result.ok ? '已打开 /rewind 候选面板（DOM）' : '已填入 /rewind，请按回车')
-            })
+            // preferChat/forceDom must not bypass compatibility by submitting /rewind.
+            recordBridgeOutcome('rewind-exec', { ok: false, strategy: 'unavailable', error: 'rewind-compatibility-unverified' })
+            setToast('回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。')
             break
           }
           case 'rewind-exec': {
-            const mode = action.mode === 'chat' ? 'chat' : 'both'
-            const seq = action.seq ?? action.anchorSeq ?? action.index
-            if (seq == null) {
-              setToast('回退失败：缺少锚点 seq')
-              break
-            }
-            await afterClose(async () => {
-              const viaSession = await execRewindViaSession(seq, mode)
-              if (viaSession.ok) {
-                recordBridgeOutcome('rewind-exec', { ok: true, strategy: 'session-api' })
-                setToast(`已执行回退 @${seq} (${mode})`)
-                notifyPulse(['storage->core', 'storage->task-board'])
-                return
-              }
-              recordBridgeOutcome('rewind-exec', {
-                ok: false,
-                strategy: 'unavailable',
-                error: viaSession.error || 'rewind-failed',
-              })
-              setToast('回退请用消息旁 ↶ 按钮，或先点「打开 /rewind」选锚点')
-            })
+            recordBridgeOutcome('rewind-exec', { ok: false, strategy: 'unavailable', error: 'rewind-compatibility-unverified' })
+            setToast('回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。')
             break
           }
           default:
@@ -840,8 +779,8 @@ window.__ModuleLoader__.load({
     exports.POLL_MS = 2500
     exports.CLIENT_VER = 'v2.78'
     /** compose 时写入内容哈希；源码里占位为 dev */
-    exports.CLIENT_BUILD = 'c142f73f6f'
-    exports.CLIENT_BUILT_AT = '2026-09-29T13:11:45.549Z'
+    exports.CLIENT_BUILD = '8e56218a81'
+    exports.CLIENT_BUILT_AT = '2026-10-02T07:29:31.765Z'
     exports.ACTION_URL = '/api/task-board/action'
     exports.PULSE_URL = '/api/open-world/pulse'
     exports.OW_ACTION_URL = '/api/open-world/action'
@@ -849,6 +788,18 @@ window.__ModuleLoader__.load({
     exports.STREAM_URL = '/api/open-world/stream'
     exports.SPACE_VIEW_URL = '/api/open-world/space/view'
     exports.SPACE_SECOND_SCREEN_URL = '/api/open-world/space/second-screen'
+    // ── 聊天坞（像微信一样发消息/发文件；消息落本地文件） ──
+    exports.CHAT_THREADS_URL = '/api/open-world/chat/threads'
+    exports.CHAT_MESSAGES_URL = '/api/open-world/chat/messages'
+    exports.CHAT_POST_URL = '/api/open-world/chat/post'
+    exports.CHAT_UPLOAD_URL = '/api/open-world/chat/upload'
+    exports.CHAT_READ_URL = '/api/open-world/chat/read'
+    exports.CHAT_FILE_URL = '/api/open-world/chat/file'
+    exports.CHAT_VIEW_URL = '/api/open-world/chat/view'
+    /** 入口归纳：日常组常驻；实验组在简单模式下折叠（不删除，保留能力） */
+    exports.UI_MODE_KEY = 'dsh-open-world-ui-mode'
+    exports.DAILY_SURFACES = ['chat', 'task-board', 'rewind', 'sidebar']
+    exports.LAB_SURFACES = ['market', 'memory', 'ssh', 'remote', 'analytics', 'monitor', 'fleet']
     exports.MEMORY_URL = '/api/open-world/memory'
     exports.MEMORY_SEARCH_URL = '/api/open-world/memory/search'
     exports.MEMORY_ARCHIVES_URL = '/api/open-world/memory/archives'
@@ -865,6 +816,7 @@ window.__ModuleLoader__.load({
     exports.WM_MODES = ['fullscreen', 'split', 'float', 'minimized']
     /** 壳内应用表面（ATI 节点进入） */
     exports.APP_SURFACES = {
+      chat: { title: '聊天坞', titleEn: 'CHAT' },
       'task-board': { title: '任务看板', titleEn: 'TASK BOARD' },
       rewind: { title: '回退时间轴', titleEn: 'REWIND' },
       market: { title: '插件市场', titleEn: 'MARKET' },
@@ -892,29 +844,137 @@ window.__ModuleLoader__.load({
     ]
 
     exports.ACI_PHASES = [
-      { id: 'plan', zh: '规划', en: 'PLAN', color: '#5eead4' },
-      { id: 'execute', zh: '执行', en: 'EXECUTE', color: '#f5d67a' },
-      { id: 'evaluate', zh: '评估', en: 'EVALUATE', color: '#a78bfa' },
-      { id: 'adjust', zh: '调整', en: 'ADJUST', color: '#f472b6' },
+      { id: 'plan', zh: '规划', en: 'PLAN', color: '#E7B24B' },
+      { id: 'execute', zh: '执行', en: 'EXECUTE', color: '#F0C674' },
+      { id: 'evaluate', zh: '评估', en: 'EVALUATE', color: '#64D2FF' },
+      { id: 'adjust', zh: '调整', en: 'ADJUST', color: '#FF9F0A' },
     ]
 
-    exports.ATI_STAGES_FALLBACK = [
-      { id: 'seed', zh: '拓扑胚' },
-      { id: 'ml', zh: '机器学习' },
-      { id: 'dl', zh: '深度学习' },
-      { id: 'chem', zh: '化学计算' },
-      { id: 'ati', zh: 'ATI 涌现' },
+    exports.LOAD_COLORS = ['#E7B24B', '#30D158', '#F0C674', '#64D2FF']
+    exports.LOAD_COLORS = ['#E7B24B', '#30D158', '#F0C674', '#64D2FF']
+
+    exports.QUICK_ACTIONS = [
+      { icon: 'chat', label: '聊天', action: { type: 'embed', label: '聊天坞', panel: 'chat' } },
+      { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世界 · 新任务' } },
+      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '任务看板', panel: 'task-board' } },
+      { icon: 'diagnosis', label: '回退', action: { type: 'embed', label: '回退时间轴', panel: 'rewind' } },
     ]
 
-    exports.DL_STACK = [
-      { id: 'user-hub', label: 'TOKENIZER', zh: '词元化' },
-      { id: 'network', label: 'EMBEDDING', zh: '嵌入层' },
-      { id: 'ai-engine', label: 'ATTENTION', zh: '多头注意力' },
-      { id: 'analytics', label: 'FFN', zh: '前馈网络' },
-      { id: 'task-board', label: 'OPTIMIZER', zh: '梯度优化' },
-      { id: 'core', label: 'ATI HEAD', zh: '输出头' },
-    ]
 
+    /** 550C 终端皮肤（借 dsh-550c-boot 的琥珀 CRT 语言）：窗口角标 / 扫描线 / 点线小节 / 等宽字
+     *  聊天坞与消息总线共用这一套，避免两套视觉各说各话。 */
+    exports.OW_SKIN_550C = [
+      '.ow550c{--am:#E7B24B;--am-b:#ffc043;--am-d:#8a5e10;--am-fade:rgba(232,160,32,.35);--tx:#F2F2F4;--tx-dim:#6B6B72;--tx-faint:#4a3f28;--bg:#0A0A0C;--bg-panel:#0A0A0C;--bg-win:#0d0a06;--red:#e05030;--red-b:#ff7050;--grn:#b8c840;--cyn:#64D2FF;font-family:"SF Mono",Menlo,Monaco,Consolas,"Courier New",monospace;font-size:11.5px;line-height:1.55;color:var(--tx)}',
+      '.ow550c *{box-sizing:border-box}',
+      '.ow550c .win{position:relative;display:flex;flex-direction:column;background:var(--bg-panel);border:1px solid var(--am-d);box-shadow:inset 0 0 30px rgba(232,160,32,.03)}',
+      '.ow550c .win:before,.ow550c .win:after{content:"";position:absolute;width:8px;height:8px;border-color:var(--am);z-index:5;pointer-events:none}',
+      '.ow550c .win:before{top:-1px;left:-1px;border-top:2px solid;border-left:2px solid}',
+      '.ow550c .win:after{bottom:-1px;right:-1px;border-bottom:2px solid;border-right:2px solid}',
+      '.ow550c .whead{display:flex;align-items:center;gap:8px;padding:4px 8px;background:linear-gradient(180deg,#161006,#0A0A0C);border-bottom:1px solid var(--am-d);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--am)}',
+      '.ow550c .whead .tag{margin-left:auto;color:var(--tx-faint);font-size:9px;letter-spacing:.1em;text-transform:none}',
+      '.ow550c .led{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 6px var(--grn);animation:owpulse 1.2s infinite;flex:none}',
+      '.ow550c .led.red{background:var(--red);box-shadow:0 0 6px var(--red)}',
+      '.ow550c .led.amber{background:var(--am-b);box-shadow:0 0 6px var(--am-b)}',
+      '@keyframes owpulse{0%,100%{opacity:1}50%{opacity:.25}}',
+      '.ow550c .sect{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--am-d);padding:6px 0 3px;border-bottom:1px dotted var(--am-fade);margin-bottom:3px}',
+      '.ow550c .body{flex:1;overflow:auto;padding:6px 8px;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(232,160,32,.3) transparent}',
+      '.ow550c .body::-webkit-scrollbar{width:5px;height:5px}',
+      '.ow550c .body::-webkit-scrollbar-thumb{background:rgba(232,160,32,.25)}',
+      '.ow550c .dt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:1px 0;font-variant-numeric:tabular-nums;font-size:10.5px}',
+      '.ow550c .dt .k{color:var(--tx-faint);letter-spacing:.05em}',
+      '.ow550c .dt .v{color:var(--tx);text-align:right}',
+      '.ow550c .ok{color:var(--grn)}.ow550c .warn{color:var(--am-b)}.ow550c .bad{color:var(--red)}.ow550c .dim{color:var(--tx-dim)}.ow550c .faint{color:var(--tx-faint)}',
+      '.ow550c .ln{white-space:pre-wrap;word-break:break-word;font-size:11.5px;color:var(--tx)}',
+      '.ow550c .ln.sys{color:var(--am)}.ow550c .ln.inf{color:var(--tx-dim)}.ow550c .ln.ok{color:var(--grn)}',
+      '.ow550c .ln.warn{color:var(--am-b)}.ow550c .ln.bad{color:var(--red)}.ow550c .ln.cmd{color:#fff;font-weight:500}',
+      '.ow550c .inp{width:100%;background:#040302;border:1px solid var(--am-d);color:var(--tx);font:inherit;font-size:11px;padding:5px 8px}',
+      '.ow550c .inp:focus{outline:none;border-color:var(--am);box-shadow:0 0 12px rgba(232,160,32,.14)}',
+      '.ow550c select.inp{cursor:pointer}',
+      '.ow550c textarea.inp{line-height:1.5;resize:vertical;min-height:52px}',
+      '.ow550c .btn{padding:4px 12px;background:linear-gradient(180deg,#1a1208,#0A0A0C);border:1px solid var(--am-d);color:var(--am);font:inherit;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap}',
+      '.ow550c .btn:hover{background:rgba(232,160,32,.15);border-color:var(--am);color:var(--am-b);box-shadow:0 0 14px rgba(232,160,32,.22)}',
+      '.ow550c .btn.primary{background:linear-gradient(180deg,#3a2408,#1a1005);border-color:var(--am);color:var(--am-b)}',
+      '.ow550c .btn.primary:hover{background:rgba(232,160,32,.25);box-shadow:0 0 18px rgba(232,160,32,.42)}',
+      '.ow550c .btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none}',
+      '.ow550c .chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--am-d);background:#0A0A0C;color:var(--tx-dim);padding:2px 8px;font-size:9.5px;letter-spacing:.06em;cursor:pointer;text-decoration:none}',
+      '.ow550c .chip:hover{color:var(--am-b);border-color:var(--am)}',
+      '.ow550c .chip.on{background:#1a1208;border-color:var(--am);color:var(--am-b)}',
+      '.ow550c .badge{background:var(--am-b);color:#1a1208;border-radius:999px;font-size:9px;padding:0 5px;font-weight:700}',
+      '.ow550c .trow{padding:5px 7px;cursor:pointer;border-left:2px solid transparent}',
+      '.ow550c .trow:hover{background:rgba(232,160,32,.05)}',
+      '.ow550c .trow.on{border-left-color:var(--am);background:rgba(232,160,32,.08)}',
+      '.ow550c .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.ow550c .scan{position:relative}',
+      '.ow550c .scan:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(232,160,32,.04) 0,rgba(232,160,32,.04) 1px,transparent 1px,transparent 3px);z-index:6}',
+      '.ow550c .meter{height:8px;background:#0A0A0C;border:1px solid var(--am-d);position:relative;overflow:hidden}',
+      '.ow550c .meter i{display:block;height:100%;background:linear-gradient(90deg,var(--am-d),var(--am-b));box-shadow:0 0 8px var(--am-fade)}',
+      '.ow550c .alert{height:2px;background:repeating-linear-gradient(90deg,var(--red) 0 10px,transparent 10px 20px);animation:owalertmove 1s linear infinite}',
+      '@keyframes owalertmove{from{background-position:0 0}to{background-position:20px 0}}',
+    ].join('')
+
+    /** DSH 指挥舱皮肤（Open World 自有语言，取自 styles.js 的 --ow-* 令牌）：
+     *  金 #ffc043 / 琥珀 #E7B24B / 青 #64D2FF / 绿 #b8c840 于近黑底，
+     *  双语微标签、菱形信号点、标尺发丝线、四角切口、网格底 —— 与 550C 的琥珀 CRT 区分开。 */
+    exports.OW_SKIN_DSH = [
+      '.owd{--tx:#F2F2F4;--tx2:#A3A3A8;--tx3:#6B6B72;--hair:rgba(255,255,255,.08);--hair2:rgba(255,255,255,.16);--acc:#E7B24B;--accSoft:rgba(231,178,75,.14);--blue:#64D2FF;--grn:#30D158;--red:#FF453A;--panel:rgba(255,255,255,.035);--elev:rgba(255,255,255,.06);',
+      'font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;font-size:13px;line-height:1.6;color:var(--tx);-webkit-font-smoothing:antialiased}',
+      '.owd *{box-sizing:border-box}',
+      '.owd .panel{position:relative;border:1px solid var(--hair);border-radius:14px;background:var(--panel);backdrop-filter:blur(24px) saturate(140%);overflow:hidden}',
+      '.owd .head{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--hair)}',
+      '.owd .zh{font-size:13.5px;font-weight:590;letter-spacing:-.01em;color:var(--tx)}',
+      '.owd .en{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);font-weight:500}',
+      '.owd .sig{width:7px;height:7px;border-radius:50%;background:var(--grn);flex:none}',
+      '.owd .sig.red{background:var(--red)}',
+      '.owd .ruler{height:1px;background:var(--hair)}',
+      '.owd .tag{margin-left:auto;font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums}',
+      '.owd .sect{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:560;letter-spacing:.02em;color:var(--tx2);padding:14px 2px 7px}',
+      '.owd .sect:after{content:"";flex:1;height:1px;background:var(--hair)}',
+      '.owd .body{flex:1;overflow:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}',
+      '.owd .body::-webkit-scrollbar{width:8px;height:8px}',
+      '.owd .body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}',
+      '.owd .card{border:1px solid var(--hair);border-radius:12px;background:rgba(255,255,255,.028);padding:9px 12px;margin-bottom:7px}',
+      '.owd .card.me{border-left:2px solid var(--acc)}',
+      '.owd .card.ag{border-left:2px solid var(--blue)}',
+      '.owd .card.sys{border-left:2px solid var(--tx3);background:rgba(255,255,255,.015)}',
+      '.owd .card:hover{border-color:var(--hair2)}',
+      '.owd .meta{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--tx2);display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-variant-numeric:tabular-nums}',
+      '.owd .ln{font-size:13px;line-height:1.62;color:var(--tx);white-space:pre-wrap;word-break:break-word;padding-top:3px}',
+      '.owd .muted{color:var(--tx3)}',
+      '.owd .ok{color:var(--grn)}.owd .warn{color:var(--acc)}.owd .bad{color:var(--red)}.owd .info{color:var(--blue)}.owd .dim{color:var(--tx2)}.owd .faint{color:var(--tx3)}',
+      '.owd .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);background:var(--elev);color:var(--tx2);padding:4px 11px;border-radius:999px;font-size:12px;cursor:pointer;user-select:none;transition:background .18s ease,border-color .18s ease,color .18s ease}',
+      '.owd .chip:hover{background:rgba(255,255,255,.1);color:var(--tx);border-color:var(--hair2)}',
+      '.owd .chip.on{background:var(--accSoft);border-color:rgba(231,178,75,.5);color:#F5D9A0;font-weight:560}',
+      '.owd .chip.att{border-style:solid}',
+      '.owd .chip.info.on{background:rgba(100,210,255,.16);border-color:rgba(100,210,255,.5);color:#CFEFFF}',
+      '.owd .inp{background:rgba(0,0,0,.35);border:1px solid var(--hair);border-radius:10px;color:var(--tx);font:inherit;font-size:13px;padding:8px 11px;width:100%}',
+      '.owd .inp:focus{outline:none;border-color:var(--hair2);box-shadow:0 0 0 3px rgba(231,178,75,.14)}',
+      '.owd textarea.inp{line-height:1.6;resize:vertical;min-height:58px}',
+      '.owd select.inp{cursor:pointer}',
+      '.owd .btn{border:1px solid var(--hair);border-radius:9px;background:var(--elev);color:var(--tx);padding:6px 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .18s ease,border-color .18s ease,transform .18s ease}',
+      '.owd .btn:hover{background:rgba(255,255,255,.1);border-color:var(--hair2)}',
+      '.owd .btn:active{transform:scale(.985)}',
+      '.owd .btn.primary{background:var(--acc);border-color:transparent;color:#161006;font-weight:600}',
+      '.owd .btn.primary:hover{background:#F0C674}',
+      '.owd .btn[disabled]{opacity:.35;cursor:not-allowed}',
+      '.owd .row{padding:9px 10px;border-radius:10px;cursor:pointer}',
+      '.owd .row:hover{background:rgba(255,255,255,.055)}',
+      '.owd .row.on{background:var(--accSoft)}',
+      '.owd .row .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.owd .badge{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.1);color:var(--tx);flex:none}',
+      '.owd .badge.cyn{background:rgba(100,210,255,.18);color:#CFEFFF}',
+      '.owd .meter{height:5px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden;margin-top:5px}',
+      '.owd .meter i{display:block;height:100%;border-radius:999px;background:var(--acc)}',
+      '.owd .foot{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--hair);font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--tx3)}',
+      '.owd .divider{height:1px;background:var(--hair);margin:9px 0}',
+    ].join('')
+
+    /** 皮肤选择：默认「精修版」Apple-like；OW_SKIN_550C 仅作怀旧可选 */
+    exports.OW_SKIN_ACTIVE = exports.OW_SKIN_DSH
+
+    /** 壳顶用法条：关闭后写入 localStorage */
+    exports.SHELL_GUIDE_KEY = 'dsh-open-world-shell-guide-dismissed'
+
+    /** 客户端节点中文名（与服务端 index.js NODE_ZH 同步） */
     exports.NODE_ZH = {
       core: '核心系统',
       'ai-engine': 'AI 引擎',
@@ -929,30 +989,22 @@ window.__ModuleLoader__.load({
       'session-active': '当前会话',
     }
 
+    /** 客户端节点布局（orbit/angle）与语义色（v2 色板） */
     exports.NODE_LAYOUT = {
-      core: { orbit: 0, angle: 0, en: 'CORE SYSTEM', color: '#ffffff' },
-      analytics: { orbit: 4, angle: -70, en: 'DATA ANALYTICS', color: '#bfe38e' },
-      'ai-engine': { orbit: 3, angle: 20, en: 'AI ENGINE', color: '#f5d67a' },
-      security: { orbit: 3, angle: 95, en: 'SECURITY', color: '#5eead4' },
-      network: { orbit: 4, angle: 145, en: 'NETWORK', color: '#bfe38e' },
-      storage: { orbit: 4, angle: 215, en: 'STORAGE', color: '#7ab8f5' },
-      'user-hub': { orbit: 3.5, angle: 250, en: 'USER HUB', color: '#f4a261' },
-      'task-board': { orbit: 3, angle: -130, en: 'TASK QUEUE', color: '#38bdf8' },
-      runtime: { orbit: 3.5, angle: 170, en: 'RUNTIME', color: '#7c8ea6' },
-      memory: { orbit: 2.5, angle: -40, en: 'MEMORY BANK', color: '#a78bfa' },
+      core: { orbit: 0, angle: 0, en: 'CORE SYSTEM', color: '#F2F2F4' },
+      analytics: { orbit: 4, angle: -70, en: 'DATA ANALYTICS', color: '#64D2FF' },
+      'ai-engine': { orbit: 3, angle: 20, en: 'AI ENGINE', color: '#F0C674' },
+      security: { orbit: 3, angle: 95, en: 'SECURITY', color: '#E7B24B' },
+      network: { orbit: 4, angle: 145, en: 'NETWORK', color: '#30D158' },
+      storage: { orbit: 4, angle: 215, en: 'STORAGE', color: '#F0C674' },
+      'user-hub': { orbit: 3.5, angle: 250, en: 'USER HUB', color: '#FF9F0A' },
+      'task-board': { orbit: 3, angle: -130, en: 'TASK QUEUE', color: '#30D158' },
+      runtime: { orbit: 3.5, angle: 170, en: 'RUNTIME', color: '#6B6B72' },
+      memory: { orbit: 2.5, angle: -40, en: 'MEMORY BANK', color: '#64D2FF' },
     }
 
+    /** 事件圆点类名（对应 styles.js .ow-event-dot.*） */
     exports.EVENT_COLORS = ['green', 'gold', 'cyan', 'orange', 'purple']
-    exports.LOAD_COLORS = ['#5eead4', '#bfe38e', '#f5d67a', '#7ab8f5']
-
-    exports.QUICK_ACTIONS = [
-      { icon: 'plus', label: '新建任务', action: { type: 'task-create', title: '开放世界 · 新任务' } },
-      { icon: 'backup', label: '任务看板', action: { type: 'embed', label: '任务看板', panel: 'task-board' } },
-      { icon: 'diagnosis', label: '回退', action: { type: 'embed', label: '回退时间轴', panel: 'rewind' } },
-    ]
-
-    /** 壳顶用法条：关闭后写入 localStorage */
-    exports.SHELL_GUIDE_KEY = 'dsh-open-world-shell-guide-dismissed'
 
     return module.exports
   },
@@ -969,16 +1021,22 @@ window.__ModuleLoader__.load({
     const CSS = `
 .ow-root,.ow-root *{box-sizing:border-box}
 .ow-root{
-  --ow-bg-deep:#05070d;--ow-bg-panel:rgba(18,26,38,.55);--ow-border:rgba(94,234,212,.18);
-  --ow-border-strong:rgba(94,234,212,.35);--ow-text:#e6f1ff;--ow-text-2:#7c8ea6;
-  --ow-text-muted:#4a5a70;--ow-cyan:#5eead4;--ow-gold:#f5d67a;--ow-green:#bfe38e;
-  --ow-orange:#f4a261;--ow-blue:#7ab8f5;--ow-glow:0 0 12px rgba(94,234,212,.45);
-  --ow-mono:Consolas,'Courier New',ui-monospace,monospace;
-  --ow-display:Consolas,'Segoe UI','Microsoft YaHei UI',sans-serif;
-  font-family:'Segoe UI','Microsoft YaHei UI',system-ui,sans-serif;color:var(--ow-text);
+  /* Apple-like 深色体系：中性近黑 + 单一金点缀 + 系统字体（数字用等宽） */
+  --ow-bg-deep:#0A0A0C;--ow-bg-panel:rgba(255,255,255,.035);--ow-bg-elev:rgba(255,255,255,.06);
+  --ow-border:rgba(255,255,255,.08);--ow-border-strong:rgba(255,255,255,.16);
+  --ow-text:#F2F2F4;--ow-text-2:#A3A3A8;--ow-text-muted:#7A7A7A;
+  --ow-accent:#E7B24B;--ow-accent-soft:rgba(231,178,75,.14);
+  --ow-green:#30D158;--ow-orange:#FF9F0A;--ow-red:#FF453A;--ow-blue:#64D2FF;
+  /* 兼容旧变量名（旧代码仍在使用） */
+  --ow-cyan:var(--ow-accent);--ow-gold:#F0C674;--ow-glow:none;
+  --ow-radius:12px;--ow-radius-sm:8px;--ow-shadow:0 10px 30px rgba(0,0,0,.5);
+  --ow-mono:'SF Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  --ow-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI Variable Display','Segoe UI','Microsoft YaHei UI',system-ui,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',system-ui,sans-serif;
+  color:var(--ow-text);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
 .ow-trigger{display:grid;place-items:center;width:28px;height:28px;border:none;border-radius:999px;background:transparent;color:var(--dsw-alias-label-secondary,#aab);cursor:pointer;font-size:15px;transition:all .2s}
-.ow-trigger:hover{background:rgba(94,234,212,.12);color:var(--ow-cyan);box-shadow:var(--ow-glow)}
+.ow-trigger:hover{background:rgba(231,178,75,.12);color:var(--ow-cyan);}
 .ow-overlay{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;overflow:hidden;background:var(--ow-bg-deep);color:var(--ow-text);isolation:isolate;transition:width .2s ease,height .2s ease,inset .2s ease,border-radius .2s ease,box-shadow .2s ease}
 .ow-overlay.is-split{inset:0 0 0 auto;width:min(56vw,960px);border-left:1px solid var(--ow-border-strong);box-shadow:-16px 0 48px rgba(0,0,0,.5)}
 .ow-overlay.is-float{inset:auto;top:7vh;left:10vw;width:min(80vw,1180px);height:86vh;border-radius:8px;border:1px solid var(--ow-border-strong);box-shadow:0 24px 64px rgba(0,0,0,.55)}
@@ -987,131 +1045,111 @@ window.__ModuleLoader__.load({
 .ow-overlay.is-split .ow-body,.ow-overlay.is-float .ow-body{grid-template-columns:240px 1fr;padding:12px 14px}
 .ow-overlay.is-split .ow-side-right,.ow-overlay.is-float .ow-side-right{display:none}
 .ow-wm-bar{display:flex;align-items:center;gap:6px}
-.ow-wm-btn{border:1px solid var(--ow-border);background:rgba(8,14,24,.65);color:var(--ow-text-2);border-radius:4px;padding:6px 10px;cursor:pointer;font-size:11px;letter-spacing:.04em;transition:all .15s}
-.ow-wm-btn:hover{color:var(--ow-cyan);border-color:var(--ow-cyan)}
-.ow-wm-btn.on{color:var(--ow-cyan);border-color:var(--ow-cyan);background:rgba(94,234,212,.1);box-shadow:var(--ow-glow)}
-.ow-dock{display:flex;align-items:center;gap:6px;padding:6px;border-radius:999px;background:rgba(8,14,24,.92);border:1px solid var(--ow-border-strong);box-shadow:var(--ow-glow);backdrop-filter:blur(8px)}
+.ow-wm-btn{border:1px solid var(--ow-border);background:rgba(255,255,255,.04);color:var(--ow-text-2);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;letter-spacing:0;transition:background .15s,color .15s,border-color .15s}
+.ow-wm-btn:hover{color:var(--ow-text);background:rgba(255,255,255,.08)}
+.ow-wm-btn.on{color:var(--ow-accent);border-color:rgba(231,178,75,.4);background:rgba(231,178,75,.08)}
+.ow-dock{display:flex;align-items:center;gap:6px;padding:6px;border-radius:999px;background:rgba(20,20,22,.92);border:1px solid var(--ow-border-strong);backdrop-filter:blur(8px)}
 .ow-dock-chip{display:inline-flex;align-items:center;gap:8px;border:none;background:transparent;color:var(--ow-cyan);cursor:pointer;font-size:12px;font-family:var(--ow-mono);padding:4px 10px;letter-spacing:.08em}
 .ow-dock-chip:hover{color:#fff}
 .ow-dock-mark{font-size:14px}
-.ow-dock-unread{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#f472b6;color:#fff;font-size:10px;display:grid;place-items:center}
-.ow-dock-close{width:24px;height:24px;border:none;border-radius:999px;background:transparent;color:#7c8ea6;cursor:pointer;font-size:14px}
+.ow-dock-unread{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#FF453A;color:#fff;font-size:11px;display:grid;place-items:center}
+.ow-dock-close{width:24px;height:24px;border:none;border-radius:999px;background:transparent;color:#A3A3A8;cursor:pointer;font-size:14px}
 .ow-dock-close:hover{color:#ffb8b8;background:rgba(80,20,20,.35)}
 .ow-fleet{display:flex;flex-direction:column;gap:4px}
-.ow-fleet-summary{font-size:11px;color:#5eead4;margin-bottom:6px;font-family:var(--ow-mono)}
-.ow-fleet-hint{font-size:10px;color:#64748b;margin-bottom:6px;line-height:1.4}
-.ow-fleet-row{display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid rgba(94,234,212,.12);border-radius:4px;font-size:11px}
-.ow-fleet-row.ow-clickable:hover{background:rgba(94,234,212,.06)}
+.ow-fleet-summary{font-size:11px;color:#E7B24B;margin-bottom:6px;font-family:var(--ow-mono)}
+.ow-fleet-hint{font-size:11px;color:#6B6B72;margin-bottom:6px;line-height:1.4}
+.ow-fleet-row{display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid rgba(231,178,75,.12);border-radius:8px;font-size:11px}
+.ow-fleet-row.ow-clickable:hover{background:rgba(231,178,75,.06)}
 .ow-fleet-row-static{cursor:default;opacity:.92}
-.ow-fleet-row.status-running,.ow-fleet-row.status-active,.ow-fleet-row.status-busy{border-color:rgba(94,234,212,.35)}
-.ow-fleet-kind{color:#7c8ea6;font-size:10px;letter-spacing:.04em}
+.ow-fleet-row.status-running,.ow-fleet-row.status-active,.ow-fleet-row.status-busy{border-color:rgba(231,178,75,.35)}
+.ow-fleet-kind{color:#A3A3A8;font-size:11px;letter-spacing:.04em}
 .ow-fleet-main{min-width:0;display:flex;flex-direction:column;gap:3px}
-.ow-fleet-title{color:#e6f1ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ow-fleet-title{color:#F2F2F4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ow-fleet-stages{display:flex;flex-wrap:wrap;gap:3px}
-.ow-fleet-stage{font-size:9px;color:#94a3b8;padding:1px 5px;border:1px solid rgba(148,163,184,.25);border-radius:3px;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ow-fleet-pct{color:#f5d67a;font-family:var(--ow-mono);font-size:10px}
-.ow-fleet-status{color:#5eead4;font-size:10px}
+.ow-fleet-stage{font-size:11px;color:#A3A3A8;padding:1px 5px;border:1px solid rgba(148,163,184,.25);border-radius:8px;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ow-fleet-pct{color:#F0C674;font-family:var(--ow-mono);font-size:11px}
+.ow-fleet-status{color:#E7B24B;font-size:11px}
 .ow-topbar.is-float-drag{cursor:grab}
 .ow-topbar.is-float-drag:active{cursor:grabbing}
-.ow-bg-canvas{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;display:block}
-.ow-fx-vig{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 84% 78% at 50% 50%,rgba(0,0,0,0) 46%,rgba(0,0,0,.34) 76%,rgba(0,0,0,.80) 100%)}
-.ow-fx-scan{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.22;background:repeating-linear-gradient(180deg,rgba(255,255,255,.03) 0 1px,rgba(0,0,0,0) 1px 3px)}
-.ow-fx-sweep{position:absolute;left:0;right:0;height:44vh;z-index:1;pointer-events:none;opacity:.09;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(159,228,255,.10),rgba(0,0,0,0));animation:owSweep 14s linear infinite}
-@keyframes owSweep{0%{transform:translateY(-50vh)}100%{transform:translateY(120vh)}}
-.ow-starfield{position:absolute;inset:0;z-index:0;pointer-events:none;background:
-  radial-gradient(ellipse at 50% 50%,rgba(30,58,70,.25) 0%,transparent 55%),
-  radial-gradient(ellipse at 20% 80%,rgba(15,40,60,.3) 0%,transparent 45%),
-  var(--ow-bg-deep)}
-.ow-starfield::before,.ow-starfield::after{content:'';position:absolute;inset:0;animation:owTwinkle 6s ease-in-out infinite alternate}
-.ow-starfield::before{background-image:
-  radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,.6),transparent),
-  radial-gradient(1.5px 1.5px at 45% 35%,rgba(255,255,255,.7),transparent),
-  radial-gradient(1px 1px at 80% 15%,rgba(255,255,255,.5),transparent),
-  radial-gradient(1px 1px at 65% 60%,rgba(200,230,255,.4),transparent)}
-.ow-starfield::after{animation-delay:-3s;animation-duration:8s;background-image:
-  radial-gradient(1px 1px at 30% 25%,rgba(200,230,255,.45),transparent),
-  radial-gradient(1px 1px at 70% 25%,rgba(180,210,240,.5),transparent),
-  radial-gradient(1px 1px at 50% 70%,rgba(255,255,255,.4),transparent)}
-@keyframes owTwinkle{0%{opacity:.4}100%{opacity:1}}
+.ow-overlay.is-arriving::after{content:'';position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(231,178,75,.22) 0%,transparent 55%),#0A0A0C;}
+@keyframes owArrive{0%{opacity:1}100%{opacity:0}}
 .ow-shell{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
-.ow-ver{position:absolute;top:8px;right:140px;font-size:9px;color:rgba(94,234,212,.35);letter-spacing:.15em;z-index:3;pointer-events:none;font-family:var(--ow-mono)}
-.ow-stale{position:absolute;top:28px;left:50%;transform:translateX(-50%);z-index:6;max-width:min(92vw,640px);padding:8px 14px;border:1px solid rgba(245,214,122,.45);border-radius:2px;background:rgba(40,28,8,.92);color:#f5d67a;font-size:11px;font-family:var(--ow-mono);text-align:center;pointer-events:none;letter-spacing:.02em}
-.ow-bridge-health{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;padding:6px 8px;border:1px solid rgba(94,234,212,.1);border-radius:4px;background:rgba(4,8,16,.45);font-size:9px}
-.ow-bridge-label{color:#7c8ea6;letter-spacing:1px;margin-right:4px}
-.ow-bridge-chip{padding:2px 6px;border-radius:3px;border:1px solid rgba(94,234,212,.15);color:#7c8ea6}
-.ow-bridge-chip.ok{border-color:rgba(94,234,212,.35);color:#5eead4}
+.ow-ver{position:absolute;top:8px;right:140px;font-size:11px;color:rgba(231,178,75,.35);letter-spacing:.15em;z-index:3;pointer-events:none;font-family:var(--ow-mono)}
+.ow-stale{position:absolute;top:28px;left:50%;transform:translateX(-50%);z-index:6;max-width:min(92vw,640px);padding:8px 14px;border:1px solid rgba(240,198,116,.45);border-radius:8px;background:rgba(40,28,8,.92);color:#F0C674;font-size:11px;font-family:var(--ow-mono);text-align:center;pointer-events:none;letter-spacing:.02em}
+.ow-bridge-health{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;padding:6px 8px;border:1px solid rgba(231,178,75,.1);border-radius:8px;background:rgba(5,4,3,.45);font-size:11px}
+.ow-bridge-label{color:#A3A3A8;letter-spacing:.02em;margin-right:4px}
+.ow-bridge-chip{padding:2px 6px;border-radius:8px;border:1px solid rgba(231,178,75,.15);color:#A3A3A8}
+.ow-bridge-chip.ok{border-color:rgba(231,178,75,.35);color:#E7B24B}
 .ow-bridge-chip.warn{border-color:rgba(251,191,36,.4);color:#fbbf24}
 .ow-bridge-chip.bad{border-color:rgba(255,120,120,.35);color:#ff9090}
-.ow-bridge-refresh{margin-left:auto;padding:2px 6px;border:1px solid rgba(94,234,212,.2);background:transparent;color:#5eead4;border-radius:3px;cursor:pointer;font-size:10px}
-.ow-metaphor-tag{display:inline-block;margin-left:8px;padding:1px 6px;font-size:8px;letter-spacing:.5px;border:1px solid rgba(167,139,250,.35);color:#a78bfa;border-radius:3px;vertical-align:middle}
-.ow-derived-tag{display:inline-block;margin-left:6px;padding:1px 5px;font-size:8px;border:1px solid rgba(94,234,212,.2);color:#7c8ea6;border-radius:3px}
-.ow-topbar{height:60px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ow-border);background:linear-gradient(to bottom,rgba(10,18,28,.8),rgba(10,18,28,.3));position:relative}
-.ow-topbar::before{content:'';position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);width:40%;height:1px;background:linear-gradient(to right,transparent,var(--ow-cyan),transparent);box-shadow:var(--ow-glow)}
+.ow-bridge-refresh{margin-left:auto;padding:2px 6px;border:1px solid rgba(231,178,75,.2);background:transparent;color:#E7B24B;border-radius:8px;cursor:pointer;font-size:11px}
+.ow-metaphor-tag{display:inline-block;margin-left:8px;padding:1px 6px;font-size:10.5px;letter-spacing:.5px;border:1px solid rgba(100,210,255,.35);color:#64D2FF;border-radius:8px;vertical-align:middle}
+.ow-derived-tag{display:inline-block;margin-left:6px;padding:1px 5px;font-size:10.5px;border:1px solid rgba(231,178,75,.2);color:#A3A3A8;border-radius:8px}
+.ow-topbar{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ow-border);background:rgba(10,10,12,.65);backdrop-filter:blur(20px) saturate(140%);position:relative}
 .ow-topbar-left,.ow-topbar-right{display:flex;align-items:center;gap:22px}
 .ow-brand{display:flex;align-items:center;gap:10px}
-.ow-brand-logo{width:28px;height:28px;border:1.5px solid var(--ow-cyan);border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}
-.ow-brand-logo::before{content:'';width:14px;height:14px;border:1px solid var(--ow-cyan);border-radius:50%}
-.ow-brand-name{font-family:var(--ow-display);font-size:18px;font-weight:700;letter-spacing:3px;color:var(--ow-text)}
-.ow-icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ow-border);border-radius:4px;color:var(--ow-text-2);cursor:default;background:transparent;transition:all .2s}
-.ow-icon-btn:hover{color:var(--ow-cyan);border-color:var(--ow-cyan);box-shadow:var(--ow-glow)}
-.ow-topbar-center{display:flex;flex-direction:column;align-items:center;position:absolute;left:50%;transform:translateX(-50%);top:8px}
-.ow-topbar-time{font-family:var(--ow-mono);font-size:18px;font-weight:500;letter-spacing:2px;color:var(--ow-text)}
-.ow-topbar-date{font-size:11px;color:var(--ow-text-2);letter-spacing:1px;font-family:var(--ow-mono)}
-.ow-close{border:1px solid rgba(255,100,100,.3);background:rgba(80,20,20,.35);color:#ffb8b8;border-radius:4px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.06em;transition:all .2s}
-.ow-close:hover{background:rgba(120,30,30,.5);box-shadow:0 0 16px rgba(255,80,80,.2)}
+.ow-brand-logo{width:18px;height:18px;position:relative;border-radius:50%;background:radial-gradient(circle at 35% 32%,#F6DFA6 0%,var(--ow-accent) 46%,rgba(231,178,75,.12) 78%,transparent 100%);box-shadow:0 0 8px rgba(231,178,75,.35),inset -1px -2px 3px rgba(10,10,12,.55)}
+.ow-brand-logo::before{content:'';position:absolute;left:50%;top:50%;width:26px;height:9px;margin:-4.5px 0 0 -13px;border:1px solid rgba(231,178,75,.45);border-top-color:rgba(231,178,75,.15);border-radius:50%;transform:rotate(-22deg);pointer-events:none}
+.ow-brand-logo::after{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 68% 70%,rgba(10,10,12,.5) 0%,transparent 52%)}
+.ow-brand-name{font-size:13px;font-weight:590;letter-spacing:0;color:var(--ow-text)}
+.ow-icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;border-radius:8px;color:var(--ow-text-2);cursor:default;background:transparent;transition:background .18s,color .18s}
+.ow-icon-btn:hover{color:var(--ow-text);background:rgba(255,255,255,.08)}
+.ow-topbar-clock{font-family:var(--ow-mono);font-size:11.5px;color:var(--ow-text-muted);margin-right:10px;font-variant-numeric:tabular-nums}
+.ow-close{border:1px solid var(--ow-border);background:rgba(255,255,255,.04);color:var(--ow-text-2);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:500;letter-spacing:0;transition:background .18s,color .18s}
+.ow-close:hover{background:rgba(255,255,255,.09);color:var(--ow-text)}
 .ow-body{flex:1;display:grid;grid-template-columns:300px 1fr 300px;gap:0;padding:16px 20px;min-height:0}
 .ow-side{display:flex;flex-direction:column;overflow-y:auto;min-height:0}
 .ow-side-left{padding-right:4px}
-.ow-side-tabs{display:flex;gap:4px;margin-bottom:10px;padding:0 2px;position:sticky;top:0;z-index:3;background:linear-gradient(180deg,rgba(6,10,18,.98) 70%,transparent)}
-.ow-side-tab{flex:1;border:1px solid var(--ow-border);background:rgba(8,14,24,.65);color:var(--ow-text-muted);font-size:11px;padding:7px 4px;cursor:pointer;border-radius:2px;letter-spacing:.4px;transition:border-color .15s,color .15s}
+.ow-side-tabs{display:flex;gap:4px;margin-bottom:10px;padding:0 2px;position:sticky;top:0;z-index:3;background:rgba(10,10,12,.85);backdrop-filter:blur(12px)}
+.ow-side-tab{flex:1;border:1px solid var(--ow-border);background:rgba(255,255,255,.03);color:var(--ow-text-muted);font-size:11px;padding:7px 4px;cursor:pointer;border-radius:8px;letter-spacing:0;transition:border-color .15s,color .15s,background .15s}
 .ow-side-tab:hover{color:var(--ow-text-2)}
-.ow-side-tab.on{border-color:var(--ow-cyan);color:var(--ow-cyan);background:rgba(94,234,212,.08)}
-.ow-side-hint{font-size:10px;color:#5a6a80;line-height:1.55;margin-bottom:8px;padding:0 4px}
+.ow-side-tab.on{border-color:var(--ow-cyan);color:var(--ow-cyan);background:rgba(231,178,75,.08)}
+.ow-side-hint{font-size:11px;color:#6B6B72;line-height:1.55;margin-bottom:8px;padding:0 4px}
 .ow-status-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.ow-status-chip{font-size:10px;padding:3px 8px;border:1px solid rgba(94,234,212,.15);border-radius:3px;color:#9fb4cc}
-.ow-status-chip.ok{border-color:rgba(94,234,212,.35);color:#5eead4}
+.ow-status-chip{font-size:11px;padding:3px 8px;border:1px solid rgba(231,178,75,.15);border-radius:8px;color:#A3A3A8}
+.ow-status-chip.ok{border-color:rgba(231,178,75,.35);color:#E7B24B}
 .ow-status-chip.off{opacity:.55}
 .ow-side-right{padding-left:4px}
 .ow-side::-webkit-scrollbar{width:3px}
-.ow-side::-webkit-scrollbar-thumb{background:var(--ow-border-strong);border-radius:2px}
-.ow-panel{background:var(--ow-bg-panel);border:1px solid var(--ow-border);border-radius:2px;position:relative;backdrop-filter:blur(4px);margin-bottom:14px}
+.ow-side::-webkit-scrollbar-thumb{background:var(--ow-border-strong);border-radius:8px}
+.ow-panel{background:var(--ow-bg-panel);border:1px solid var(--ow-border);border-radius:8px;position:relative;backdrop-filter:blur(4px);margin-bottom:14px}
 .ow-panel::before,.ow-panel::after{content:'';position:absolute;width:10px;height:10px;border-color:var(--ow-cyan);border-style:solid;border-width:0;pointer-events:none}
 .ow-panel::before{top:-1px;left:-1px;border-top-width:1.5px;border-left-width:1.5px}
 .ow-panel::after{bottom:-1px;right:-1px;border-bottom-width:1.5px;border-right-width:1.5px}
 .ow-panel-head{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ow-border)}
 .ow-panel-title{display:flex;flex-direction:column;gap:2px}
-.ow-panel-title-zh{font-size:13px;font-weight:500;color:var(--ow-text);letter-spacing:1px}
-.ow-panel-title-en{font-size:10px;color:var(--ow-text-muted);letter-spacing:1.5px;font-family:var(--ow-mono);text-transform:uppercase}
+.ow-panel-title-zh{font-size:13px;font-weight:500;color:var(--ow-text);letter-spacing:.02em}
+.ow-panel-title-en{font-size:11px;color:var(--ow-text-muted);letter-spacing:.02em;font-family:var(--ow-mono);text-transform:uppercase}
 .ow-panel-more{font-size:11px;color:var(--ow-text-muted);cursor:pointer}
 .ow-panel-body{padding:14px 16px}
 .ow-center{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
 .ow-galaxy-wrap{position:relative;width:100%;height:100%;max-width:720px;max-height:720px;aspect-ratio:1/1}
 .ow-galaxy-title{position:absolute;top:8%;left:50%;transform:translateX(-50%);font-family:var(--ow-display);font-size:13px;color:var(--ow-text-muted);letter-spacing:8px;text-transform:uppercase;opacity:.6;z-index:1}
 .ow-galaxy-svg{width:100%;height:100%}
-.ow-orbit-ring{fill:none;stroke:rgba(94,234,212,.08);stroke-width:1;stroke-dasharray:4 6}
-.ow-orbit-ring.hl{stroke:rgba(94,234,212,.18);stroke-dasharray:none}
-.ow-rotate-slow{animation:owSpin 120s linear infinite;transform-origin:350px 350px}
-.ow-rotate-slow2{animation:owSpin 180s linear infinite reverse;transform-origin:350px 350px}
-.ow-rotate-rev{animation:owSpin 90s linear infinite reverse;transform-origin:350px 350px}
+.ow-orbit-ring{fill:none;stroke:rgba(231,178,75,.08);stroke-width:1;stroke-dasharray:4 6}
+.ow-orbit-ring.hl{stroke:rgba(231,178,75,.18);stroke-dasharray:none}
+.ow-rotate-slow{transform-origin:350px 350px}
+.ow-rotate-slow2{transform-origin:350px 350px}
+.ow-rotate-rev{transform-origin:350px 350px}
 @keyframes owSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.ow-core-pulse{animation:owPulse 3s ease-in-out infinite}
+.ow-core-pulse{}
 @keyframes owPulse{0%,100%{opacity:.85}50%{opacity:1}}
 .ow-node{cursor:pointer}
 .ow-node:hover{filter:brightness(1.15)}
-.ow-orbit-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:2px;background:rgba(8,16,28,.85);border:1px solid var(--ow-border);font-size:12px;color:var(--ow-cyan);white-space:nowrap;backdrop-filter:blur(8px);z-index:2;font-family:var(--ow-mono)}
+.ow-orbit-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:8px;background:rgba(20,20,22,.88);border:1px solid var(--ow-border);font-size:12px;color:var(--ow-cyan);white-space:nowrap;backdrop-filter:blur(8px);z-index:2;font-family:var(--ow-mono)}
 .ow-health-wrap{display:flex;align-items:center;justify-content:center;padding:4px 0 10px;position:relative}
 .ow-health-ring{position:relative;width:110px;height:110px}
 .ow-health-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ow-health-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ow-health-val{font-family:var(--ow-display);font-size:32px;font-weight:600;color:var(--ow-cyan);line-height:1;text-shadow:var(--ow-glow)}
+.ow-health-val{font-family:var(--ow-display);font-size:32px;font-weight:600;color:var(--ow-cyan);line-height:1;}
 .ow-health-unit{font-size:11px;color:var(--ow-text-muted);font-family:var(--ow-mono);margin-top:2px}
 .ow-health-label{text-align:center;margin-top:2px}
-.ow-health-label-main{font-size:12px;color:var(--ow-text-2);letter-spacing:1px}
-.ow-health-label-sub{font-size:10px;color:var(--ow-text-muted);letter-spacing:1.5px;font-family:var(--ow-mono);margin-top:2px}
+.ow-health-label-main{font-size:12px;color:var(--ow-text-2);letter-spacing:.02em}
+.ow-health-label-sub{font-size:11px;color:var(--ow-text-muted);letter-spacing:.02em;font-family:var(--ow-mono);margin-top:2px}
 .ow-spark{width:100%;height:36px;display:block;margin-top:8px}
-.ow-load-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(94,234,212,.07)}
+.ow-load-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(231,178,75,.07)}
 .ow-load-item:last-child{border-bottom:none}
-.ow-load-label{font-family:var(--ow-mono);font-size:12px;color:var(--ow-text-2);letter-spacing:1px;width:44px}
+.ow-load-label{font-family:var(--ow-mono);font-size:12px;color:var(--ow-text-2);letter-spacing:.02em;width:44px}
 .ow-load-wave{flex:1;height:24px;margin:0 8px}
 .ow-load-val{font-family:var(--ow-mono);font-size:13px;color:var(--ow-text);font-weight:500;width:60px;text-align:right}
 .ow-event-list{display:flex;flex-direction:column;gap:10px}
@@ -1121,7 +1159,7 @@ window.__ModuleLoader__.load({
 .ow-event-dot.gold{background:var(--ow-gold);color:var(--ow-gold)}
 .ow-event-dot.cyan{background:var(--ow-cyan);color:var(--ow-cyan)}
 .ow-event-dot.orange{background:var(--ow-orange);color:var(--ow-orange)}
-.ow-event-dot.purple{background:#a78bfa;color:#a78bfa}
+.ow-event-dot.purple{background:#64D2FF;color:#64D2FF}
 .ow-event-text{flex:1;color:var(--ow-text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ow-event-time{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);flex-shrink:0}
 .ow-radar{width:100%;height:120px}
@@ -1132,7 +1170,7 @@ window.__ModuleLoader__.load({
 .ow-donut svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ow-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .ow-donut-total{font-family:var(--ow-display);font-size:26px;font-weight:600;color:var(--ow-text);line-height:1}
-.ow-donut-label{font-size:11px;color:var(--ow-text-muted);margin-top:4px;letter-spacing:1px}
+.ow-donut-label{font-size:11px;color:var(--ow-text-muted);margin-top:4px;letter-spacing:.02em}
 .ow-res-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;width:100%}
 .ow-res-item{display:flex;align-items:center;gap:8px;font-size:12px}
 .ow-res-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -1143,84 +1181,71 @@ window.__ModuleLoader__.load({
 .ow-task-item{display:flex;flex-direction:column;gap:6px}
 .ow-task-head{display:flex;align-items:center;justify-content:space-between;font-size:12px}
 .ow-task-name{color:var(--ow-text-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ow-task-status{font-family:var(--ow-mono);font-size:10px;padding:1px 6px;border-radius:2px;margin-left:8px;letter-spacing:.5px}
-.ow-task-status.running{color:var(--ow-cyan);background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.25)}
+.ow-task-status{font-family:var(--ow-mono);font-size:11px;padding:1px 6px;border-radius:8px;margin-left:8px;letter-spacing:.5px}
+.ow-task-status.running{color:var(--ow-cyan);background:rgba(231,178,75,.1);border:1px solid rgba(231,178,75,.25)}
 .ow-task-status.pending{color:var(--ow-text-muted);background:rgba(74,90,112,.15);border:1px solid rgba(74,90,112,.3)}
 .ow-task-pct{font-family:var(--ow-mono);font-size:11px;color:var(--ow-gold);margin-left:6px;width:32px;text-align:right}
-.ow-task-bar{height:3px;background:rgba(94,234,212,.1);border-radius:2px;overflow:hidden}
-.ow-task-fill{height:100%;border-radius:2px;transition:width 1s ease}
-.ow-task-fill.cyan{background:linear-gradient(to right,#2dd4bf,var(--ow-cyan));box-shadow:0 0 6px rgba(94,234,212,.5)}
-.ow-task-fill.gold{background:linear-gradient(to right,#d4a74b,var(--ow-gold));box-shadow:0 0 6px rgba(245,214,122,.5)}
+.ow-task-bar{height:3px;background:rgba(231,178,75,.1);border-radius:8px;overflow:hidden}
+.ow-task-fill{height:100%;border-radius:8px;transition:width 1s ease}
+.ow-task-fill.cyan{background:linear-gradient(to right,#8a5e10,var(--ow-cyan));box-shadow:0 0 6px rgba(231,178,75,.5)}
+.ow-task-fill.gold{background:linear-gradient(to right,#d4a74b,var(--ow-gold));box-shadow:0 0 6px rgba(240,198,116,.5)}
 .ow-task-fill.dim{background:var(--ow-text-muted);opacity:.4}
 .ow-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.ow-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 4px;border:1px solid var(--ow-border);border-radius:2px;background:rgba(94,234,212,.03);cursor:pointer;transition:all .2s;color:var(--ow-text-2)}
-.ow-action-btn:hover{border-color:var(--ow-cyan);color:var(--ow-cyan);background:rgba(94,234,212,.08);box-shadow:var(--ow-glow)}
+.ow-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 4px;border:1px solid var(--ow-border);border-radius:8px;background:rgba(231,178,75,.03);cursor:pointer;transition:all .2s;color:var(--ow-text-2)}
+.ow-action-btn:hover{border-color:var(--ow-cyan);color:var(--ow-cyan);background:rgba(231,178,75,.08);}
 .ow-action-label{font-size:11px;letter-spacing:.5px}
-.ow-bottom{height:110px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 28px;border-top:1px solid var(--ow-border);background:linear-gradient(to top,rgba(10,18,28,.8),rgba(10,18,28,.3));position:relative}
-.ow-bottom::before{content:'';position:absolute;left:50%;top:-1px;transform:translateX(-50%);width:40%;height:1px;background:linear-gradient(to right,transparent,var(--ow-cyan),transparent);box-shadow:var(--ow-glow)}
+.ow-bottom{height:110px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 20px;border-top:1px solid var(--ow-border);background:rgba(10,10,12,.65);backdrop-filter:blur(20px) saturate(140%);position:relative}
 .ow-log-wrap{display:flex;flex-direction:column;gap:6px;max-height:80px;overflow:hidden}
 .ow-log-head{display:flex;align-items:center;justify-content:space-between}
-.ow-log-title{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:1.5px}
+.ow-log-title{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:.02em}
 .ow-log-line{display:flex;gap:10px;align-items:center;font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-2)}
-.ow-log-time{color:var(--ow-cyan);font-size:11px}
-.ow-log-dot{width:5px;height:5px;border-radius:50%;background:var(--ow-green);box-shadow:0 0 4px var(--ow-green)}
+.ow-log-time{color:var(--ow-text-muted);font-size:11px}
+.ow-log-dot{width:5px;height:5px;border-radius:50%;background:var(--ow-green)}
 .ow-view-switch{display:flex;gap:0;align-items:center;position:relative}
-.ow-deep-toggle{position:absolute;top:-46px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 22px;background:linear-gradient(to bottom,rgba(18,26,38,.95),rgba(10,18,28,.95));border:1px solid var(--ow-border);border-bottom:none;border-radius:2px 2px 0 0;white-space:nowrap}
-.ow-deep-icon{color:var(--ow-gold)}
-.ow-deep-label{display:flex;flex-direction:column;gap:2px}
-.ow-deep-zh{font-size:12px;color:var(--ow-text);letter-spacing:2px}
-.ow-deep-en{font-family:var(--ow-mono);font-size:9px;color:var(--ow-text-muted);letter-spacing:1.5px}
-.ow-deep-switch{position:relative;width:36px;height:20px;background:rgba(74,90,112,.3);border:1px solid var(--ow-border);border-radius:10px;cursor:pointer;transition:all .3s}
-.ow-deep-switch.on{background:rgba(191,227,142,.25);border-color:var(--ow-green);box-shadow:0 0 8px rgba(191,227,142,.3)}
-.ow-deep-switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--ow-text-muted);transition:all .3s}
-.ow-deep-switch.on::after{left:18px;background:var(--ow-green);box-shadow:0 0 6px var(--ow-green)}
-.ow-view-btn{position:relative;width:140px;height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--ow-text-2);transition:all .25s;background:transparent;border:none;padding:0}
-.ow-view-hex{position:absolute;inset:0}
-.ow-view-hex polygon{fill:rgba(12,20,32,.6);stroke:var(--ow-border);stroke-width:1;transition:all .25s}
-.ow-view-btn:hover .ow-view-hex polygon{stroke:var(--ow-cyan);fill:rgba(94,234,212,.06)}
-.ow-view-btn.on{color:var(--ow-cyan)}
-.ow-view-btn.on .ow-view-hex polygon{fill:rgba(94,234,212,.1);stroke:var(--ow-cyan);stroke-width:1.5;filter:drop-shadow(0 0 4px rgba(94,234,212,.4))}
+.ow-view-btn{position:relative;width:140px;height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--ow-text-2);transition:background .18s,color .18s,border-color .18s;background:transparent;border:1px solid transparent;border-radius:12px;padding:0}
+.ow-view-btn:hover{color:var(--ow-text);background:rgba(255,255,255,.05)}
+.ow-view-btn.on{color:var(--ow-text);background:rgba(255,255,255,.07);border-color:var(--ow-border-strong)}
 .ow-view-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px}
-.ow-view-label{font-size:12px;letter-spacing:1px}
-.ow-view-sub{font-family:var(--ow-mono);font-size:9px;color:var(--ow-text-muted);letter-spacing:1px}
+.ow-view-label{font-size:12px;letter-spacing:.02em}
+.ow-view-sub{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:.02em}
 .ow-bottom-right{display:flex;align-items:center;justify-content:flex-end;gap:30px}
 .ow-metric{display:flex;flex-direction:column;gap:4px}
 .ow-metric-label{display:flex;flex-direction:column;gap:2px}
-.ow-metric-zh{font-size:11px;color:var(--ow-text-2);letter-spacing:1px}
-.ow-metric-en{font-family:var(--ow-mono);font-size:9px;color:var(--ow-text-muted);letter-spacing:1px}
-.ow-metric-val{font-family:var(--ow-mono);font-size:22px;font-weight:500;color:var(--ow-text);line-height:1}
+.ow-metric-zh{font-size:11px;color:var(--ow-text-2);letter-spacing:.02em}
+.ow-metric-en{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:.02em}
+.ow-metric-val{font-family:var(--ow-mono);font-size:15px;font-weight:500;color:var(--ow-text);line-height:1}
 .ow-metric-val .u{font-size:12px;color:var(--ow-text-2);margin-left:2px}
-.ow-metric-bar{height:3px;background:rgba(94,234,212,.1);border-radius:2px;overflow:hidden;width:100px}
-.ow-metric-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.ow-metric-bar{height:3px;background:rgba(231,178,75,.1);border-radius:8px;overflow:hidden;width:100px}
+.ow-metric-fill{height:100%;border-radius:8px;transition:width 1s ease}
 .ow-monitor{padding:24px;width:100%;max-width:860px;z-index:2}
-.ow-monitor pre{background:rgba(0,0,0,.4);border:1px solid var(--ow-border);border-radius:2px;padding:16px;font-size:11px;overflow:auto;max-height:58vh;color:var(--ow-cyan);font-family:var(--ow-mono)}
+.ow-monitor pre{background:rgba(0,0,0,.4);border:1px solid var(--ow-border);border-radius:8px;padding:16px;font-size:11px;overflow:auto;max-height:58vh;color:var(--ow-cyan);font-family:var(--ow-mono)}
 .ow-error{color:#ff9090;font-size:12px;padding:8px 18px;background:rgba(80,20,20,.3);z-index:3}
 .ow-integ-list{display:flex;flex-direction:column;gap:8px}
-.ow-integ-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--ow-border);border-radius:2px;background:rgba(94,234,212,.02);cursor:pointer;transition:all .2s}
-.ow-integ-item:hover{border-color:var(--ow-cyan);background:rgba(94,234,212,.08);box-shadow:var(--ow-glow)}
+.ow-integ-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--ow-border);border-radius:8px;background:rgba(231,178,75,.02);cursor:pointer;transition:all .2s}
+.ow-integ-item:hover{border-color:var(--ow-cyan);background:rgba(231,178,75,.08);}
 .ow-integ-item.offline{opacity:.55;cursor:default}
 .ow-integ-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .ow-integ-dot.online{background:var(--ow-green);box-shadow:0 0 6px var(--ow-green)}
 .ow-integ-dot.idle{background:var(--ow-gold);box-shadow:0 0 6px var(--ow-gold)}
 .ow-integ-dot.missing{background:var(--ow-text-muted)}
 .ow-integ-name{flex:1;font-size:12px;color:var(--ow-text)}
-.ow-integ-en{font-family:var(--ow-mono);font-size:9px;color:var(--ow-text-muted);letter-spacing:.08em}
+.ow-integ-en{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:.08em}
 .ow-action-bar{display:flex;align-items:center;gap:10px;margin-top:8px}
-.ow-action-bar button{flex:1;padding:8px 12px;border:1px solid var(--ow-border);border-radius:2px;background:rgba(94,234,212,.06);color:var(--ow-cyan);font-size:11px;cursor:pointer;transition:all .2s}
-.ow-action-bar button:hover{border-color:var(--ow-cyan);box-shadow:var(--ow-glow)}
+.ow-action-bar button{flex:1;padding:8px 12px;border:1px solid var(--ow-border);border-radius:8px;background:rgba(231,178,75,.06);color:var(--ow-cyan);font-size:11px;cursor:pointer;transition:all .2s}
+.ow-action-bar button:hover{border-color:var(--ow-cyan);}
 .ow-action-bar button.sec{color:var(--ow-text-2);background:transparent}
 .ow-orbit-hint{display:flex;flex-direction:column;align-items:center;gap:8px}
 .ow-clickable{cursor:pointer}
 .ow-clickable:hover .ow-task-name{color:var(--ow-cyan)}
-.ow-toast{position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:2147483647;padding:12px 22px;border:1px solid var(--ow-border-strong);border-radius:2px;background:rgba(10,18,28,.96);color:var(--ow-cyan);font-size:13px;font-family:var(--ow-mono);box-shadow:var(--ow-glow);pointer-events:none;max-width:min(92vw,520px);text-align:center}
+.ow-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:2147483647;padding:10px 18px;border:1px solid var(--ow-border-strong);border-radius:10px;background:rgba(20,20,22,.96);color:var(--ow-text);font-size:12.5px;pointer-events:none;max-width:min(92vw,520px);text-align:center;backdrop-filter:blur(12px)}
 .ow-topo{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:24px;width:100%;max-width:920px;z-index:2}
-.ow-topo-card{padding:14px;border:1px solid var(--ow-border);border-radius:2px;background:rgba(8,14,24,.8);cursor:pointer;transition:all .2s}
-.ow-topo-card:hover{border-color:var(--ow-cyan);box-shadow:0 0 20px rgba(94,234,212,.08)}
+.ow-topo-card{padding:14px;border:1px solid var(--ow-border);border-radius:8px;background:rgba(20,20,22,.8);cursor:pointer;transition:all .2s}
+.ow-topo-card:hover{border-color:var(--ow-cyan);box-shadow:0 0 20px rgba(231,178,75,.08)}
 .ow-neural-wrap{position:relative;width:100%;height:100%;max-width:860px;max-height:560px;aspect-ratio:860/560}
 .ow-neural-title{position:absolute;top:4%;left:50%;transform:translateX(-50%);font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:6px;z-index:1}
 .ow-neural-svg{width:100%;height:100%}
-.ow-nn-layer-label{font-family:var(--ow-mono);font-size:8px;fill:#4a5a70;letter-spacing:1.5px}
-.ow-nn-layer-label-zh{font-size:9px;fill:#6d8eb0}
+.ow-nn-layer-label{font-family:var(--ow-mono);font-size:10.5px;fill:#6B6B72;letter-spacing:.02em}
+.ow-nn-layer-label-zh{font-size:11px;fill:#A3A3A8}
 .ow-nn-edge{fill:none;stroke-width:1.5;opacity:.35;transition:opacity .3s,stroke-width .3s}
 .ow-nn-edge.active{opacity:.85;stroke-width:2}
 .ow-nn-edge-glow{fill:none;stroke-width:4;opacity:.12;filter:blur(2px)}
@@ -1228,190 +1253,1323 @@ window.__ModuleLoader__.load({
 .ow-nn-node:hover{filter:brightness(1.2)}
 .ow-nn-node.dragging{cursor:grabbing;filter:brightness(1.35)}
 .ow-neural-toolbar{position:absolute;top:4%;right:8%;display:flex;gap:6px;z-index:2}
-.ow-neural-btn{font-family:var(--ow-mono);font-size:9px;padding:4px 10px;border:1px solid rgba(94,234,212,.25);background:rgba(8,14,24,.75);color:var(--ow-text-muted);cursor:pointer;border-radius:3px;letter-spacing:1px}
+.ow-neural-btn{font-family:var(--ow-mono);font-size:11px;padding:4px 10px;border:1px solid rgba(231,178,75,.25);background:rgba(20,20,22,.75);color:var(--ow-text-muted);cursor:pointer;border-radius:8px;letter-spacing:.02em}
 .ow-neural-btn:hover{border-color:var(--ow-cyan);color:var(--ow-cyan)}
 .ow-nn-edge-hit{fill:none;stroke:transparent;stroke-width:12;pointer-events:stroke;cursor:pointer}
-.ow-nn-tooltip{position:fixed;pointer-events:none;padding:6px 10px;background:rgba(8,14,24,.92);border:1px solid rgba(94,234,212,.3);border-radius:4px;font-family:var(--ow-mono);font-size:10px;color:#e6f1ff;z-index:9999;white-space:nowrap}
-.ow-nn-tooltip-w{font-size:11px;color:#f5d67a;margin-top:2px}
-.ow-neural-hint{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);font-size:9px;color:#4a5a70;font-family:var(--ow-mono);letter-spacing:1px;z-index:1}
+.ow-nn-tooltip{position:fixed;pointer-events:none;padding:6px 10px;background:rgba(20,20,22,.92);border:1px solid rgba(231,178,75,.3);border-radius:8px;font-family:var(--ow-mono);font-size:11px;color:#F2F2F4;z-index:9999;white-space:nowrap}
+.ow-nn-tooltip-w{font-size:11px;color:#F0C674;margin-top:2px}
+.ow-neural-hint{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);font-size:11px;color:#6B6B72;font-family:var(--ow-mono);letter-spacing:.02em;z-index:1}
 .ow-nn-neuron{stroke:rgba(255,255,255,.2);stroke-width:1}
 .ow-nn-neuron.sel{stroke:#fff;stroke-width:2.5}
-.ow-nn-label{font-size:10px;fill:#e6f1ff;font-weight:500}
-.ow-nn-metric{font-size:9px;fill:#f5d67a;font-family:var(--ow-mono)}
-.ow-nn-pulse{filter:drop-shadow(0 0 4px #5eead4)}
+.ow-nn-label{font-size:11px;fill:#F2F2F4;font-weight:500}
+.ow-nn-metric{font-size:11px;fill:#F0C674;font-family:var(--ow-mono)}
+.ow-nn-pulse{}
 .ow-vp-wrap{position:relative;width:100%;height:100%;overflow:hidden;touch-action:none}
 .ow-vp-inner{position:absolute;inset:0;transform-origin:50% 50%;will-change:transform}
 .ow-vp-bg{position:absolute;inset:-40%;pointer-events:none}
 .ow-cmd-overlay{position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding-top:12vh}
-.ow-cmd{min-width:min(520px,92vw);background:rgba(10,18,28,.96);border:1px solid var(--ow-border-strong);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+.ow-cmd{min-width:min(520px,92vw);background:rgba(20,20,22,.97);border:1px solid var(--ow-border-strong);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
 .ow-cmd-input{width:100%;padding:14px 16px;border:none;background:transparent;color:var(--ow-text);font-size:14px;outline:none;font-family:var(--ow-mono)}
 .ow-cmd-list{max-height:320px;overflow-y:auto;border-top:1px solid var(--ow-border)}
 .ow-cmd-item{padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;gap:12px;font-size:13px}
-.ow-cmd-item:hover,.ow-cmd-item.sel{background:rgba(94,234,212,.08)}
-.ow-cmd-item span:last-child{font-size:10px;color:var(--ow-text-muted);font-family:var(--ow-mono)}
-.ow-embed{position:absolute;inset:8% 6%;z-index:5;background:rgba(8,14,24,.94);border:1px solid var(--ow-border-strong);border-radius:6px;display:flex;flex-direction:column;backdrop-filter:blur(8px)}
+.ow-cmd-item:hover,.ow-cmd-item.sel{background:rgba(231,178,75,.08)}
+.ow-cmd-item span:last-child{font-size:11px;color:var(--ow-text-muted);font-family:var(--ow-mono)}
+.ow-embed{position:absolute;inset:8% 6%;z-index:5;background:rgba(20,20,22,.94);border:1px solid var(--ow-border-strong);border-radius:6px;display:flex;flex-direction:column;backdrop-filter:blur(8px)}
 .ow-embed-head{padding:10px 14px;border-bottom:1px solid var(--ow-border);display:flex;justify-content:space-between;align-items:center}
 .ow-embed-body{flex:1;overflow:auto;padding:12px 14px}
-.ow-detail-card{position:absolute;top:12px;right:12px;width:240px;z-index:4;background:rgba(8,14,24,.92);border:1px solid var(--ow-border-strong);border-radius:6px;padding:12px 14px;backdrop-filter:blur(6px)}
+.ow-detail-card{position:absolute;top:12px;right:12px;width:240px;z-index:4;background:rgba(20,20,22,.92);border:1px solid var(--ow-border-strong);border-radius:6px;padding:12px 14px;backdrop-filter:blur(6px)}
 .ow-detail-title{font-size:13px;font-weight:600;color:var(--ow-text);margin-bottom:4px}
-.ow-detail-sub{font-size:10px;color:var(--ow-text-muted);font-family:var(--ow-mono);margin-bottom:10px}
-.ow-detail-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(94,234,212,.06)}
+.ow-detail-sub{font-size:11px;color:var(--ow-text-muted);font-family:var(--ow-mono);margin-bottom:10px}
+.ow-detail-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(231,178,75,.06)}
 .ow-detail-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.ow-detail-actions button{font-size:10px;padding:5px 10px;border:1px solid var(--ow-border);background:rgba(94,234,212,.08);color:var(--ow-cyan);cursor:pointer;border-radius:3px}
+.ow-detail-actions button{font-size:11px;padding:5px 10px;border:1px solid var(--ow-border);background:rgba(231,178,75,.08);color:var(--ow-cyan);cursor:pointer;border-radius:8px}
 .ow-ati-wrap{position:relative;width:100%;height:100%;max-width:920px;max-height:600px;aspect-ratio:920/600}
-.ow-ati-title{position:absolute;top:2%;left:50%;transform:translateX(-50%);font-family:var(--ow-mono);font-size:12px;color:#c4b5fd;letter-spacing:10px;z-index:2;text-shadow:0 0 20px rgba(167,139,250,.6)}
-.ow-ati-sub{position:absolute;top:6%;left:50%;transform:translateX(-50%);font-size:9px;color:#6d8eb0;letter-spacing:4px;z-index:2;font-family:var(--ow-mono)}
+.ow-ati-title{position:absolute;top:2%;left:50%;transform:translateX(-50%);z-index:2}
+.ow-ati-sub{position:absolute;top:6%;left:50%;transform:translateX(-50%);font-size:11px;color:#A3A3A8;letter-spacing:4px;z-index:2;font-family:var(--ow-mono)}
 .ow-ati-svg{width:100%;height:100%}
-.ow-ati-poincare{fill:rgba(8,12,24,.4);stroke:rgba(94,234,212,.12);stroke-width:1}
-.ow-ati-geodesic{fill:none;stroke:rgba(94,234,212,.08);stroke-width:.8}
-.ow-ati-torus{fill:none;stroke:rgba(167,139,250,.15);stroke-width:1;stroke-dasharray:6 8}
-.ow-ati-dl-box{fill:rgba(12,20,36,.7);stroke:rgba(245,214,122,.35);stroke-width:1}
-.ow-ati-dl-box.hl{stroke:#f5d67a;filter:drop-shadow(0 0 6px rgba(245,214,122,.4))}
-.ow-ati-dl-label{font-family:var(--ow-mono);font-size:7px;fill:#f5d67a;letter-spacing:1px}
-.ow-ati-dl-zh{font-size:8px;fill:#7c8ea6}
-.ow-ati-hex{fill:none;stroke:rgba(52,211,153,.4);stroke-width:1.2}
-.ow-ati-hex-node{fill:rgba(52,211,153,.25);stroke:#34d399;stroke-width:1}
-.ow-ati-bar{fill:rgba(94,234,212,.25)}
-.ow-ati-singularity{filter:url(#owAtiGlow)}
-.ow-ati-metric{font-family:var(--ow-mono);font-size:8px;fill:#a78bfa}
+.ow-ati-poincare{fill:rgba(20,20,22,.4);stroke:rgba(231,178,75,.12);stroke-width:1}
+.ow-ati-geodesic{fill:none;stroke:rgba(231,178,75,.08);stroke-width:.8}
+.ow-ati-torus{fill:none;stroke:rgba(255,255,255,.1);stroke-width:1}
+.ow-ati-dl-box{fill:rgba(12,20,36,.7);stroke:rgba(240,198,116,.35);stroke-width:1}
+.ow-ati-dl-box.hl{stroke:#F0C674;)}
+.ow-ati-dl-label{font-family:var(--ow-mono);font-size:11px;fill:#F0C674;letter-spacing:.5px}
+.ow-ati-dl-zh{font-size:11px;fill:#A3A3A8}
+.ow-ati-hex{fill:none;stroke:rgba(48,209,88,.4);stroke-width:1.2}
+.ow-ati-hex-node{fill:rgba(48,209,88,.25);stroke:#30D158;stroke-width:1}
+.ow-ati-bar{fill:rgba(231,178,75,.25)}
+.ow-ati-singularity{filter:none}
+.ow-ati-metric{font-family:var(--ow-mono);font-size:11px;fill:#64D2FF}
 .ow-ati-preset-bar{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px;z-index:3;max-width:640px}
-.ow-ati-preset{font-size:8px;padding:3px 7px;border:1px solid rgba(167,139,250,.3);background:rgba(8,14,24,.82);color:#9ca3af;cursor:pointer;border-radius:3px;font-family:var(--ow-mono);letter-spacing:.5px;transition:all .18s}
-.ow-ati-preset:hover{border-color:#5eead4;color:#c4f5ef}
-.ow-ati-preset.on{border-color:#a78bfa;color:#e9d5ff;box-shadow:0 0 14px rgba(167,139,250,.4),inset 0 0 8px rgba(167,139,250,.15)}
-.ow-ati-preset.g-top.on{border-color:#5eead4;color:#c4f5ef;box-shadow:0 0 14px rgba(94,234,212,.4)}
-.ow-ati-preset.g-ml.on{border-color:#f5d67a;color:#fdf0c2;box-shadow:0 0 14px rgba(245,214,122,.4)}
-.ow-ati-preset.g-chem.on{border-color:#34d399;color:#c8f7e3;box-shadow:0 0 14px rgba(52,211,153,.4)}
+.ow-ati-preset{font-size:11.5px;padding:4px 11px;border:1px solid var(--ow-border);background:rgba(255,255,255,.03);color:var(--ow-text-2);cursor:pointer;border-radius:999px;letter-spacing:0;transition:all .18s}
+.ow-ati-preset:hover{border-color:var(--ow-border-strong);color:var(--ow-text)}
+.ow-ati-preset.on{border-color:rgba(231,178,75,.55);color:var(--ow-accent);background:rgba(231,178,75,.07)}
+.ow-ati-preset.g-top.on{border-color:rgba(231,178,75,.55);color:var(--ow-accent);background:rgba(231,178,75,.07)}
+.ow-ati-preset.g-ml.on{border-color:rgba(231,178,75,.55);color:var(--ow-accent);background:rgba(231,178,75,.07)}
+.ow-ati-preset.g-chem.on{border-color:rgba(231,178,75,.55);color:var(--ow-accent);background:rgba(231,178,75,.07)}
 .ow-ati-lab-details{position:relative}
 .ow-ati-lab-details>summary{list-style:none}
 .ow-ati-lab-details>summary::-webkit-details-marker{display:none}
-.ow-ati-lab-presets{position:absolute;bottom:120%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:4px;width:max-content;max-width:360px;padding:6px;background:rgba(8,14,24,.94);border:1px solid rgba(167,139,250,.25);border-radius:6px}
-.ow-shell-guide{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(94,234,212,.25);background:rgba(94,234,212,.06);border-radius:6px}
-.ow-shell-guide-text{flex:1;font-size:11px;line-height:1.45;color:#94a3b8}
-.ow-shell-guide-text strong{color:#5eead4;font-weight:600}
-.ow-shell-guide-x{flex-shrink:0;font-size:10px;padding:4px 8px;border:1px solid rgba(148,163,184,.35);background:transparent;color:#94a3b8;border-radius:4px;cursor:pointer}
-.ow-shell-guide-x:hover{border-color:#5eead4;color:#c4f5ef}
-.ow-empty-cue{margin:0 0 10px;padding:12px 12px 10px;border:1px dashed rgba(94,234,212,.28);border-radius:8px;background:linear-gradient(160deg,rgba(94,234,212,.07),rgba(8,14,24,.4))}
+.ow-ati-lab-presets{position:absolute;bottom:120%;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:4px;width:max-content;max-width:360px;padding:6px;background:rgba(20,20,22,.96);border:1px solid var(--ow-border);border-radius:10px}
+.ow-shell-guide{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:8px 10px;border:1px solid rgba(231,178,75,.25);background:rgba(231,178,75,.06);border-radius:6px}
+.ow-shell-guide-text{flex:1;font-size:11px;line-height:1.45;color:#A3A3A8}
+.ow-shell-guide-text strong{color:#E7B24B;font-weight:600}
+.ow-shell-guide-x{flex-shrink:0;font-size:11px;padding:4px 8px;border:1px solid rgba(148,163,184,.35);background:transparent;color:#A3A3A8;border-radius:8px;cursor:pointer}
+.ow-shell-guide-x:hover{border-color:#E7B24B;color:var(--ow-accent)}
+.ow-empty-cue{margin:0 0 10px;padding:12px 12px 10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:linear-gradient(160deg,rgba(231,178,75,.07),rgba(20,20,22,.4))}
 .ow-empty-cue-slim{padding:8px 10px;margin-bottom:8px}
 .ow-empty-cue-art{position:relative;width:44px;height:44px;margin:0 0 8px}
-.ow-empty-cue-ring{position:absolute;inset:4px;border:1.5px solid rgba(94,234,212,.35);border-radius:50%}
-.ow-empty-cue-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#5eead4;box-shadow:0 0 10px rgba(94,234,212,.45)}
-.ow-empty-cue-ray{position:absolute;left:50%;top:2px;width:1.5px;height:12px;margin-left:-0.75px;background:rgba(94,234,212,.55);transform-origin:bottom center;animation:ow-empty-pulse 2.4s ease-in-out infinite}
+.ow-empty-cue-ring{position:absolute;inset:4px;border:1.5px solid rgba(231,178,75,.35);border-radius:50%}
+.ow-empty-cue-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#E7B24B;box-shadow:0 0 10px rgba(231,178,75,.45)}
+.ow-empty-cue-ray{position:absolute;left:50%;top:2px;width:1.5px;height:12px;margin-left:-0.75px;background:rgba(231,178,75,.55);transform-origin:bottom center;}
 @keyframes ow-empty-pulse{0%,100%{opacity:.35;transform:scaleY(.7)}50%{opacity:1;transform:scaleY(1)}}
 .ow-empty-cue-title{font-size:12px;color:#e2e8f0;font-weight:600;margin-bottom:4px}
-.ow-empty-cue-body{font-size:11px;line-height:1.5;color:#94a3b8;margin-bottom:8px}
+.ow-empty-cue-body{font-size:11px;line-height:1.5;color:#A3A3A8;margin-bottom:8px}
 .ow-empty-cue-actions{display:flex;flex-wrap:wrap;gap:6px}
 .ow-memory-tabs{margin-bottom:8px}
 .ow-adv-fold{border-top:1px solid rgba(148,163,184,.12)}
-.ow-ati-hud{position:absolute;top:10%;left:2.5%;font-family:var(--ow-mono);font-size:8px;color:#6d8eb0;line-height:1.7;z-index:2;max-width:300px}
-.ow-ati-hud b{color:#c4b5fd;font-weight:500}
-.ow-ati-stage-tag{position:absolute;top:9%;right:2.5%;z-index:2;font-family:var(--ow-mono);font-size:8px;color:#7c8ea6;text-align:right;line-height:1.8}
-.ow-ati-stage-tag b{color:#5eead4;font-weight:500;letter-spacing:1px}
+.ow-ati-hud{position:absolute;top:10%;left:2.5%;font-family:var(--ow-mono);font-size:10.5px;color:#A3A3A8;line-height:1.7;z-index:2;max-width:300px}
+.ow-ati-hud b{color:var(--ow-text);font-weight:500}
+.ow-ati-stage-tag{position:absolute;top:9%;right:2.5%;z-index:2;font-family:var(--ow-mono);font-size:11px;color:#A3A3A8;text-align:right;line-height:1.9}
+.ow-ati-stage-tag b{color:#E7B24B;font-weight:500;letter-spacing:.02em}
 .ow-lab-wire{fill:none;stroke-width:1;opacity:.85}
-.ow-lab-wire.cyan{stroke:#5eead4}
-.ow-lab-wire.violet{stroke:#a78bfa}
-.ow-lab-wire.gold{stroke:#f5d67a}
-.ow-lab-wire.green{stroke:#34d399}
-.ow-lab-wire.pink{stroke:#f472b6}
-.ow-lab-wire-dim{fill:none;stroke-width:.7;stroke:#5eead4;opacity:.16}
-.ow-lab-loss{fill:none;stroke:#5eead4;stroke-width:2;filter:drop-shadow(0 0 5px rgba(94,234,212,.55))}
-.ow-lab-loss-area{fill:rgba(94,234,212,.08)}
-.ow-lab-contour{fill:rgba(167,139,250,.05);stroke:#a78bfa;stroke-width:.8;stroke-dasharray:3 5}
+.ow-lab-wire.cyan{stroke:#E7B24B}
+.ow-lab-wire.violet{stroke:#64D2FF}
+.ow-lab-wire.gold{stroke:#F0C674}
+.ow-lab-wire.green{stroke:#30D158}
+.ow-lab-wire.pink{stroke:#FF9F0A}
+.ow-lab-wire-dim{fill:none;stroke-width:.7;stroke:#E7B24B;opacity:.16}
+.ow-lab-loss{fill:none;stroke:#E7B24B;stroke-width:2}
+.ow-lab-loss-area{fill:rgba(231,178,75,.08)}
+.ow-lab-contour{fill:rgba(100,210,255,.05);stroke:#64D2FF;stroke-width:.8;stroke-dasharray:3 5}
 .ow-lab-axis{stroke:rgba(124,142,166,.25);stroke-width:.7}
-.ow-lab-tick{font-family:var(--ow-mono);font-size:7px;fill:#4a5a70}
-.ow-lab-title{font-family:var(--ow-mono);font-size:9px;fill:#e6f1ff;letter-spacing:2px;text-shadow:0 0 10px rgba(94,234,212,.5)}
-.ow-lab-title.dim{font-size:7px;fill:#6d8eb0}
-.ow-lab-elem{stroke:#34d399;stroke-width:1;transition:filter .2s}
+.ow-lab-tick{font-family:var(--ow-mono);font-size:10.5px;fill:#A3A3A8}
+.ow-lab-title{font-family:var(--ow-mono);font-size:12px;fill:#e6d2a6;letter-spacing:1.4px;}
+.ow-lab-title.dim{font-size:10.5px;fill:#A3A3A8}
+.ow-lab-elem{stroke:#30D158;stroke-width:1;transition:filter .2s}
 .ow-lab-elem:hover{filter:brightness(1.25)}
-.ow-lab-elem.metal{stroke:#f4a261}
-.ow-lab-elem.nonmetal{stroke:#5eead4}
-.ow-lab-elem.carbon{stroke:#a78bfa}
+.ow-lab-elem.metal{stroke:#FF9F0A}
+.ow-lab-elem.nonmetal{stroke:#E7B24B}
+.ow-lab-elem.carbon{stroke:#64D2FF}
 .ow-lab-elem-symbol{font-family:var(--ow-mono);font-size:15px;font-weight:700;text-anchor:middle}
-.ow-lab-elem-z{font-family:var(--ow-mono);font-size:6px;fill:#7c8ea6;text-anchor:middle}
-.ow-lab-elem-name{font-family:var(--ow-mono);font-size:6px;fill:#6d8eb0;text-anchor:middle}
-.ow-lab-elem-metric{font-family:var(--ow-mono);font-size:6px;fill:#f5d67a;text-anchor:middle}
-.ow-lab-bond{fill:none;stroke:rgba(52,211,153,.45);stroke-width:1}
+.ow-lab-elem-z{font-family:var(--ow-mono);font-size:11px;fill:#A3A3A8;text-anchor:middle}
+.ow-lab-elem-name{font-family:var(--ow-mono);font-size:11px;fill:#A3A3A8;text-anchor:middle}
+.ow-lab-elem-metric{font-family:var(--ow-mono);font-size:11px;fill:#F0C674;text-anchor:middle}
+.ow-lab-bond{fill:none;stroke:rgba(48,209,88,.45);stroke-width:1}
 .ow-lab-bond.double{stroke-width:1.6}
-.ow-lab-atom{fill:rgba(8,14,24,.9);stroke:#34d399;stroke-width:1.2}
-.ow-lab-electron{fill:#5eead4;opacity:.9}
-.ow-lab-att-cell{stroke:rgba(8,12,24,.8);stroke-width:1}
-.ow-lab-att-token{font-family:var(--ow-mono);font-size:7px;fill:#7c8ea6;text-anchor:middle}
+.ow-lab-atom{fill:rgba(20,20,22,.9);stroke:#30D158;stroke-width:1.2}
+.ow-lab-electron{fill:#E7B24B;opacity:.9}
+.ow-lab-att-cell{stroke:rgba(20,20,22,.8);stroke-width:1}
+.ow-lab-sub{font-family:var(--ow-mono);font-size:10.5px;fill:#A3A3A8;letter-spacing:.2px}
+.ow-lab-att-value{font-family:var(--ow-mono);font-size:11px;pointer-events:none}
+.ow-lab-att-token{font-family:var(--ow-mono);font-size:11px;fill:#b39a63;text-anchor:middle}
 .ow-lab-evo-ring{fill:none;stroke:rgba(124,142,166,.18);stroke-width:1}
-.ow-lab-evo-ring.on{stroke:rgba(167,139,250,.7);stroke-width:1.6;filter:drop-shadow(0 0 6px rgba(167,139,250,.6))}
-.ow-lab-evo-label{font-family:var(--ow-mono);font-size:7px;fill:#7c8ea6;text-anchor:middle;letter-spacing:1px}
-.ow-lab-evo-label.on{fill:#e9d5ff}
-.ow-lab-evo-val{font-family:var(--ow-mono);font-size:18px;fill:#e6f1ff;text-anchor:middle;font-weight:700}
-.ow-lab-grad-arrow{stroke:#5eead4;stroke-width:1.4;fill:none;marker-end:url(#owLabArrow)}
-.ow-lab-node{fill:rgba(8,12,24,.55);stroke:rgba(245,214,122,.5);stroke-width:1}
-.ow-lab-node.on{stroke:#f5d67a;filter:drop-shadow(0 0 6px rgba(245,214,122,.5))}
-.ow-social-tag{font-size:9px;color:#6d8eb0;margin-top:2px;letter-spacing:.5px;max-width:200px;line-height:1.4}
+.ow-lab-evo-ring.on{stroke:rgba(100,210,255,.7);stroke-width:1.6;)}
+.ow-lab-evo-label{font-family:var(--ow-mono);font-size:10.5px;fill:#A3A3A8;text-anchor:middle;letter-spacing:.02em}
+.ow-lab-evo-label.on{fill:#EAF4FF}
+.ow-lab-evo-val{font-family:var(--ow-mono);font-size:18px;fill:#F2F2F4;text-anchor:middle;font-weight:700}
+.ow-lab-grad-arrow{stroke:#E7B24B;stroke-width:1.4;fill:none;marker-end:url(#owLabArrow)}
+.ow-lab-node{fill:rgba(20,20,22,.55);stroke:rgba(240,198,116,.5);stroke-width:1}
+.ow-lab-node.on{stroke:#F0C674;)}
+.ow-social-tag{font-size:11px;color:#A3A3A8;margin-top:2px;letter-spacing:.5px;max-width:200px;line-height:1.4}
 .ow-social-list{display:flex;flex-direction:column;gap:8px}
-.ow-social-presence{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;border:1px solid rgba(94,234,212,.1);cursor:pointer;transition:background .2s}
-.ow-social-presence:hover{background:rgba(94,234,212,.06)}
-.ow-social-presence.active{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08)}
-.ow-social-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#5eead4,#a78bfa);display:grid;place-items:center;font-size:11px;font-weight:700;color:#05070d;flex-shrink:0}
-.ow-social-name{font-size:12px;color:#e6f1ff}
-.ow-social-sub{font-size:10px;color:#7c8ea6;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ow-social-channel{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid rgba(94,234,212,.12);border-radius:4px;cursor:pointer;font-size:12px}
+.ow-social-presence{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;border:1px solid rgba(231,178,75,.1);cursor:pointer;transition:background .2s}
+.ow-social-presence:hover{background:rgba(231,178,75,.06)}
+.ow-social-presence.active{border-color:rgba(100,210,255,.4);background:rgba(100,210,255,.08)}
+.ow-social-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#E7B24B,#64D2FF);display:grid;place-items:center;font-size:11px;font-weight:700;color:#0A0A0C;flex-shrink:0}
+.ow-social-name{font-size:12px;color:#F2F2F4}
+.ow-social-sub{font-size:11px;color:#A3A3A8;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ow-social-channel{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid rgba(231,178,75,.12);border-radius:8px;cursor:pointer;font-size:12px}
 .ow-social-channel:hover{border-color:var(--ow-cyan)}
 .ow-social-channel.off{opacity:.45;cursor:default}
-.ow-social-feed-item{font-size:11px;padding:6px 0;border-bottom:1px solid rgba(94,234,212,.06);display:flex;gap:8px}
-.ow-social-kind{font-size:9px;color:#a78bfa;font-family:var(--ow-mono);min-width:42px}
+.ow-social-feed-item{font-size:11px;padding:6px 0;border-bottom:1px solid rgba(231,178,75,.06);display:flex;gap:8px}
+.ow-social-kind{font-size:11px;color:#64D2FF;font-family:var(--ow-mono);min-width:42px}
 .ow-msg-hub{display:flex;flex-direction:column;gap:10px}
-.ow-msg-compose textarea{width:100%;min-height:64px;background:rgba(8,14,24,.8);border:1px solid var(--ow-border);border-radius:4px;color:#e6f1ff;padding:8px;font-size:12px;resize:vertical;font-family:inherit}
+.ow-msg-compose textarea{width:100%;min-height:64px;background:rgba(20,20,22,.8);border:1px solid var(--ow-border);border-radius:8px;color:#F2F2F4;padding:8px;font-size:12px;resize:vertical;font-family:inherit}
 .ow-msg-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.ow-msg-select,.ow-msg-btn{font-size:10px;padding:5px 8px;border:1px solid var(--ow-border);background:rgba(8,14,24,.75);color:var(--ow-text-muted);border-radius:3px;font-family:var(--ow-mono)}
+.ow-msg-select,.ow-msg-btn{font-size:11px;padding:5px 8px;border:1px solid var(--ow-border);background:rgba(20,20,22,.75);color:var(--ow-text-muted);border-radius:8px;font-family:var(--ow-mono)}
 .ow-msg-btn:disabled{opacity:.4;cursor:not-allowed}
-.ow-msg-btn.primary{border-color:#a78bfa;color:#e9d5ff;cursor:pointer}
-.ow-msg-btn.primary:hover{box-shadow:0 0 10px rgba(167,139,250,.3)}
+.ow-msg-btn.primary{border-color:#64D2FF;color:#EAF4FF;cursor:pointer}
+.ow-msg-btn.primary:hover{box-shadow:0 0 10px rgba(100,210,255,.3)}
 .ow-msg-btn.primary:disabled:hover{box-shadow:none}
-.ow-msg-item{padding:8px;border:1px solid rgba(94,234,212,.1);border-radius:4px;font-size:11px;cursor:pointer}
-.ow-msg-item.unread{border-color:rgba(167,139,250,.45);background:rgba(167,139,250,.06)}
-.ow-msg-meta{font-size:9px;color:#7c8ea6;margin-top:4px}
-.ow-msg-attach{font-size:10px;color:#a78bfa;margin-top:4px}
+.ow-msg-item{padding:8px;border:1px solid rgba(231,178,75,.1);border-radius:8px;font-size:11px;cursor:pointer}
+.ow-msg-item.unread{border-color:rgba(100,210,255,.45);background:rgba(100,210,255,.06)}
+.ow-msg-meta{font-size:11px;color:#A3A3A8;margin-top:4px}
+.ow-msg-attach{font-size:11px;color:#64D2FF;margin-top:4px}
 .ow-hub{display:flex;flex-direction:column;gap:10px}
-.ow-hub-sec{border:1px solid rgba(94,234,212,.12);border-radius:4px;padding:8px;background:rgba(8,14,24,.55)}
+.ow-hub-sec{border:1px solid rgba(231,178,75,.12);border-radius:8px;padding:8px;background:rgba(20,20,22,.55)}
 .ow-hub-fold>summary{list-style:none;outline:none}
 .ow-hub-fold>summary::-webkit-details-marker{display:none}
-.ow-hub-fold>summary::before{content:'▸ ';color:#64748b;font-size:10px}
+.ow-hub-fold>summary::before{content:'▸ ';color:#6B6B72;font-size:11px}
 .ow-hub-fold[open]>summary::before{content:'▾ '}
-.ow-hub-title{font-size:9px;color:#4a5a70;letter-spacing:1px;margin-bottom:6px}
+.ow-hub-title{font-size:11px;color:#6B6B72;letter-spacing:.02em;margin-bottom:6px}
 .ow-hub-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.ow-hub-stat{font-size:11px;color:#e6f1ff}
-.ow-hub-link{font-size:10px;color:#5eead4;word-break:break-all;max-height:48px;overflow:auto}
-.ow-hub-item{padding:6px 8px;border:1px solid rgba(94,234,212,.1);border-radius:3px;font-size:11px;cursor:pointer;margin-top:4px}
+.ow-hub-stat{font-size:11px;color:#F2F2F4}
+.ow-hub-link{font-size:11px;color:#E7B24B;word-break:break-all;max-height:48px;overflow:auto}
+.ow-hub-item{padding:6px 8px;border:1px solid rgba(231,178,75,.1);border-radius:8px;font-size:11px;cursor:pointer;margin-top:4px}
 .ow-hub-item:hover{border-color:var(--ow-cyan)}
-.ow-hub-mem{font-size:10px;color:#7c8ea6;line-height:1.4;max-height:64px;overflow:auto;margin-top:4px}
-.ow-archify-embed{position:absolute;inset:12px 12px 80px;z-index:4;border:1px solid rgba(167,139,250,.35);border-radius:4px;background:rgba(5,7,13,.92);display:flex;flex-direction:column;overflow:hidden}
-.ow-archify-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(94,234,212,.15);font-size:11px;color:#e6f1ff}
-.ow-archify-frame{flex:1;border:none;width:100%;background:#05070d}
+.ow-hub-mem{font-size:11px;color:#A3A3A8;line-height:1.4;max-height:64px;overflow:auto;margin-top:4px}
+.ow-archify-embed{position:absolute;inset:12px 12px 80px;z-index:4;border:1px solid rgba(100,210,255,.35);border-radius:8px;background:rgba(5,7,13,.92);display:flex;flex-direction:column;overflow:hidden}
+.ow-archify-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(231,178,75,.15);font-size:11px;color:#F2F2F4}
+.ow-archify-frame{flex:1;border:none;width:100%;background:#0A0A0C}
 .ow-rewind-tl{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
-.ow-rewind-item{padding:8px 10px;border:1px solid rgba(94,234,212,.12);border-radius:4px;font-size:11px;cursor:pointer;background:rgba(8,14,24,.5)}
-.ow-rewind-item:hover{border-color:var(--ow-cyan);background:rgba(94,234,212,.06)}
-.ow-rewind-item.active{border-color:rgba(167,139,250,.5)}
-.ow-rewind-meta{font-size:9px;color:#7c8ea6;margin-top:4px}
+.ow-rewind-item{padding:8px 10px;border:1px solid rgba(231,178,75,.12);border-radius:8px;font-size:11px;cursor:pointer;background:rgba(20,20,22,.5)}
+.ow-rewind-item:hover{border-color:var(--ow-cyan);background:rgba(231,178,75,.06)}
+.ow-rewind-item.active{border-color:rgba(100,210,255,.5)}
+.ow-rewind-meta{font-size:11px;color:#A3A3A8;margin-top:4px}
 .ow-rewind-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .ow-idea-center{padding:20px 24px 32px;overflow:auto;height:100%;max-width:920px;margin:0 auto}
 .ow-idea-hero{margin-bottom:20px}
-.ow-idea-hero h2{margin:0;font-size:18px;letter-spacing:3px;color:#e6f1ff}
-.ow-idea-tag{font-size:11px;color:#5eead4;margin:6px 0 10px}
-.ow-idea-overview{font-size:12px;color:#7c8ea6;line-height:1.55;margin-bottom:8px}
-.ow-idea-bullet{font-size:11px;color:#9aa8bc;line-height:1.5;margin-top:4px}
+.ow-idea-hero h2{margin:0;font-size:18px;letter-spacing:.02em;color:#F2F2F4}
+.ow-idea-tag{font-size:11px;color:#E7B24B;margin:6px 0 10px}
+.ow-idea-overview{font-size:12px;color:#A3A3A8;line-height:1.55;margin-bottom:8px}
+.ow-idea-bullet{font-size:11px;color:#A3A3A8;line-height:1.5;margin-top:4px}
 .ow-idea-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:8px}
-.ow-idea-card{padding:10px;border:1px solid rgba(94,234,212,.12);border-radius:4px;cursor:pointer;background:rgba(8,14,24,.45);transition:border-color .15s}
-.ow-idea-card:hover{border-color:rgba(94,234,212,.35)}
-.ow-idea-card.active{border-color:var(--ow-cyan);background:rgba(94,234,212,.08)}
-.ow-idea-card.compare{box-shadow:inset 0 0 0 1px rgba(167,139,250,.45)}
-.ow-idea-card strong{display:block;font-size:12px;color:#e6f1ff}
-.ow-idea-sub{font-size:9px;color:#7c8ea6;margin-top:4px;letter-spacing:.5px}
+.ow-idea-card{padding:10px;border:1px solid rgba(231,178,75,.12);border-radius:8px;cursor:pointer;background:rgba(20,20,22,.45);transition:border-color .15s}
+.ow-idea-card:hover{border-color:rgba(231,178,75,.35)}
+.ow-idea-card.active{border-color:var(--ow-cyan);background:rgba(231,178,75,.08)}
+.ow-idea-card.compare{box-shadow:inset 0 0 0 1px rgba(100,210,255,.45)}
+.ow-idea-card strong{display:block;font-size:12px;color:#F2F2F4}
+.ow-idea-sub{font-size:11px;color:#A3A3A8;margin-top:4px;letter-spacing:.5px}
 .ow-idea-treat-row{display:flex;flex-wrap:wrap;gap:6px}
-.ow-idea-chip{font-size:10px;padding:4px 8px;border:1px solid rgba(94,234,212,.15);border-radius:12px;background:transparent;color:#7c8ea6;cursor:pointer}
-.ow-idea-chip.on{border-color:var(--ow-cyan);color:#5eead4;background:rgba(94,234,212,.08)}
-.ow-idea-instruction{font-size:11px;color:#9aa8bc;line-height:1.45;margin:12px 0;padding:10px;border:1px dashed rgba(94,234,212,.15);border-radius:4px}
-.ow-idea-prompt{width:100%;margin-top:10px;padding:10px;border:1px solid rgba(94,234,212,.15);border-radius:4px;background:rgba(4,8,16,.7);color:#e6f1ff;font-size:12px;line-height:1.45;resize:vertical;min-height:72px;font-family:inherit}
-.ow-unread-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#a78bfa;color:#05070d;font-size:9px;font-weight:700;display:grid;place-items:center}
+.ow-idea-chip{font-size:11px;padding:4px 8px;border:1px solid rgba(231,178,75,.15);border-radius:12px;background:transparent;color:#A3A3A8;cursor:pointer}
+.ow-idea-chip.on{border-color:var(--ow-cyan);color:#E7B24B;background:rgba(231,178,75,.08)}
+.ow-idea-instruction{font-size:11px;color:#A3A3A8;line-height:1.45;margin:12px 0;padding:10px;border:1px dashed rgba(231,178,75,.15);border-radius:8px}
+.ow-idea-prompt{width:100%;margin-top:10px;padding:10px;border:1px solid rgba(231,178,75,.15);border-radius:8px;background:rgba(5,4,3,.7);color:#F2F2F4;font-size:12px;line-height:1.45;resize:vertical;min-height:72px;font-family:inherit}
+.ow-unread-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#64D2FF;color:#0A0A0C;font-size:11px;font-weight:700;display:grid;place-items:center}
 .ow-trigger-wrap{position:relative;display:inline-grid}
-    `
+
+/* 550C scheme sync (data-ow-scheme from dsh-550c-boot:scheme) */
+.ow-root[data-ow-scheme="green"]{
+  --ow-cyan:#4ad46a;--ow-gold:#a6ffbb;--ow-border:rgba(74,212,106,.18);--ow-border-strong:rgba(74,212,106,.38);
+  --ow-glow:0 0 12px rgba(74,212,106,.45);--ow-text:#c8e8d0;--ow-text-2:#5a8a64;--ow-text-muted:#2a4a32;
+}
+.ow-root[data-ow-scheme="cyan"]{
+  --ow-cyan:#3fc8dc;--ow-gold:#a6f0ff;--ow-border:rgba(63,200,220,.18);--ow-border-strong:rgba(63,200,220,.38);
+  --ow-glow:0 0 12px rgba(63,200,220,.45);--ow-text:#c8e4ea;--ow-text-2:#5a8890;--ow-text-muted:#2a4850;
+}
+.ow-root[data-ow-scheme="white"]{
+  --ow-cyan:#c9c9c9;--ow-gold:#ffffff;--ow-border:rgba(255,255,255,.18);--ow-border-strong:rgba(255,255,255,.38);
+  --ow-glow:0 0 12px rgba(255,255,255,.35);--ow-text:#e8e8e8;--ow-text-2:#9a9a9a;--ow-text-muted:#5a5a5a;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   设计系统 v2（Apple-like 精修层）：克制、留白、发丝线、无发光。
+   放在最后——同名规则后写生效，类名与 DOM 结构均不变。
+   ──────────────────────────────────────────────────────────────── */
+.ow-root{background:var(--ow-bg-deep)}
+.ow-overlay{background:var(--ow-bg-deep)}
+.ow-panel{border-radius:14px;border:1px solid var(--ow-border);background:var(--ow-bg-panel);backdrop-filter:blur(24px) saturate(140%);box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:border-color .2s ease,background .2s ease}
+.ow-panel:hover{border-color:var(--ow-border-strong)}
+.ow-panel-title{font-size:13px;font-weight:590;letter-spacing:-.01em;color:var(--ow-text)}
+.ow-panel-title-en{font-size:10px;letter-spacing:.14em;color:var(--ow-text-muted);font-weight:500;text-transform:uppercase;margin-top:2px}
+.ow-panel-sub,.ow-detail-sub,.ow-side-hint{font-size:12px;line-height:1.6;color:var(--ow-text-2)}
+.ow-event-item,.ow-cmd-item span:last-child{font-size:12.5px}
+.ow-event-time{font-variant-numeric:tabular-nums;color:var(--ow-text-muted);font-size:11.5px}
+.ow-neural-btn,.ow-msg-btn,.ow-bridge-refresh,.ow-detail-actions button{
+  font-family:inherit;font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;
+  padding:6px 12px;border-radius:9px;border:1px solid var(--ow-border);
+  background:var(--ow-bg-elev);color:var(--ow-text);cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.ow-neural-btn:hover,.ow-msg-btn:hover,.ow-bridge-refresh:hover,.ow-detail-actions button:hover{
+  background:rgba(255,255,255,.1);border-color:var(--ow-border-strong)}
+.ow-neural-btn:active,.ow-msg-btn:active{transform:scale(.98)}
+.ow-msg-btn.primary{border-color:transparent;background:var(--ow-accent);color:#161006;font-weight:600}
+.ow-msg-btn.primary:hover{background:#F0C674}
+.ow-msg-select,.ow-cmd-input,.ow-msg-hub textarea{
+  font-family:inherit;font-size:12.5px;padding:8px 11px;border-radius:10px;
+  border:1px solid var(--ow-border);background:rgba(0,0,0,.35);color:var(--ow-text)}
+.ow-msg-select:focus,.ow-cmd-input:focus,.ow-msg-hub textarea:focus{outline:none;border-color:var(--ow-border-strong);box-shadow:0 0 0 3px rgba(231,178,75,.14)}
+.ow-dock{border-radius:999px;background:rgba(20,20,22,.82);border:1px solid var(--ow-border);box-shadow:0 12px 32px rgba(0,0,0,.55);backdrop-filter:blur(24px) saturate(150%)}
+.ow-dock-chip{font-size:12px;padding:5px 11px;border-radius:999px;color:var(--ow-text-2)}
+.ow-dock-unread{background:var(--ow-red);color:#fff;font-size:10.5px;min-width:18px;height:18px}
+.ow-action-btn{border-radius:10px;border:1px solid var(--ow-border);background:var(--ow-bg-elev);font-size:12px;color:var(--ow-text);transition:background .18s ease}
+.ow-action-btn:hover{background:rgba(255,255,255,.1)}
+.ow-detail-card,.ow-detail-row{border-radius:12px;border-color:var(--ow-border)}
+.ow-detail-row{font-size:12.5px;padding:7px 0}
+.ow-embed-head{font-size:12.5px;border-bottom:1px solid var(--ow-border)}
+.ow-embed{border-radius:14px;border:1px solid var(--ow-border);overflow:hidden}
+.ow-ati-title,.ow-ati-hud,.ow-lab-title{font-family:var(--ow-display);letter-spacing:-.01em;text-transform:none}
+.ow-ati-title{font-size:15px;font-weight:590;color:var(--ow-text)}
+.ow-ati-hud{font-family:var(--ow-mono);font-size:11.5px;color:var(--ow-text-2);letter-spacing:.02em}
+.ow-ati-sub,.ow-lab-tick{font-family:var(--ow-mono);font-size:11px;color:var(--ow-text-muted);letter-spacing:.01em}
+.ow-lab-title{font-family:var(--ow-display);font-size:12.5px;font-weight:560;color:var(--ow-text);letter-spacing:0}
+.ow-lab-sub{font-family:var(--ow-display);font-size:11.5px;color:var(--ow-text-2);letter-spacing:0}
+.ow-lab-att-token{font-family:var(--ow-mono);font-size:11px;fill:var(--ow-text-2)}
+.ow-lab-att-value{font-family:var(--ow-mono);font-size:10.5px;font-weight:500}
+.ow-lab-att-cell{stroke:transparent}
+.ow-ati-dl-box{fill:rgba(255,255,255,.045);stroke:var(--ow-border);stroke-width:1}
+.ow-ati-dl-box.hl{stroke:var(--ow-accent);stroke-width:1.2}
+.ow-ati-dl-label{font-family:var(--ow-display);font-size:12px;font-weight:560;fill:var(--ow-text);letter-spacing:0}
+.ow-ati-dl-zh{font-family:var(--ow-display);font-size:11.5px;fill:var(--ow-text-2)}
+.ow-ati-metric{font-family:var(--ow-mono);font-size:11.5px;fill:var(--ow-accent)}
+.ow-ati-stage-tag{font-family:var(--ow-mono);font-size:11.5px;color:var(--ow-text-2);line-height:1.9}
+.ow-ati-stage-tag b{color:var(--ow-accent);font-weight:600}
+.ow-metric-en,.ow-view-sub,.ow-deep-en,.ow-integ-en,.ow-health-label-sub{font-family:var(--ow-mono);font-size:10.5px;letter-spacing:.1em;color:var(--ow-text-muted)}
+.ow-status-chip{font-size:11.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--ow-border);color:var(--ow-text-2);background:var(--ow-bg-elev)}
+.ow-task-status{font-size:11px;border-radius:999px;padding:2px 8px}
+.ow-fleet-hint{font-size:11.5px;color:var(--ow-text-2);line-height:1.6}
+.ow-fleet-kind,.ow-fleet-pct,.ow-fleet-status,.ow-fleet-stage{font-size:11.5px}
+.ow-fleet-stage{border-radius:999px;border-color:var(--ow-border);color:var(--ow-text-2)}
+.ow-bridge-health{font-size:11.5px;border-radius:10px;border-color:var(--ow-border)}
+.ow-metaphor-tag,.ow-derived-tag{font-size:10px;border-radius:999px;padding:2px 8px;letter-spacing:.04em}
+.ow-metaphor-tag{border-color:rgba(100,210,255,.35);color:var(--ow-blue)}
+.ow-derived-tag{border-color:var(--ow-border);color:var(--ow-text-muted)}
+.ow-nn-label{font-size:12px;fill:var(--ow-text)}
+.ow-nn-metric{font-size:11.5px;fill:var(--ow-accent);font-family:var(--ow-mono)}
+.ow-nn-layer-label{font-size:11px;fill:var(--ow-text-muted);letter-spacing:.02em}
+.ow-nn-layer-label-zh{font-size:11.5px;fill:var(--ow-text-2)}
+.ow-nn-tooltip{border-radius:10px;background:rgba(20,20,22,.94);border:1px solid var(--ow-border);font-size:12px;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+.ow-empty-cue{color:var(--ow-text-2)}
+.ow-empty-cue-dot{background:var(--ow-accent)}
+.ow-ver{font-size:10.5px;color:var(--ow-text-muted);letter-spacing:.1em}
+.ow-cmd-item{border-radius:10px}
+.ow-cmd-item:hover{background:var(--ow-bg-elev)}
+.ow-cmd-overlay{background:rgba(0,0,0,.55);backdrop-filter:blur(10px)}
+/* Garden · 园（第四视图） */
+.ow-garden{position:relative;width:100%;height:100%;min-height:420px;overflow:hidden;border-radius:12px;background:#0D1013}
+.ow-garden-cvs{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+.ow-garden-vtitle{position:absolute;left:18px;top:14px;pointer-events:none;writing-mode:vertical-rl;letter-spacing:.4em;font-size:13px;color:rgba(233,228,216,.45);font-family:'Kaiti SC','STKaiti','KaiTi',serif}
+.ow-garden-corner{position:absolute;right:14px;bottom:66px;display:flex;align-items:center;gap:6px;pointer-events:none}
+.ow-garden-yu{font-size:10px;color:var(--ow-accent);border:1px solid var(--ow-border);border-radius:2px;padding:1px 5px}
+.ow-garden-note{font-size:10.5px;color:var(--ow-text-muted)}
+.ow-garden-card{position:absolute;width:240px;z-index:6;background:rgba(16,20,24,.96);border:1px solid var(--ow-border);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:12px 14px}
+.ow-gc-head{display:flex;align-items:baseline;gap:8px}
+.ow-gc-zi{font-size:22px;font-family:'Kaiti SC','STKaiti','KaiTi',serif;color:var(--ow-text)}
+.ow-gc-en{font-size:10.5px;color:var(--ow-text-muted);font-family:var(--ow-mono)}
+.ow-gc-seal{margin-left:auto;width:16px;height:16px;background:#C8402F;border-radius:2px;color:#F6EFE2;font-size:10px;display:flex;align-items:center;justify-content:center}
+.ow-gc-who{margin-top:6px;font-size:12px;line-height:1.65;color:var(--ow-text-2)}
+.ow-gc-now{margin-top:5px;font-size:12px;color:var(--ow-text-muted)}
+.ow-gc-rel{margin-top:6px;font-size:11px;line-height:1.6;color:var(--ow-text-muted);border-left:2px solid var(--ow-border);padding-left:8px}
+.ow-gc-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ow-gc-acts button{background:rgba(255,255,255,.04);border:1px solid var(--ow-border);border-radius:999px;color:var(--ow-text);font-size:12px;padding:4px 12px;cursor:pointer;transition:background .18s ease,border-color .18s ease}
+.ow-gc-acts button:hover{background:rgba(255,255,255,.08);border-color:var(--ow-border-strong)}
+.ow-gc-x{margin-left:auto}
+.ow-garden-path{position:absolute;right:12px;top:12px;bottom:110px;width:240px;z-index:6;display:flex;flex-direction:column;background:rgba(14,18,22,.96);border:1px solid var(--ow-border);border-radius:10px;padding:10px 0 6px}
+.ow-gp-head{display:flex;align-items:baseline;gap:8px;padding:0 12px 8px;border-bottom:1px solid var(--ow-border)}
+.ow-gp-head b{font-weight:590;font-size:13px}
+.ow-gp-head span{font-size:10.5px;color:var(--ow-text-muted)}
+.ow-gp-head button{margin-left:auto;background:none;border:none;color:var(--ow-text-muted);cursor:pointer}
+.ow-gp-list{overflow-y:auto;padding:6px 12px}
+.ow-gp-ev{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--ow-border);font-size:12px;color:var(--ow-text-2);line-height:1.5}
+.ow-gp-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--ow-accent);margin-top:6px}
+.ow-garden-letter{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:6;width:min(420px,70%)}
+.ow-garden-personas{display:flex;gap:6px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
+/* v5/v6 · 无障碍与降级（优化版次 2026-10-01） */
+@media (prefers-reduced-motion: reduce){.ow-overlay.is-arriving::after{animation:none;transition:none}.ow-garden-pn,.ow-garden-paper input,.ow-garden-paper button,.ow-gc-zi{animation:none!important;transition:none!important}}
+.ow-garden-pn:focus-visible,.ow-garden-paper input:focus-visible,.ow-garden-paper button:focus-visible{outline:2px solid var(--ow-accent);outline-offset:2px}
+/* v63 · 信纸字数余量 */
+.ow-garden-count{font-size:10px;color:var(--ow-text-muted);font-family:var(--ow-mono);min-width:24px;text-align:right}
+.ow-garden-pn{background:rgba(13,16,19,.72);border:1px dashed var(--ow-border-strong);border-radius:999px;color:var(--ow-text-muted);font-size:11px;padding:3px 11px;cursor:pointer;transition:all .18s ease}
+.ow-garden-pn:hover{color:var(--ow-text)}
+.ow-garden-pn.on{color:#F6EFE2;border-style:solid;background:#C8402F;border-color:#C8402F}
+.ow-garden-paper{display:flex;gap:8px;align-items:center;background:#F4EFE6;border-radius:10px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.ow-garden-paper input{flex:1;background:transparent;border:none;outline:none;font-size:13px;color:#2A2620;font-family:inherit}
+.ow-garden-paper input::placeholder{color:#A89F8D}
+.ow-garden-paper button{flex:none;width:30px;height:30px;border-radius:50%;border:none;background:#C8402F;color:#F6EFE2;font-size:13px;cursor:pointer;font-family:'Kaiti SC','STKaiti','KaiTi',serif;transition:transform .18s ease}
+.ow-garden-paper button:hover{transform:scale(1.06)}
+.ow-garden-ask{position:absolute;left:50%;transform:translateX(-50%);top:14px;z-index:7;width:min(360px,80%)}
+.ow-garden-ask input{width:100%;background:rgba(16,20,24,.96);border:1px solid var(--ow-border-strong);border-radius:999px;padding:8px 16px;font-size:12.5px;color:var(--ow-text);outline:none;font-family:inherit}
+/* Narrow screens: preserve navigation, give the opened app the full content area. */
+@media (max-width:1100px){
+ .ow-overlay .ow-bottom{display:flex;height:76px;flex-shrink:0;padding:8px}
+ .ow-overlay .ow-bottom .ow-log-wrap,.ow-overlay .ow-bottom-right{display:none}
+ .ow-overlay .ow-view-switch{width:100%;justify-content:center}
+ .ow-overlay .ow-view-btn{flex:1;min-width:0;width:auto;max-width:140px;height:52px}
+ .ow-overlay .ow-body{grid-template-columns:220px minmax(0,1fr)}
+ .ow-overlay .ow-side-right{display:none}
+ .ow-overlay .ow-body:has(.ow-embed){grid-template-columns:minmax(0,1fr)}
+ .ow-overlay .ow-body:has(.ow-embed)>.ow-side{display:none}
+}
+@media (max-width:700px){
+ .ow-overlay .ow-view-sub{display:none}
+ .ow-overlay:not(.is-minimized){inset:0!important;left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0}
+ .ow-overlay .ow-topbar{height:auto;min-height:48px;flex-shrink:0;padding:8px;gap:8px;flex-wrap:wrap}
+ .ow-overlay .ow-topbar-left,.ow-overlay .ow-topbar-right{gap:8px;flex-wrap:wrap;min-width:0}
+ .ow-overlay .ow-topbar-clock,.ow-overlay .ow-ver{display:none}
+ .ow-overlay .ow-body{display:flex;flex-direction:column;min-width:0;padding:8px;gap:8px;overflow:auto}
+ .ow-overlay .ow-side-left{max-height:160px;flex-shrink:0;padding:0}
+ .ow-overlay .ow-center{flex:1 0 380px;min-width:0;min-height:380px}
+ .ow-overlay .ow-body:has(.ow-embed){overflow:hidden}
+ .ow-overlay .ow-body:has(.ow-embed)>.ow-side{display:none}
+ .ow-overlay .ow-body:has(.ow-embed)>.ow-center{flex:1;min-height:0}
+ .ow-overlay .ow-embed{inset:0}
+ .ow-overlay .ow-embed-head{padding:8px;gap:8px;flex-shrink:0}
+ .ow-overlay .ow-embed-head>div{min-width:0;overflow-wrap:anywhere}
+ .ow-overlay .ow-embed-head>div>span{display:none}
+ .ow-overlay .ow-embed-head>button{flex-shrink:0}
+ .ow-overlay .ow-embed-body{padding:8px;min-width:0;min-height:0}
+ .ow-overlay .ow-history:has(.ow-native-conversation) .ow-history-nav{display:none}
+ .ow-overlay .ow-native-conversation{overflow:auto}
+ .ow-overlay .ow-native-conversation header strong{min-width:0;overflow-wrap:anywhere}
+ .ow-overlay .ow-native-messages{min-height:120px}
+}
+`
     module.exports = { CSS }
+    return module.exports
+  },
+})
+
+
+// Explicit native Session conversation. No model selection, task activation or second transcript store.
+window.__ModuleLoader__.load({
+  id: 'dsh-open-world/conversation',
+  factory: (require) => {
+    const React = require('react'), { useState, useEffect, useRef } = React, h = React.createElement
+    const OUTBOX = 'ow-native-outbox:', BOOKMARK = 'ow-native-selection'
+    const methods = ['session/list', 'session/page', 'session/create', 'session/rename', 'session/prompt', 'session/cancel']
+    function bookmark(value) { try { if (value) sessionStorage.setItem(BOOKMARK, JSON.stringify(value)); else return JSON.parse(sessionStorage.getItem(BOOKMARK) || 'null') } catch { return null } }
+    function pendingFor(id) { try { const p = JSON.parse(sessionStorage.getItem(OUTBOX + id) || 'null'); return p?.request?.sessionId === id && typeof p.request.requestId === 'string' && Array.isArray(p.request.content) ? p : null } catch { return null } }
+    function savePending(id, value) { if (value) sessionStorage.setItem(OUTBOX + id, JSON.stringify(value)); else sessionStorage.removeItem(OUTBOX + id) }
+    async function rpcSession(method, args, signal) {
+      if (!methods.includes(method)) throw new Error('不支持的会话操作')
+      if (method !== 'session/list' && (typeof (args.request?.sessionId || args.request?.address?.sessionId) !== 'string' || !(args.request?.sessionId || args.request?.address?.sessionId).trim())) throw new Error('必须明确指定会话')
+      const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, 15000)
+      if (signal?.aborted) controller.abort(); else signal?.addEventListener('abort', abort, { once: true })
+      try {
+        const rpcId = crypto.randomUUID()
+        const r = await fetch('/api/' + method, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'client-request', rpcId, method, payload: { args } }), signal: controller.signal })
+        if (!r.ok) throw new Error(`会话接口失败（${r.status}）`)
+        const j = await r.json()
+        if (j.rpcId !== rpcId || !j.result || typeof j.result.ok !== 'boolean') throw new Error('会话响应无效')
+        if (!j.result.ok) { const e = new Error(j.result.error?.message || '会话操作被拒绝'); e.definite = true; throw e }
+        return j.result.value
+      } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort) }
+    }
+    function hasReceipt(records, pending) {
+      return !!pending && records.some(r => { const e = r.event; return e?.type === 'user/message' && e.data?.source?.rpcId === pending.request.requestId || e?.type === 'agent/inbox/spliced' && e.data?.inserted?.some(m => m.source?.rpcId === pending.request.requestId) })
+    }
+    function turnState(records, summary, pending) {
+      const events = records.map(r => r.event).filter(Boolean).sort((a, b) => a.seq - b.seq)
+      const user = pending && events.find(e => e.type === 'user/message' && e.data?.source?.rpcId === pending.request.requestId)
+      const start = user && events.filter(e => e.type === 'turn/start' && e.seq < user.seq).at(-1)
+      const end = user && start && events.find(e => e.type === 'turn/end' && e.seq > user.seq && e.data?.turn === start.data?.turn)
+      const earlyError = pending && !user && events.filter(e => e.type === 'turn/end' && e.seq > pending.baseSeq && e.data?.reason?.kind === 'error').at(-1)
+      if (earlyError && !summary?.running) return { phase: 'error', done: false, label: '会话运行失败，发送状态仍需核对', error: earlyError.data.reason.error?.message || '原生会话返回错误' }
+      if (pending && !end) return { phase: user && summary?.running ? 'running' : 'waiting', done: false, label: user && summary?.running ? '正在回答…' : '已提交，等待原生会话处理…' }
+      const last = end || events.filter(e => e.type === 'turn/end').at(-1)
+      if (!pending && summary?.running) return { phase: 'running', done: false, label: '此会话正在运行…' }
+      if (!last) return { phase: 'idle', done: false, label: '可以提问' }
+      const kind = last.data?.reason?.kind
+      if (kind === 'error') return { phase: 'error', done: !!end, label: '本轮失败', error: last.data.reason.error?.message || '原生会话返回错误' }
+      if (kind !== 'completed') return { phase: 'stopped', done: !!end, label: '本轮已结束（' + (kind || '原因未提供') + '）' }
+      const begin = events.filter(e => e.type === 'turn/start' && e.seq < last.seq && e.data?.turn === last.data?.turn).at(-1)
+      const reply = begin && events.some(e => e.type === 'assistant/message' && e.seq > begin.seq && e.seq < last.seq)
+      return { phase: 'complete', done: !!end, label: reply ? '回复已完成' : '本轮结束，未返回助手消息' }
+    }
+    function NewConversation({ onCreated, onBack }) {
+      const [cwd, setCwd] = useState(''), [name, setName] = useState('世界问答'), [busy, setBusy] = useState(false), [error, setError] = useState('')
+      const id = useRef('ow-chat-' + crypto.randomUUID()), lock = useRef(false), life = useRef(null), identity = useRef(null)
+      useEffect(() => { life.current = new AbortController(); return () => life.current.abort() }, [])
+      async function create(e) {
+        e.preventDefault(); if (lock.current || !cwd.trim()) return
+        if (!/^(?:[A-Za-z]:[\\/]|\/)/.test(cwd.trim()) || /[\u0000-\u001f]/.test(cwd)) { setError('请填写已有工作区的绝对路径'); return }
+        lock.current = true; setBusy(true); setError('')
+        // Keep identical identity after an ambiguous creation response.
+        const request = identity.current || (identity.current = { sessionId: id.current, cwd: cwd.trim() })
+        try {
+          const created = await rpcSession('session/create', { request }, life.current.signal)
+          if (created?.sessionId !== id.current) throw new Error('新会话返回的身份不匹配')
+          let warning = ''
+          if (name.trim()) try { await rpcSession('session/rename', { request: { sessionId: id.current, title: name.trim() } }, life.current.signal) } catch { warning = '会话已创建，但名称未保存。' }
+          if (!life.current.signal.aborted) onCreated({ sessionId: id.current, cwd: request.cwd, projections: { values: { title: name.trim() || '世界问答' } } }, warning)
+        } catch (e) { if (!life.current.signal.aborted) { if (e.definite) identity.current = null; setError(e.message + '；重试将沿用同一会话 ID。') } }
+        finally { lock.current = false; if (!life.current.signal.aborted) setBusy(false) }
+      }
+      return h('form', { className: 'ow-native-new', onSubmit: create, 'data-native-new': true }, h('style', null, css), h('h3', null, '新建问答'),
+        h('p', null, '使用原生会话与现有模型。发送后，助手可能按你的要求使用该工作区工具。'),
+        h('label', null, '工作区绝对路径', h('input', { className: 'inp', value: cwd, disabled: busy || !!identity.current, required: true, 'aria-label': '问答工作区', placeholder: 'D:/项目目录', onChange: e => setCwd(e.target.value) })),
+        h('label', null, '会话名称', h('input', { className: 'inp', value: name, maxLength: 80, disabled: busy, 'aria-label': '问答名称', onChange: e => setName(e.target.value) })),
+        error && h('p', { role: 'alert' }, error), h('button', { className: 'btn', type: 'submit', disabled: busy || !cwd.trim() }, busy ? '正在创建…' : '创建会话'), h('button', { className: 'btn', type: 'button', onClick: onBack }, '返回'))
+    }
+    function Conversation({ session, onBack, toMessages, warning = '' }) {
+      const id = session.sessionId, initial = pendingFor(id)
+      const [draft, setDraft] = useState(initial?.request.content[0]?.text || ''), [pending, setPending] = useState(initial)
+      const [snapshot, setSnapshot] = useState({ summary: session, records: [], ready: false }), [readError, setReadError] = useState('')
+      const [operationError, setOperationError] = useState(warning), [uncertain, setUncertain] = useState(!!initial), [sending, setSending] = useState(false), [stopping, setStopping] = useState(false)
+      const [refresh, setRefresh] = useState(0), [unlock, setUnlock] = useState(false), life = useRef(null), pendingRef = useRef(initial), lock = useRef(false), stopLock = useRef(false), tail = useRef(null), stick = useRef(true)
+      useEffect(() => { const controller = new AbortController(); life.current = controller; return () => controller.abort() }, [])
+      useEffect(() => {
+        const controller = new AbortController(); let timer
+        async function poll() {
+          try {
+            const list = await rpcSession('session/list', { _request: {} }, controller.signal)
+            if (!Array.isArray(list?.items)) throw new Error('会话列表响应无效')
+            const summary = list.items.find(s => s.sessionId === id)
+            if (!summary) throw new Error('此会话已不可用，请返回列表核对')
+            let records = []
+            if (Number.isFinite(summary.projections?.asOfSeq)) {
+              let throughSeq = summary.projections.asOfSeq
+              // Follow the owned pending request across bounded pages; never mark an unrelated turn complete.
+              for (let n = 0; n < 20; n++) {
+                const page = await rpcSession('session/page', { request: { address: { kind: 'session', sessionId: id }, throughSeq, maxMessages: 30 } }, controller.signal)
+                if (!Array.isArray(page?.records)) throw new Error('会话记录响应无效')
+                records.push(...page.records)
+                const p = pendingRef.current
+                if (!p || !page.hasMore || records.some(r => r.event?.type === 'turn/start' && r.event.seq <= p.baseSeq + 1) || turnState(records, summary, p).done) break
+                const min = Math.min(...page.records.map(r => r.event?.seq).filter(Number.isFinite))
+                if (!Number.isFinite(min) || min <= p.baseSeq || min >= throughSeq) break
+                throughSeq = min - 1
+              }
+            }
+            if (controller.signal.aborted) return
+            const status = turnState(records, summary, pendingRef.current)
+            if (hasReceipt(records, pendingRef.current)) { setUncertain(false); setOperationError('') }
+            if (status.error && !status.done && pendingRef.current && !summary.running) setUncertain(true)
+            if (status.done && pendingRef.current) { savePending(id, null); pendingRef.current = null; setPending(null); setDraft(''); setUncertain(false); setOperationError('') }
+            setSnapshot({ summary, records, ready: true }); setReadError('')
+          } catch (e) { if (!controller.signal.aborted) setReadError('读取回复失败：' + e.message) }
+          finally { if (!controller.signal.aborted) timer = setTimeout(poll, 1500) }
+        }
+        poll(); return () => { controller.abort(); clearTimeout(timer) }
+      }, [id, refresh])
+      const status = turnState(snapshot.records, snapshot.summary, pending), rows = toMessages(snapshot.records)
+      useEffect(() => { if (stick.current) tail.current?.scrollIntoView({ block: 'nearest' }) }, [rows.at(-1)?.seq, rows.at(-1)?.text])
+      async function send() {
+        if (lock.current || pendingRef.current || !draft.trim() || !snapshot.ready || snapshot.summary.running || readError) return
+        lock.current = true; setSending(true); setOperationError('')
+        const p = { baseSeq: snapshot.summary.projections?.asOfSeq || 0, sentAt: Date.now(), request: { requestId: 'ow-prompt-' + crypto.randomUUID(), sessionId: id, mode: 'queue', content: [{ type: 'text', text: draft.trim() }], clientTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } }
+        try {
+          if (!p) return
+          // Save only the in-flight outbox. Never blindly re-post an ambiguous native prompt.
+          try { savePending(id, p) } catch { setOperationError('无法保存待确认请求，本次未发送；请检查浏览器存储。'); return }
+          pendingRef.current = p; setPending(p); setUncertain(false)
+          const accepted = await rpcSession('session/prompt', { request: p.request }, life.current.signal)
+          if (accepted?.accepted !== true) throw new Error('未收到明确接收确认')
+          if (!life.current.signal.aborted) { setDraft(''); setRefresh(v => v + 1) }
+        } catch (e) {
+          if (!life.current.signal.aborted) {
+            if (e.definite) { savePending(id, null); pendingRef.current = null; setPending(null); setUncertain(false) }
+            else { if (!pendingRef.current) return; setUncertain(true) }
+            setOperationError(e.definite ? '发送被拒绝：' + e.message : '发送状态未确认：' + e.message + '。请核对发送状态；不会自动重发。')
+          }
+        } finally { lock.current = false; if (!life.current.signal.aborted) setSending(false) }
+      }
+      async function stop() {
+        if (stopLock.current || !snapshot.summary.running) return
+        stopLock.current = true; setStopping(true); setOperationError('')
+        try { const r = await rpcSession('session/cancel', { request: { sessionId: id } }, life.current.signal); if (r?.accepted !== true) throw new Error('停止请求未确认'); if (!life.current.signal.aborted) { setOperationError('已请求停止当前回复；排队中的问题不会被删除。'); setRefresh(v => v + 1) } }
+        catch (e) { if (!life.current.signal.aborted) setOperationError('停止状态未确认：' + e.message) }
+        finally { stopLock.current = false; if (!life.current.signal.aborted) setStopping(false) }
+      }
+      return h('section', { className: 'ow-native-conversation', 'data-native-conversation': id }, h('style', null, css),
+        h('header', null, h('strong', null, snapshot.summary.projections?.values?.title || '世界问答'), h('button', { type: 'button', className: 'btn', onClick: () => onBack(snapshot.summary) }, '历史与文件')),
+        h('small', { className: 'ow-native-identity', title: `${id} · ${session.cwd || ''}` }, `${id} · ${session.cwd || ''}`),
+        h('div', { className: 'ow-native-status', role: 'status', 'data-native-phase': status.phase }, sending ? '正在提交…' : uncertain && pending ? '发送状态待核对' : status.label),
+        (readError || operationError || status.error) && h('div', { role: 'alert' }, readError || operationError || status.error),
+        h('div', { className: 'ow-native-messages', 'aria-label': '原生会话对话', onScroll: e => { const x = e.currentTarget; stick.current = x.scrollHeight - x.scrollTop - x.clientHeight < 90 } },
+          !snapshot.ready ? h('p', null, '正在读取会话…') : !rows.length ? h('p', null, '还没有对话。发送第一条问题。') : rows.map(m => h('article', { key: m.seq, 'data-native-message': m.role === '我' ? 'user' : 'assistant' }, h('strong', null, m.role), h('pre', null, m.text))),
+          h('span', { ref: tail })),
+        h('div', { className: 'ow-native-actions' }, h('button', { type: 'button', className: 'btn', onClick: () => setRefresh(v => v + 1) }, '刷新回复'),
+          uncertain && pending && h('button', { type: 'button', className: 'btn', disabled: sending, onClick: () => setRefresh(v => v + 1) }, '核对发送状态'),
+          uncertain && pending && !snapshot.summary.running && h('button', { type: 'button', className: 'btn', disabled: sending || !!readError, onClick: () => setUnlock(v => !v) }, '解除发送锁定'),
+          snapshot.summary.running && h('button', { type: 'button', className: 'btn', disabled: stopping, onClick: stop }, stopping ? '正在请求停止…' : '停止当前回复')),
+        unlock && uncertain && pending && h('div', { role: 'alert' }, '解除锁定不会撤回服务端请求；再次发送可能重复。', h('button', { type: 'button', className: 'btn', disabled: sending || !!readError || !!snapshot.summary.running, onClick: () => { savePending(id, null); pendingRef.current = null; setPending(null); setUncertain(false); setUnlock(false); setOperationError('已解除锁定，未重新发送。请先核对历史记录。') } }, '确认解除，不重发')),
+        h('form', { onSubmit: e => { e.preventDefault(); send() } }, h('textarea', { className: 'inp', 'aria-label': '发送给此原生会话', placeholder: '向上方明确选定的会话提问…', rows: 3, value: draft, disabled: !!pending || sending, onChange: e => setDraft(e.target.value), onKeyDown: e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.nativeEvent?.isComposing) { e.preventDefault(); send() } } }),
+          h('button', { className: 'btn', type: 'submit', disabled: !draft.trim() || !!pending || sending || !snapshot.ready || !!readError || !!snapshot.summary.running }, '发送问题')),
+        h('small', null, '原生会话保留上下文；较早记录见“历史与文件”。离开此页不会停止回复。'))
+    }
+    const css = `.ow-history-main:has(.ow-native-conversation){display:flex;flex-direction:column;overflow:hidden}.ow-native-conversation{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px;overflow:hidden}.ow-native-conversation header,.ow-native-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ow-native-conversation header strong{flex:1}.ow-native-identity{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}.ow-native-messages{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}.ow-native-messages article{margin:8px 0;padding:10px;background:#ffffff08;border:1px solid #ffffff18;border-radius:8px}.ow-native-messages article[data-native-message=user]{background:#629bff12}.ow-native-messages pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:6px 0}.ow-native-conversation form{flex-shrink:0;display:flex;align-items:flex-end;gap:8px}.ow-native-conversation textarea{flex:1;min-width:0;resize:vertical;max-height:150px}.ow-native-new label{display:flex;flex-direction:column;gap:8px;margin:12px 0}.ow-native-status{font-size:12px;color:#aacbff}`
+    return { rpcSession, hasReceipt, turnState, bookmark, pendingFor, savePending, Conversation, NewConversation }
+  },
+})
+
+
+// Read-only Session history and artifact reopening inside the existing ChatDock.
+window.__ModuleLoader__.load({
+  id: 'dsh-open-world/history',
+  factory: (require) => {
+    const React = require('react')
+    const { useState, useEffect, useRef } = React
+    const h = React.createElement
+    const { Conversation, NewConversation, bookmark } = require('dsh-open-world/conversation')
+    const MAX_BYTES = 8 * 1024 * 1024
+    // Same authenticated read-only endpoints used by the native document preview.
+    // Optional legacy DI does not expose remote.workspaceFiles on every Desktop.
+    let workspaceFiles = {
+      stat: (sessionId, path, signal) => rpcRead('workspaceFiles/stat', { workspaceFileScopeId: sessionId, path }, signal),
+      readBytes: (sessionId, path, options, signal) => rpcRead('workspaceFiles/readBytes', { workspaceFileScopeId: sessionId, path, options }, signal),
+    }
+    function configureWorkspaceFiles(service) {
+      workspaceFiles = service
+      return () => { if (workspaceFiles === service) workspaceFiles = null }
+    }
+    function validPath(path) {
+      return typeof path === 'string' && path.trim().length > 0 && path.length <= 4096
+        && !/[\u0000-\u001f]/.test(path) && !/^(https?|data|javascript|file):/i.test(path)
+    }
+    function mutationPath(data) {
+      let a
+      try { a = typeof data.arguments === 'string' ? JSON.parse(data.arguments) : data.arguments } catch { return null }
+      if (!a || typeof a !== 'object') return null
+      let path = null
+      if (data.name === 'write' && typeof a.content === 'string') path = a.file_path
+      if (data.name === 'edit' && typeof a.old_string === 'string' && a.old_string.length && typeof a.new_string === 'string' && a.old_string !== a.new_string) path = a.file_path
+      if (data.name === 'str_replace_editor') {
+        const allowed = (a.command === 'create' && typeof a.file_text === 'string')
+          || (a.command === 'str_replace' && typeof a.old_str === 'string' && a.old_str.length > 0 && (a.new_str === undefined || typeof a.new_str === 'string'))
+          || (a.command === 'insert' && Number.isInteger(a.insert_line) && a.insert_line >= 0 && typeof a.new_str === 'string')
+        if (allowed) path = a.path
+      }
+      return validPath(path) ? path : null
+    }
+    function eventsOf(records) {
+      return records.map(r => r.event).filter(e => e && Number.isFinite(e.seq)).sort((a, b) => a.seq - b.seq)
+    }
+    function collectArtifacts(records) {
+      const calls = new Map(), files = new Map()
+      function add(path, e, source, label) {
+        if (!validPath(path)) return
+        files.set(path, { path, name: typeof label === 'string' && label.trim() ? label : path.split(/[\\/]/).pop(), seq: e.seq, turn: e.data?.turn, source })
+      }
+      for (const e of eventsOf(records)) {
+        const d = e.data || {}, key = `${d.turn}:${d.callId}`
+        if (e.type === 'tool/call') calls.set(key, mutationPath(d))
+        if (e.type === 'tool/result' && d.message && d.message.isError !== true && e.surfaceOp === 'append') {
+          const path = calls.get(`${d.turn}:${d.message.source?.callId}`)
+          if (path) add(path, e, '成功写入')
+        }
+        if (e.type === 'deliverables/presented' && Array.isArray(d.files)) {
+          for (const f of d.files) if (f && typeof f === 'object') add(f.path, e, '明确交付', f.title)
+        }
+      }
+      return [...files.values()].sort((a, b) => b.seq - a.seq)
+    }
+    function messageRows(records) {
+      return eventsOf(records).filter(e => (e.type === 'user/message' && (!e.data?.source?.kind || e.data.source.kind === 'user')) || e.type === 'assistant/message').map(e => {
+        const m = e.data?.message || e.data
+        const text = typeof m?.content === 'string' ? m.content : Array.isArray(m?.content) ? m.content.filter(b => b.type === 'text').map(b => b.text).join('\n') : ''
+        return { seq: e.seq, role: e.type === 'user/message' ? '我' : '助手', text }
+      }).filter(m => m.text)
+    }
+    async function rpcRead(method, args, signal) {
+      if (!['session/list', 'session/page', 'workspaceFiles/stat', 'workspaceFiles/readBytes', 'workspaceFiles/list'].includes(method)) throw new Error('历史浏览仅允许读取')
+      const rpcId = crypto.randomUUID()
+      const response = await fetch('/api/' + method, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'client-request', rpcId, method, payload: { args } }), signal })
+      if (!response.ok) throw new Error(`读取失败（${response.status}）`)
+      let envelope, parts
+      if ((response.headers.get('content-type') || '').startsWith('multipart/form-data')) {
+        const reader = response.body.getReader(), chunks = []; let length = 0
+        for (;;) {
+          const chunk = await reader.read(); if (chunk.done) break
+          length += chunk.value.byteLength
+          if (length > MAX_BYTES + 65536) { await reader.cancel(); throw new Error('文件超过预览大小限制') }
+          chunks.push(chunk.value)
+        }
+        parts = await new Response(new Blob(chunks), { headers: response.headers }).formData()
+        if (typeof parts.get('metadata') !== 'string') throw new Error('文件响应缺少元数据')
+        envelope = JSON.parse(parts.get('metadata'))
+      } else envelope = await response.json()
+      if (envelope.rpcId !== rpcId || !envelope.result?.ok) throw new Error(envelope.result?.error?.message || '会话服务未返回有效结果，请重试')
+      if (parts) {
+        const attachment = envelope.attachments?.find(a => a.codec === 'bytes' && a.path?.length === 1 && a.path[0] === 'data')
+        const data = attachment && parts.get(attachment.part)
+        if (!data || typeof data.arrayBuffer !== 'function' || data.size > MAX_BYTES) throw new Error('文件响应内容无效')
+        envelope.result.value.data = new Uint8Array(await data.arrayBuffer())
+      }
+      return envelope.result.value
+    }
+    async function readArtifact(sessionId, file, signal) {
+      if (!workspaceFiles) throw new Error('文件服务尚未就绪，请稍后重试')
+      if (!validPath(file.path)) throw new Error('文件路径无效')
+      const name = file.path.split(/[\\/]/).pop()
+      if (/^(\.env(?:\..*)?|id_(rsa|ed25519)|credentials)$/i.test(name) || /\.(pem|key|p12|pfx)$/i.test(name)) throw new Error('敏感凭据文件不在历史预览中读取')
+      const stat = await workspaceFiles.stat(sessionId, file.path, signal)
+      if (!Number.isFinite(stat.bytes) || stat.bytes < 0) throw new Error('无法确定文件大小，未自动读取')
+      if (stat.bytes > MAX_BYTES) throw new Error('文件超过 8 MB，请在原工作区打开')
+      const result = await workspaceFiles.readBytes(sessionId, file.path, {}, signal)
+      signal?.throwIfAborted()
+      if (!result.data || result.data.byteLength > MAX_BYTES || result.eof !== true) throw new Error('文件未完整读取，未提供不完整预览')
+      return result
+    }
+    const css = `.ow-history{display:flex;flex:1;min-height:0;min-width:0;gap:12px;padding:10px;color:var(--tx)}.ow-history button{font:inherit;color:inherit;cursor:pointer}.ow-history button:disabled{cursor:default;opacity:.5}.ow-history-nav{width:210px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-height:0}.ow-history-sessions{overflow:auto;min-height:0}.ow-history-session{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:10px;margin-bottom:4px;overflow-wrap:anywhere}.ow-history-session[aria-pressed=true]{background:var(--accSoft);border-color:var(--acc)}.ow-history-main{flex:1;min-width:0;min-height:0;overflow:auto}.ow-history-file{display:block;width:100%;text-align:left;border:1px solid var(--hair2);border-radius:9px;background:var(--panel);padding:10px;margin:8px 0;overflow-wrap:anywhere}.ow-history small{display:block;color:var(--tx2);font-size:11px;overflow-wrap:anywhere}.ow-history [data-history-text]{flex:1;min-height:0;overflow:auto}.ow-history pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 monospace}.ow-history iframe{display:block;width:100%;flex:1;min-height:160px;height:auto;border:0;background:white}.ow-history img{display:block;max-width:100%;max-height:450px}.ow-history-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.ow-history [role=alert]{color:var(--red);overflow-wrap:anywhere}@media(max-width:700px){.ow-history{flex-direction:column}.ow-history-nav{width:auto;max-height:160px;flex-shrink:0}.ow-history-main{min-height:120px}}`
+    function FilePreview({ session, file, onBack, backLabel = '返回会话' }) {
+      const [state, setState] = useState({ loading: true }), [retry, setRetry] = useState(0)
+      useEffect(() => {
+        const controller = new AbortController(); let cancelled = false, objectUrl
+        setState({ loading: true })
+        ;(async () => {
+          try {
+            const result = await readArtifact(session.sessionId, file, controller.signal)
+            if (cancelled) return
+            const path = file.path, ext = path.split('.').pop().toLowerCase()
+            const text = /^(txt|md|json|csv|log|html?|js|ts|css|py|yaml|yml|xml|svg)$/.test(ext)
+            const image = /^(png|jpe?g|gif|webp)$/.test(ext)
+            const mime = image ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : 'application/octet-stream'
+            objectUrl = URL.createObjectURL(new Blob([result.data], { type: mime }))
+            setState({ url: objectUrl, bytes: result.data.byteLength, text: text ? new TextDecoder().decode(result.data) : undefined, html: /^html?$/.test(ext), image, unsupported: !text && !image })
+          } catch (e) { if (!cancelled) setState({ error: /not-found|no entry|不存在/i.test(e.message) ? '文件已移动或不存在；历史记录仍保留。' : e.message }) }
+        })()
+        return () => { cancelled = true; controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+      }, [session.sessionId, file.path, retry])
+      return h('section', { 'aria-label': '历史文件预览', 'data-history-path': file.path, style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } },
+        h('div', { className: 'ow-history-toolbar' }, h('button', { type: 'button', className: 'btn', onClick: onBack }, backLabel), h('strong', null, file.name),
+          state.url && h('a', { href: state.url, download: file.path.split(/[\\/]/).pop(), className: 'chip' }, '下载文件')),
+        h('small', null, file.path), h('small', null, '读取当前文件，不是该轮的历史快照。'),
+        state.loading && h('p', { role: 'status' }, '正在读取文件…'),
+        state.error && h('div', null, h('p', { role: 'alert' }, state.error), h('button', { type: 'button', className: 'btn', onClick: () => setRetry(v => v + 1) }, '重试')),
+        state.html && h(React.Fragment, null, h('p', null, '静态预览：不运行脚本，不加载外部资源。'), h('iframe', { title: file.name, sandbox: '', srcDoc: `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">${state.text}` })),
+        state.text !== undefined && !state.html && h('pre', { 'data-history-text': true }, state.text),
+        state.image && h('img', { src: state.url, alt: file.name }),
+        state.unsupported && h('p', null, '此格式暂不支持内嵌预览，请下载后用对应应用打开。'))
+    }
+    function childPath(parent, name) {
+      if (typeof name !== 'string' || !name || name === '.' || name === '..' || /[\\/:\u0000-\u001f]/.test(name)) throw new Error('目录项名称无效')
+      return parent === '.' ? name : `${parent}/${name}`
+    }
+    function WorkspaceBrowser({ session, onBack }) {
+      const [folder, setFolder] = useState('.'), [state, setState] = useState({ loading: true }), [query, setQuery] = useState(''), [file, setFile] = useState(null), [retry, setRetry] = useState(0)
+      useEffect(() => {
+        const controller = new AbortController(); setState({ loading: true })
+        rpcRead('workspaceFiles/list', { workspaceFileScopeId: session.sessionId, path: folder }, controller.signal).then(result => {
+          if (!Array.isArray(result.entries)) throw new Error('目录服务响应无效，请重试')
+          if (!controller.signal.aborted) setState({ entries: result.entries, truncated: result.truncated })
+        }).catch(e => { if (!controller.signal.aborted) setState({ error: e.message }) })
+        return () => controller.abort()
+      }, [session.sessionId, folder, retry])
+      if (file) return h(FilePreview, { session, file, onBack: () => setFile(null), backLabel: '返回文件列表' })
+      const entries = (state.entries || []).filter(e => String(e.name).toLowerCase().includes(query.toLowerCase()))
+      return h('section', { 'aria-label': '会话工作区文件' },
+        h('div', { className: 'ow-history-toolbar' },
+          h('button', { type: 'button', className: 'btn', onClick: onBack }, '返回历史记录'),
+          folder !== '.' && h('button', { type: 'button', className: 'btn', onClick: () => { setFolder(folder.includes('/') ? folder.slice(0, folder.lastIndexOf('/')) : '.'); setQuery('') } }, '上一级'),
+          h('button', { type: 'button', className: 'btn', disabled: state.loading, onClick: () => setRetry(v => v + 1) }, '刷新目录')),
+        h('strong', null, '工作区文件'), h('small', null, `${session.cwd || ''} / ${folder}`),
+        h('p', null, '当前工作区中的文件，未必由此会话生成；仅浏览，不修改。'),
+        h('input', { className: 'inp', type: 'search', value: query, 'aria-label': '筛选当前目录', placeholder: '筛选当前目录…', onChange: e => setQuery(e.target.value) }),
+        state.loading && h('p', { role: 'status' }, '正在读取目录…'), state.error && h('p', { role: 'alert' }, state.error),
+        state.truncated && h('p', { role: 'status' }, '目录项超过服务上限，当前列表不完整。'),
+        entries.map(e => h('button', { key: e.name, type: 'button', className: 'ow-history-file', disabled: !['file', 'directory'].includes(e.type), 'data-workspace-entry': e.name, 'data-entry-kind': e.type, title: e.type === 'symlink' ? '符号链接暂不在此打开' : undefined,
+          onClick: () => { try { const path = childPath(folder, e.name); if (e.type === 'directory') { setFolder(path); setQuery('') } else setFile({ path, name: e.name }) } catch (error) { setState({ error: error.message }) } },
+        }, e.type === 'directory' ? `${e.name} /` : e.name)),
+        !state.loading && !state.error && !entries.length && h('p', null, '当前目录没有匹配项。'))
+    }
+    function HistoryBrowser() {
+      const [sessions, setSessions] = useState([]), [query, setQuery] = useState(''), [selected, setSelected] = useState(null)
+      const [workspace, setWorkspace] = useState(false), [conversation, setConversation] = useState(false), [creating, setCreating] = useState(false), [warning, setWarning] = useState('')
+      const [records, setRecords] = useState([]), [hasMore, setHasMore] = useState(false), [file, setFile] = useState(null)
+      const [loading, setLoading] = useState(false), [listLoading, setListLoading] = useState(true), [error, setError] = useState(''), [listError, setListError] = useState(''), [refresh, setRefresh] = useState(0)
+      const active = useRef(null), current = useRef(null)
+      useEffect(() => {
+        const controller = new AbortController(); setListLoading(true); setListError('')
+        rpcRead('session/list', { _request: {} }, controller.signal).then(value => {
+          if (!controller.signal.aborted) {
+            const items = (value.items || []).filter(s => !s.blank || s.sessionId.startsWith('ow-chat-')).sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt))
+            setSessions(items)
+            if (!current.current) { const saved = bookmark(), restored = items.find(s => s.sessionId === saved?.id); if (restored) { if (saved.mode === 'conversation') openConversation(restored); else loadPage(restored) } }
+          }
+        }).catch(e => { if (!controller.signal.aborted) setListError(e.message) }).finally(() => { if (!controller.signal.aborted) setListLoading(false) })
+        return () => controller.abort()
+      }, [refresh])
+      useEffect(() => () => active.current?.abort(), [])
+      async function loadPage(session, older = false) {
+        active.current?.abort(); const controller = new AbortController(); active.current = controller; current.current = session.sessionId
+        setLoading(true); setError(''); setFile(null); setWorkspace(false); setConversation(false); setCreating(false); setSelected(session); bookmark({ id: session.sessionId, mode: 'history' })
+        if (!older) { setRecords([]); setHasMore(false) }
+        const seqs = eventsOf(records).map(e => e.seq)
+        let throughSeq = older ? Math.min(...seqs) - 1 : session.projections?.asOfSeq
+        try {
+          if (!older) {
+            const inventory = await rpcRead('session/list', { _request: {} }, controller.signal)
+            const latest = inventory.items?.find(s => s.sessionId === session.sessionId)
+            if (!latest) throw new Error('此会话已不可用，请刷新列表核对')
+            if (controller.signal.aborted || current.current !== session.sessionId) return
+            throughSeq = latest.projections?.asOfSeq; setSelected(latest)
+          }
+          if (!Number.isFinite(throughSeq) || throughSeq < 0) { setHasMore(false); return }
+          const page = await rpcRead('session/page', { request: { address: { kind: 'session', sessionId: session.sessionId }, throughSeq, maxMessages: 30 } }, controller.signal)
+          if (controller.signal.aborted || current.current !== session.sessionId) return
+          const incoming = (page.records || []).filter(r => Number.isFinite(r.event?.seq))
+          setRecords(previous => [...new Map([...(older ? previous : []), ...incoming].map(r => [r.event.seq, r])).values()])
+          setHasMore(page.hasMore === true && incoming.some(r => r.event.seq < throughSeq))
+        } catch (e) { if (!controller.signal.aborted) setError(e.message) }
+        finally { if (!controller.signal.aborted) setLoading(false) }
+      }
+      function openConversation(session, notice = '') {
+        active.current?.abort(); current.current = session.sessionId; setSelected(session); setCreating(false); setFile(null); setWorkspace(false); setWarning(notice); setConversation(true); bookmark({ id: session.sessionId, mode: 'conversation' })
+      }
+      const title = session => session.projections?.values?.title || '未命名会话'
+      const filtered = sessions.filter(s => `${title(s)} ${s.cwd || ''} ${s.sessionId}`.toLowerCase().includes(query.toLowerCase()))
+      const files = collectArtifacts(records), messages = messageRows(records)
+      return h('div', { className: 'ow-history', 'data-history-browser': true }, h('style', null, css),
+        h('nav', { className: 'ow-history-nav', 'aria-label': '历史会话列表' },
+          h('input', { className: 'inp', type: 'search', 'aria-label': '搜索历史会话', placeholder: '搜索会话或工作区…', value: query, onChange: e => setQuery(e.target.value) }),
+          h('button', { type: 'button', className: 'btn', onClick: () => setRefresh(v => v + 1), disabled: listLoading }, listLoading ? '正在读取…' : '刷新列表'),
+          h('button', { type: 'button', className: 'btn', onClick: () => { active.current?.abort(); setCreating(true); setConversation(false) } }, '新建问答'),
+          listError && h('p', { role: 'alert' }, listError),
+          h('div', { className: 'ow-history-sessions' }, filtered.map(s => h('button', { key: s.sessionId, type: 'button', className: 'ow-history-session', 'data-history-session': s.sessionId, 'aria-pressed': selected?.sessionId === s.sessionId, onClick: () => loadPage(s) }, title(s), h('small', null, s.cwd || '未指定工作区')))),
+          !listLoading && !listError && !filtered.length && h('p', null, '没有匹配的历史会话。')),
+        h('main', { className: 'ow-history-main' }, creating ? h(NewConversation, { onCreated: (s, notice) => { openConversation(s, notice); setRefresh(v => v + 1) }, onBack: () => setCreating(false) }) : conversation && selected ? h(Conversation, { key: selected.sessionId, session: selected, toMessages: messageRows, warning, onBack: s => loadPage(s) }) : !selected ? h('p', null, '选择一个历史会话，查看文件与对话。') : file ? h(FilePreview, { session: selected, file, onBack: () => setFile(null) }) : workspace ? h(WorkspaceBrowser, { key: selected.sessionId, session: selected, onBack: () => setWorkspace(false) }) : h(React.Fragment, null,
+          h('div', { className: 'ow-history-toolbar' }, h('strong', null, title(selected)), h('button', { type: 'button', className: 'btn', disabled: loading, onClick: () => loadPage(selected) }, '刷新会话')),
+          h('small', null, selected.cwd || ''),
+          h('button', { type: 'button', className: 'btn', onClick: () => openConversation(selected) }, '继续此会话'),
+          selected.cwd && h('button', { type: 'button', className: 'btn', onClick: () => setWorkspace(true) }, '查看工作区文件'),
+          loading && h('p', { role: 'status' }, '正在读取历史记录…'), error && h('p', { role: 'alert' }, error),
+          files.map(f => h('button', { key: f.path, type: 'button', className: 'ow-history-file', 'data-history-file': f.path, onClick: () => setFile(f) }, f.name, h('small', null, `${f.source} · ${f.path}`))),
+          !loading && !error && !files.length && h('p', null, '这页记录没有已登记的文件。' + (hasMore ? '可加载更早记录。' : '未登记的文件不会从对话文字中猜测。')),
+          hasMore && h('button', { type: 'button', className: 'btn', disabled: loading, onClick: () => loadPage(selected, true) }, '加载更早记录'),
+          messages.length > 0 && h('details', null, h('summary', null, `会话文字（只读，${messages.length} 条）`), messages.map(m => h('article', { key: m.seq }, h('strong', null, m.role), h('pre', null, m.text)))))))
+    }
+    return { configureWorkspaceFiles, childPath, validPath, mutationPath, collectArtifacts, messageRows, rpcRead, readArtifact, HistoryBrowser }
+  },
+})
+
+
+// Open World · 聊天坞（壳内 · 已合并「消息总线」）
+// 定位：日常对话 + 投递台合一 —— 说一句话、拖一份文件、选一个去处，就在同一个面板里完成。
+//   · 主视图 = 会话（像聊天）；左栏底部固定一条「信箱 · 投递记录」，点开就是原来的消息总线记录。
+//   · 投递目标不再是下拉框，而是输入框上的一排小按钮：本机 / 广播 / 全部会话 / 跨机 / 官方聊天 / 剪贴板 / 导出。
+//   · 消息与附件仍全部落本地文件（open-world/chat/ 与 open-world/mailbox.json），可备份、可审计。
+// 视觉：DSH 指挥舱皮肤（constants.OW_SKIN_DSH，取自 styles.js 的 --ow-* 令牌），与 550C 的琥珀 CRT 区分开。
+window.__ModuleLoader__.load({
+  id: 'dsh-open-world/chat',
+  factory: (require) => {
+    const module = { exports: {} }
+    const exports = module.exports
+    Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
+    const React = require('react')
+    const C = require('dsh-open-world/constants')
+    const { HistoryBrowser } = require('dsh-open-world/history')
+    const { useState, useEffect, useRef, useCallback } = React
+
+    const SKIN = C.OW_SKIN_ACTIVE || ''
+    const MAX_HINT = '附件上限 8 MB · .env / *.pem / id_rsa 等敏感名会被拒绝'
+    const ROLE_ZH = { user: '我', agent: '助手', system: '系统' }
+    const ROLE_CLS = { user: 'me', agent: 'ag', system: 'sys' }
+    /* v25/v46：提示驻留与轮询间隔常量化 */
+    const TOAST_MS = 2800
+    const POLL_MS = 4000
+
+    // 投递目标：一排小按钮，点一下就换去处
+    const TARGETS = [
+      { id: 'local', zh: '记录', en: 'LOCAL', hint: '保存到本地记录；不会自动生成助手回复' },
+      { id: 'broadcast', zh: '广播', en: 'CAST', hint: '投给全体广播' },
+      { id: 'sessions', zh: '全会话', en: 'SESS', hint: '投给全部会话' },
+      { id: 'remote', zh: '跨机', en: 'REMOTE', hint: '本地 outbox，等另一台机器取', needPair: true },
+      { id: 'clipboard', zh: '剪贴板', en: 'CLIP', hint: '打包成分享包复制走', info: true },
+      { id: 'external', zh: '导出', en: 'EXPORT', hint: '导出成外发文件', info: true },
+    ]
+    const TARGET_ZH = TARGETS.reduce((a, t) => { a[t.id] = t.zh; return a }, {})
+
+    function fmtTime(ts) {
+      const d = new Date(ts || Date.now())
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    }
+    function fmtSize(n) {
+      if (!n && n !== 0) return ''
+      if (n < 1024) return `${n} B`
+      if (n < 1048576) return `${(n / 1024).toFixed(1)} KB`
+      return `${(n / 1048576).toFixed(1)} MB`
+    }
+    function dayLabel(ts) {
+      const d = new Date(ts || Date.now())
+      const now = new Date()
+      const same = (a, b) => a.toDateString() === b.toDateString()
+      if (same(d, now)) return '今天 · TODAY'
+      if (same(d, new Date(now.getTime() - 86400000))) return '昨天 · YESTERDAY'
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    async function api(url, options) {
+      const res = await fetch(url, Object.assign({ headers: { accept: 'application/json' } }, options || {}))
+      if (!res.ok) {
+        let detail = ''
+        try { detail = (await res.json()).error || '' } catch { /* ignore */ }
+        throw new Error(`${res.status}${detail ? ` ${detail}` : ''}`)
+      }
+      return res.json()
+    }
+    const post = (url, body) => api(url, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+
+    function safeContentUrl(value) {
+      if (typeof value !== 'string' || !value || /[\u0000-\u0020]/.test(value)) return null
+      if (/^https?:\/\//i.test(value)) {
+        try { const u = new URL(value); return u.username || u.password ? null : value } catch { return null }
+      }
+      return /^\/api\/open-world\/chat\/file\?[^#]+$/.test(value) ? value : null
+    }
+
+    function renderMessageText(text) {
+      const value = String(text || ''), out = []
+      const re = /\[([^\]\n]+)\]\((https?:\/\/[^\s<>"']+)\)|(https?:\/\/[^\s<>"'，。！？）]+)/g
+      let last = 0
+      for (const m of value.matchAll(re)) {
+        if (m.index > last) out.push(value.slice(last, m.index))
+        const raw = m[2] || m[3], url = m[2] ? raw : raw.replace(/[).,;!\]]+$/, '')
+        const safe = safeContentUrl(url)
+        out.push(safe ? React.createElement('a', { key: m.index, href: safe, target: '_blank', rel: 'noopener noreferrer', style: { color: 'inherit', textDecoration: 'underline', overflowWrap: 'anywhere' } }, m[1] || url) : m[0])
+        if (!m[2] && raw.length > url.length) out.push(raw.slice(url.length))
+        last = m.index + m[0].length
+      }
+      if (last < value.length) out.push(value.slice(last))
+      return out
+    }
+
+    function AttachmentPreview({ attachment, onClose }) {
+      const [state, setState] = useState({ loading: true })
+      useEffect(() => {
+        const controller = new AbortController()
+        const url = safeContentUrl(attachment.url)
+        if (!url || !url.startsWith('/api/open-world/chat/file?')) { setState({ error: '此附件不支持内嵌预览，请下载后打开。' }); return }
+        ;(async () => {
+          try {
+            const response = await fetch(url, { signal: controller.signal })
+            if (!response.ok) throw new Error(response.status === 404 ? '附件已不存在，或地址无效。' : `读取失败（${response.status}）`)
+            const name = attachment.name || ''
+            if (/\.(txt|md|json|csv|log|html?)$/i.test(name)) setState({ text: await response.text(), html: /\.html?$/i.test(name) })
+            else if (/\.(png|jpe?g|gif|webp)$/i.test(name)) setState({ image: url })
+            else setState({ downloadOnly: true })
+          } catch (e) { if (!controller.signal.aborted) setState({ error: e.message }) }
+        })()
+        return () => controller.abort()
+      }, [attachment])
+      const url = safeContentUrl(attachment.url)
+      const download = url && url.startsWith('/api/open-world/chat/file?') ? url + '&download=1' : url
+      return React.createElement('section', { 'aria-label': '附件预览', style: { padding: 12, border: '1px solid var(--am1)', marginBottom: 10 } },
+        React.createElement('strong', null, attachment.name || '附件'),
+        React.createElement('button', { type: 'button', className: 'btn', onClick: onClose, style: { marginLeft: 12 } }, '关闭预览'),
+        download && React.createElement('a', { href: download, download: attachment.name, className: 'chip', style: { marginLeft: 8 } }, '下载文件'),
+        state.loading && React.createElement('p', null, '正在读取…'),
+        state.error && React.createElement('p', { role: 'alert' }, state.error),
+        state.downloadOnly && React.createElement('p', null, '此格式请下载后用对应应用打开。'),
+        state.image && React.createElement('img', { src: state.image, alt: attachment.name, style: { display: 'block', maxWidth: '100%', maxHeight: 400 } }),
+        state.html ? React.createElement('iframe', { title: attachment.name, sandbox: '', srcDoc: `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">${state.text}`, style: { width: '100%', height: 360, border: 0, background: 'white' } })
+          : state.text !== undefined && React.createElement('pre', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 360, overflow: 'auto' } }, state.text))
+    }
+
+    function ChatDock({ compact, mailbox: mailboxProp, hub, onInject, onAction, setToast }) {
+      const [threads, setThreads] = useState([])
+      const [threadId, setThreadId] = useState(null)
+      const [messages, setMessages] = useState([])
+      const [draft, setDraft] = useState('')
+      const [pending, setPending] = useState([])
+      const [uploaded, setUploaded] = useState([])
+      const [view, setView] = useState('chat')
+      const [preview, setPreview] = useState(null)
+      const [target, setTarget] = useState('local')
+      const [moreTargets, setMoreTargets] = useState(false)
+      const [attachTopo, setAttachTopo] = useState(false)
+      const [attachMem, setAttachMem] = useState(false)
+      const [memOpen, setMemOpen] = useState(false)
+      const [memQuery, setMemQuery] = useState('')
+      const [memHits, setMemHits] = useState([])
+      const [memSource, setMemSource] = useState(null)
+      const [mbox, setMbox] = useState(mailboxProp || null)
+      const [filter, setFilter] = useState('all')
+      const [mq, setMq] = useState('')
+      const [sending, setSending] = useState(false)
+      const [flash, setFlash] = useState(null)
+      const [state, setState] = useState({ online: false, error: null, hint: MAX_HINT })
+      const [q, setQ] = useState('')
+      const fileRef = useRef(null)
+      const listRef = useRef(null)
+      const mboxRef = useRef(null)
+      const viewRef = useRef(view)
+      viewRef.current = view
+
+      const say = useCallback((text) => {
+        setState((s) => ({ ...s, hint: text }))
+        if (setToast) setToast(text)
+      }, [setToast])
+      const flashSay = useCallback((text) => {
+        setFlash(text)
+        setTimeout(() => setFlash(null), TOAST_MS)
+      }, [])
+
+      const load = useCallback(async (silent) => {
+        if (viewRef.current === 'history') return
+        try {
+          const t = await api(C.CHAT_THREADS_URL)
+          const list = t.threads || []
+          setThreads(list)
+          const active = threadId || (list[0] && list[0].id) || 'main'
+          if (!threadId) setThreadId(active)
+          const m = await api(`${C.CHAT_MESSAGES_URL}?thread=${encodeURIComponent(active)}&limit=300`)
+          setMessages(m.messages || [])
+          setState((s) => ({ ...s, online: true, error: null }))
+          if (C.MESSAGES_URL) {
+            api(C.MESSAGES_URL).then((mb) => setMbox(mb)).catch(() => {})
+          }
+          if (viewRef.current === 'chat') post(C.CHAT_READ_URL, { threadId: active }).catch(() => {})
+        } catch (err) {
+          if (!silent) setState((s) => ({ ...s, online: false, error: String(err.message || err) }))
+        }
+      }, [threadId])
+
+      useEffect(() => { if (view === 'history') return; load(false); const iv = setInterval(() => load(true), POLL_MS); return () => clearInterval(iv) }, [load, view])
+      useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight }, [messages.length, threadId, view])
+      useEffect(() => { if (preview && listRef.current) listRef.current.scrollTop = 0 }, [preview])
+      useEffect(() => { const el = mboxRef.current; if (el) el.scrollTop = el.scrollHeight }, [view])
+
+      const upload = useCallback(async (files) => {
+        for (const f of Array.from(files || [])) {
+          try {
+            const res = await fetch(`${C.CHAT_UPLOAD_URL}?thread=${encodeURIComponent(threadId || 'main')}&name=${encodeURIComponent(f.name)}`, {
+              method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f,
+            })
+            const data = await res.json()
+            if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`)
+            setUploaded((u) => [...u, data.attachment])
+            setPending((p) => [...p, { name: f.name, size: f.size }])
+            say(`已加入 ${f.name}，点「发送」一起发出`)
+          } catch (err) { say(`上传失败 ${f.name}：${err.message || err}`) }
+        }
+      }, [threadId, say])
+
+      const searchMem = useCallback(async () => {
+        const q2 = memQuery.trim()
+        if (!q2 || !C.MEMORY_SEARCH_URL) return
+        try {
+          const data = await api(`${C.MEMORY_SEARCH_URL}?q=${encodeURIComponent(q2)}`)
+          setMemHits((data && data.items) || [])
+          setMemSource((data && data.source) || (data && data.daemon ? 'daemon' : 'offline'))
+          setAttachMem(true)
+        } catch (err) { say(`检索失败：${err.message || err}`) }
+      }, [memQuery, say])
+
+      const deliver = useCallback(async (text, atts) => {
+        if (target === 'local') return null
+        if (target === 'agent') {
+          throw new Error('请在原生问答中明确选择会话；不会投递到桌面当前会话')
+        }
+        const attachments = []
+        if (attachMem && memHits.length) {
+          attachments.push({ type: 'memory', items: memHits.slice(0, 5), source: memSource || 'hindsight' })
+        }
+        const data = await post(C.OW_ACTION_URL, {
+          action: 'send-message', to: target, body: text,
+          attachSnapshot: attachTopo,
+          attachments,
+          attachMemory: attachMem && memHits.length ? memHits.slice(0, 5) : undefined,
+        })
+        if (target === 'clipboard' && data && data.share && navigator.clipboard) {
+          try { await navigator.clipboard.writeText(JSON.stringify(data.share, null, 2)) } catch { /* 剪贴板不可用不影响投递 */ }
+        }
+        return TARGET_ZH[target] || target
+      }, [target, attachTopo, attachMem, memHits, memSource, onInject])
+
+      const send = useCallback(async () => {
+        const text = draft.trim()
+        const atts = uploaded
+        if ((!text && atts.length === 0) || sending) return
+        setSending(true)
+        const localId = `local-${Date.now()}`
+        setMessages((m) => [...m, {
+          id: localId, role: 'user', text, attachments: atts, status: 'sending', ts: Date.now(),
+        }])
+        setDraft(''); setUploaded([]); setPending([])
+        try {
+          await post(C.CHAT_POST_URL, { threadId: threadId || 'main', text, attachments: atts, role: 'user' })
+          const where = await deliver(text, atts)
+          if (where) flashSay(`✓ 已投递 · ${where}`)
+          await load(true)
+        } catch (err) {
+          setMessages((m) => m.map((x) => (x.id === localId ? { ...x, status: 'failed' } : x)))
+          say(`发送失败：${err.message || err}`)
+        } finally { setSending(false) }
+      }, [draft, uploaded, sending, threadId, deliver, load, say, flashSay])
+
+      const markRead = useCallback(async (ids) => {
+        if (!ids || ids.length === 0) return
+        try {
+          await post(C.OW_ACTION_URL, { action: 'mark-read', ids })
+          const mb = await api(C.MESSAGES_URL)
+          setMbox(mb)
+        } catch (err) { say(`标记已读失败：${err.message || err}`) }
+      }, [say])
+
+      const shareSnapshot = useCallback(async () => {
+        try {
+          const data = await post(C.OW_ACTION_URL, { action: 'share-snapshot', to: 'external', body: '开放世界拓扑快照' })
+          flashSay(data && data.outboxFile ? '✓ 已导出到 outbox' : '✓ 快照已分享')
+          api(C.MESSAGES_URL).then((mb) => setMbox(mb)).catch(() => {})
+        } catch (err) { say(`分享失败：${err.message || err}`) }
+      }, [say, flashSay])
+
+      const openChatView = useCallback(() => {
+        if (C.CHAT_VIEW_URL) window.open(C.CHAT_VIEW_URL, '_blank', 'noopener')
+      }, [])
+      /* v106 成文：一键把草稿（或会话末段）投递给助手，用 office 插件生成 Word 文档（Tianshu 甄别 #6 · 走生态原生件） */
+      const makeDoc = useCallback(async () => {
+        if (sending) return
+        const EOL = String.fromCharCode(10)
+        const src = draft.trim() || messages
+          .filter((m) => m.text && (m.role === 'user' || m.role === 'agent'))
+          .slice(-20)
+          .map((m) => `${ROLE_ZH[m.role] || m.role}：${m.text}`)
+          .join(EOL)
+        if (!src) { say('没有可成文的内容：先写点草稿，或等会话有来有往'); return }
+        const body = `【成文请求】请把以下内容整理成一份 Word 文档（.docx，含标题/分节/要点），生成后回信告知文件路径。${EOL}----${EOL}${src.slice(0, 6000)}`
+        const localId = `local-${Date.now()}`
+        setMessages((m) => [...m, { id: localId, role: 'user', text: body, status: 'sending', ts: Date.now() }])
+        setSending(true)
+        try {
+          await post(C.CHAT_POST_URL, { threadId: threadId || 'main', text: body, attachments: [], role: 'user' })
+          await post(C.OW_ACTION_URL, { action: 'send-message', to: 'sessions', body })
+          flashSay('✓ 成文请求已投递 · 助手生成文档后会回信到信箱')
+          setDraft('')
+          await load(true)
+        } catch (err) {
+          setMessages((m) => m.map((x) => (x.id === localId ? { ...x, status: 'failed' } : x)))
+          say(`成文请求失败：${err.message || err}`)
+        } finally { setSending(false) }
+      }, [sending, draft, messages, threadId, say, flashSay, load])
+
+      // ── 数据切面 ───────────────────────────────────────────────────
+      const messages2 = mbox && mbox.messages ? mbox.messages : []
+      const unread = (mbox && mbox.unread) || 0
+      const remoteReady = !!(hub && hub.pair && (hub.pair.paired || hub.remoteMessaging?.paired))
+      const filteredThreads = q
+        ? threads.filter((t) => `${t.title || ''} ${t.lastMessage || ''}`.toLowerCase().includes(q.toLowerCase()))
+        : threads
+      const mboxFiltered = messages2
+        .filter((m) => (filter === 'unread' ? m.direction === 'in' && !m.read
+          : filter === 'out' ? m.direction !== 'in' : true))
+        .filter((m) => !mq.trim() || String(m.body || '').toLowerCase().includes(mq.trim().toLowerCase()))
+
+      const groups = []
+      for (const m of messages) {
+        const day = dayLabel(m.ts)
+        const last = groups[groups.length - 1]
+        if (!last || last.day !== day) groups.push({ day, items: [m] })
+        else last.items.push(m)
+      }
+
+      const messageCard = (m) => {
+        const atts = (m.attachments || []).map((a) => {
+          const url = safeContentUrl(a.url), key = a.id || a.name
+          if (!url) return React.createElement('span', { key, className: 'chip', title: '附件地址缺失或无效' }, (a.name || '附件') + '（不可用）')
+          if (url.startsWith('/api/open-world/chat/file?')) return React.createElement('button', { key, type: 'button', className: 'chip', title: '在此处预览附件', onClick: () => setPreview(a) }, a.name, ' · ', fmtSize(a.bytes))
+          return React.createElement('a', { key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'chip', title: '在浏览器打开附件' }, a.name)
+        })
+        return React.createElement('div', { key: m.id, className: `card ${ROLE_CLS[m.role] || 'ag'}` },
+          React.createElement('div', { className: 'meta' },
+            React.createElement('span', { className: m.role === 'user' ? 'warn' : (m.role === 'agent' ? 'info' : 'dim') },
+              ROLE_ZH[m.role] || m.role),
+            React.createElement('span', null, fmtTime(m.ts)),
+            m.status === 'sending' ? React.createElement('span', { className: 'dim' }, '发送中…') : null,
+            m.status === 'failed' ? React.createElement('span', { className: 'bad' }, '发送失败') : null),
+          m.text ? React.createElement('div', { className: 'ln' }, renderMessageText(m.text)) : null,
+          atts.length > 0 && React.createElement('div', { style: { paddingTop: 5 } }, atts))
+      }
+
+      const mboxCard = (m) => {
+        const isIn = m.direction === 'in'
+        const unseen = isIn && !m.read
+        const atts = []
+        for (const a of ((m.payload && m.payload.attachments) || [])) {
+          if (a.type === 'memory') atts.push(`Hindsight · ${(a.items || []).length} 条`)
+          else if (a.type === 'snapshot') atts.push('拓扑快照')
+          else atts.push(a.type || '附件')
+        }
+        if (m.payload && m.payload.snapshot && !atts.some((t) => t.indexOf('拓扑') >= 0)) atts.push('拓扑快照')
+        if (m.kind === 'notification') atts.push('通知中心')
+        return React.createElement('div', {
+          key: m.id, className: `card ${isIn ? 'ag' : 'me'}`,
+          style: { cursor: unseen ? 'pointer' : 'default', opacity: unseen ? 1 : 0.86 },
+          title: unseen ? '点击标记为已读' : undefined,
+          onClick: () => { if (unseen) markRead([m.id]) },
+        },
+          React.createElement('div', { className: 'meta' },
+            React.createElement('span', { className: isIn ? 'info' : 'warn' }, isIn ? '收' : '发'),
+            React.createElement('span', null, m.toLabel || TARGET_ZH[m.to] || m.to || '本地'),
+            React.createElement('span', null, fmtTime(m.ts)),
+            unseen ? React.createElement('span', { className: 'badge' }, '未读') : null),
+          React.createElement('div', { className: 'ln' }, renderMessageText(m.body || '（空消息）')),
+          atts.length > 0 && React.createElement('div', { style: { paddingTop: 5 } },
+            atts.map((t, i) => React.createElement('span', {
+              key: `${m.id}-a-${i}`, className: 'chip att', style: { marginRight: 5 },
+            }, t))))
+      }
+
+      const threadRow = (t) => React.createElement('div', {
+        key: t.id, className: `row${view === 'chat' && t.id === threadId ? ' on' : ''}`,
+        'data-thread-id': t.id, role: 'button', tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click() } },
+        onClick: () => {
+          if (t.id !== threadId) { setMessages([]); setPreview(null) }
+          setThreadId(t.id); setView('chat'); setPending([]); setUploaded([])
+        },
+      },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+          React.createElement('span', { className: view === 'chat' && t.id === threadId ? 'warn' : '' }, t.title || t.id),
+          t.unread ? React.createElement('span', { className: 'badge', style: { marginLeft: 'auto' } }, t.unread) : null),
+        React.createElement('div', { className: 'dim ell', style: { fontSize: 10.5 } }, t.lastMessage || '（还没有消息）'))
+
+      // ── 组装 ───────────────────────────────────────────────────────
+      const rail = React.createElement('div', {
+        style: {
+          width: compact ? 182 : 220, flexShrink: 0, borderRight: '1px solid var(--am1)',
+          padding: '0 8px 8px 0', display: 'flex', flexDirection: 'column', gap: 4, background: 'rgba(4,3,2,.35)',
+        },
+      },
+        React.createElement('div', { className: 'sect' }, '会话 · THREADS'),
+        React.createElement('input', {
+          className: 'inp', type: 'search', value: q, placeholder: '搜索会话…',
+          onChange: (e) => setQ(e.target.value),
+        }),
+        React.createElement('div', { className: 'body', style: { maxHeight: 330 } },
+          filteredThreads.map(threadRow),
+          filteredThreads.length === 0 && React.createElement('div', { className: 'muted', style: { fontSize: 10.5, padding: '6px 8px' } }, '还没有会话')),
+        React.createElement('div', { className: 'divider' }),
+        React.createElement('div', {
+          className: `row${view === 'inbox' ? ' on' : ''}`,
+          title: '原来的「消息总线」记录都在这里',
+          onClick: () => setView('inbox'),
+        },
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+            React.createElement('span', { className: view === 'inbox' ? 'warn' : '' }, '信箱 · 投递记录'),
+            unread > 0 ? React.createElement('span', { className: 'badge', style: { marginLeft: 'auto' } }, unread)
+              : React.createElement('span', { className: 'dim', style: { marginLeft: 'auto', fontSize: 10 } }, messages2.length)),
+          React.createElement('div', { className: 'dim ell', style: { fontSize: 10.5 } }, 'open-world/mailbox.json')),
+        React.createElement('div', { className: 'foot', style: { borderTop: 'none', padding: '6px 8px 0' } },
+          React.createElement('span', null, C.CHAT_VIEW_URL ? '独立页 ↗' : ''),
+          C.CHAT_VIEW_URL ? null : null),
+        C.CHAT_VIEW_URL && React.createElement('span', {
+          className: 'chip', style: { margin: '0 8px' }, title: '在新标签打开独立聊天页（含离线演示）',
+          onClick: openChatView,
+        }, '打开独立页'))
+
+      const targetRow = React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingTop: 6 } },
+        React.createElement('span', { className: 'en', style: { color: 'var(--tx3)' } }, '投递到'),
+        React.createElement('button', { type: 'button', className: 'chip', onClick: () => setView('history'), title: '明确选择会话，在世界内接收回复；当前记录草稿不会自动发送' }, '原生问答'),
+        TARGETS.filter((t) => (!t.needPair || remoteReady) && (moreTargets || t.id === 'local')).map((t) => React.createElement('span', {
+          key: t.id, className: `chip${target === t.id ? ' on' : ''}${t.info ? ' info' : ''}`,
+          title: t.hint || '', onClick: () => setTarget(t.id),
+        }, t.zh)),
+        React.createElement('button', { type: 'button', className: 'chip', onClick: () => setMoreTargets(v => !v) }, moreTargets ? '收起投递方式' : '更多投递方式'),
+        target !== 'local' && React.createElement('span', { className: 'muted', style: { fontFamily: 'var(--mono)', fontSize: 9 } },
+          `→ ${TARGET_ZH[target]}`))
+
+      const attachRow = React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingTop: 5 } },
+        React.createElement('span', { className: 'en', style: { color: 'var(--tx3)' } }, '随行'),
+        React.createElement('span', {
+          className: `chip att${attachTopo ? ' on' : ''}`, title: '把当前 ATI 拓扑/快照一并附上',
+          onClick: () => setAttachTopo((v) => !v),
+        }, '拓扑'),
+        React.createElement('span', {
+          className: `chip att${attachMem ? ' on' : ''}`, title: '把检索到的记忆一并附上',
+          onClick: () => setAttachMem((v) => !v),
+        }, 'Hindsight'),
+        React.createElement('span', {
+          className: `chip${memOpen ? ' on' : ''}`, title: '检索记忆库',
+          onClick: () => setMemOpen((v) => !v),
+        }, memOpen ? '收起检索' : '检索记忆…'),
+        React.createElement('span', {
+          className: `chip att${sending ? ' on' : ''}`, title: '成文：把草稿（或当前会话末段）投给助手，用 office 插件整理成 Word 文档，回信到信箱',
+          onClick: makeDoc,
+        }, '成文'),
+        memHits.length > 0 && React.createElement('span', { className: 'dim', style: { fontSize: 10 } }, `命中 ${memHits.length} 条`))
+
+      const composer = React.createElement('div', { style: { padding: '8px 10px 0' } },
+        pending.length > 0 && React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, paddingBottom: 5 } },
+          pending.map((f, i) => React.createElement('span', { key: `${f.name}-${i}`, className: 'chip' },
+            `${f.name}`, React.createElement('span', { className: 'muted' }, fmtSize(f.size))))),
+        React.createElement('textarea', {
+          className: 'inp', value: draft, rows: 3,
+          placeholder: '说点什么… Enter 发送 · Shift+Enter 换行 · 可直接拖入或粘贴文件',
+          onChange: (e) => setDraft(e.target.value),
+          onKeyDown: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } },
+          onDragOver: (e) => e.preventDefault(),
+          onDrop: (e) => { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files) upload(e.dataTransfer.files) },
+          onPaste: (e) => { const f = e.clipboardData && e.clipboardData.files; if (f && f.length) upload(f) },
+        }),
+        targetRow,
+        attachRow,
+        memOpen && React.createElement('div', { style: { paddingTop: 6 } },
+          React.createElement('div', { style: { display: 'flex', gap: 6 } },
+            React.createElement('input', {
+              className: 'inp', value: memQuery, placeholder: '在 Hindsight 里搜一段记忆…',
+              onChange: (e) => setMemQuery(e.target.value),
+              onKeyDown: (e) => { if (e.key === 'Enter') searchMem() },
+            }),
+            React.createElement('button', { type: 'button', className: 'btn', onClick: searchMem }, '搜')),
+          React.createElement('div', { className: 'muted', style: { fontSize: 9.5, paddingTop: 3 } },
+            memSource ? `来源 · Hindsight · ${memSource}` : '来源 · Hindsight（daemon/cache/offline）'),
+          memHits.slice(0, 4).map((m, i) => React.createElement('div', {
+            key: m.id || i, className: 'dim', style: { fontSize: 10.5, paddingLeft: '1.4em', textIndent: '-1.4em' },
+          }, `· ${String(m.text || '').slice(0, 110)}`))),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0' } },
+          React.createElement('button', {
+            type: 'button', className: 'btn', title: '选择文件（也可以拖进来或直接粘贴）',
+            onClick: () => fileRef.current && fileRef.current.click(),
+          }, '📎 附件'),
+          React.createElement('input', {
+            ref: fileRef, type: 'file', multiple: true, style: { display: 'none' },
+            onChange: (e) => { upload(e.target.files); e.target.value = '' },
+          }),
+          React.createElement('button', {
+            type: 'button', className: 'btn primary', style: { marginLeft: 'auto' },
+            onClick: send, disabled: sending || (!draft.trim() && uploaded.length === 0),
+          }, sending ? '发送中…' : (target === 'local' ? '保存记录' : `发送 → ${TARGET_ZH[target]}`)),
+          React.createElement('span', { className: 'muted', style: { fontFamily: 'var(--mono)', fontSize: 9, flexBasis: '100%' } },
+            flash ? React.createElement('span', { className: 'ok' }, flash) : state.hint)))
+
+      const inboxView = React.createElement('div', {
+        style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '0 10px 8px' },
+      },
+        React.createElement('div', { className: 'sect' }, `投递记录 · ${mboxFiltered.length} 条${unread ? ` · 未读 ${unread}` : ''}`),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' } },
+          React.createElement('span', {
+            className: `chip${filter === 'all' ? ' on' : ''}`, onClick: () => setFilter('all'),
+          }, `全部 ${messages2.length}`),
+          React.createElement('span', {
+            className: `chip${filter === 'unread' ? ' on' : ''}`, onClick: () => setFilter('unread'),
+          }, `未读 ${unread}`),
+          React.createElement('span', {
+            className: `chip${filter === 'out' ? ' on' : ''}`, onClick: () => setFilter('out'),
+          }, '我发的'),
+          React.createElement('input', {
+            className: 'inp', type: 'search', value: mq, placeholder: '搜索投递记录…',
+            style: { flex: 1, minWidth: 90 }, onChange: (e) => setMq(e.target.value),
+          }),
+          unread > 0 && React.createElement('button', {
+            type: 'button', className: 'btn',
+            onClick: () => markRead(messages2.filter((m) => m.direction === 'in' && !m.read).map((m) => m.id)),
+          }, '全部已读'),
+          React.createElement('button', { type: 'button', className: 'btn', onClick: shareSnapshot }, '分享快照')),
+        React.createElement('div', { ref: mboxRef, className: 'body', style: { paddingTop: 4 } },
+          mboxFiltered.length === 0 && React.createElement('div', {
+            className: 'muted', style: { fontSize: 11, padding: '22px 0', textAlign: 'center' },
+          }, '还没有投递记录 —— 回会话里选个投递目标发一句试试'),
+          mboxFiltered.slice(0, 80).map(mboxCard)),
+        React.createElement('div', { className: 'foot', style: { borderTop: 'none', padding: '6px 0 0' } },
+          React.createElement('span', null, '收 / 发 记录落 open-world/mailbox.json'),
+          React.createElement('span', { style: { marginLeft: 'auto' } }, remoteReady ? '跨机就绪' : '本机')))
+
+      const chatView = React.createElement('div', {
+        style: { flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 10px 0' },
+      },
+        React.createElement('div', { className: 'sect' }, `消息 · ${messages.length} 条`),
+        React.createElement('div', { ref: listRef, className: 'body', style: { flex: 1, minHeight: 60, overflowY: 'auto' } },
+          preview && React.createElement(AttachmentPreview, { attachment: preview, onClose: () => setPreview(null) }),
+          groups.map((g) => React.createElement('div', { key: g.day },
+            React.createElement('div', { className: 'sect', style: { paddingTop: 4 } }, g.day),
+            g.items.map(messageCard))),
+          messages.length === 0 && React.createElement('div', {
+            className: 'muted', style: { fontSize: 11, padding: '26px 0', textAlign: 'center' },
+          }, '这里保存消息与附件；转到桌面会话后，助手回复在该会话中显示。')),
+        !preview && composer)
+
+      return React.createElement('div', { className: 'owd', style: { height: '100%', minHeight: 0 } },
+        React.createElement('style', { dangerouslySetInnerHTML: { __html: SKIN } }),
+        React.createElement('div', { className: 'panel', style: { height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
+          React.createElement('div', { className: 'head' },
+            React.createElement('span', { className: state.online ? 'sig' : 'sig red' }),
+            React.createElement('span', { className: 'zh' }, '消息与附件'),
+            React.createElement('button', { type: 'button', className: 'btn', 'data-history-toggle': true, onClick: () => setView(view === 'history' ? 'chat' : 'history') }, view === 'history' ? '本地记录' : '历史会话'),
+            view !== 'history' && React.createElement('span', { className: 'tag' },
+              `${threads.length} 个会话 · 信箱 ${messages2.length} 条${unread ? ` · 未读 ${unread}` : ''}`,
+              state.error ? ` · ${state.error}` : '')),
+          React.createElement('div', { className: 'ruler' }),
+          view === 'history' ? React.createElement(HistoryBrowser) : React.createElement('div', { style: { display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' } },
+            rail, view === 'inbox' ? inboxView : chatView)))
+    }
+
+    exports.safeContentUrl = safeContentUrl
+    exports.renderMessageText = renderMessageText
+    exports.ChatDock = ChatDock
+    exports.TARGETS = TARGETS
     return module.exports
   },
 })
@@ -1602,6 +2760,7 @@ window.__ModuleLoader__.load({
     const exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
     const React = require('react')
+    const { RewindTimelinePanel } = require('dsh-open-world/hubs')
     const { useState, useEffect } = React
     const C = require('dsh-open-world/constants')
     const { MEMORY_URL, MEMORY_COMPARE_URL, MEMORY_ARCHIVES_URL, MEMORY_SEARCH_URL, OW_ACTION_URL, SHELL_GUIDE_KEY } = C
@@ -1684,13 +2843,13 @@ window.__ModuleLoader__.load({
         style: {
           marginTop: 12,
           padding: '10px 12px',
-          border: '1px solid rgba(94,234,212,.28)',
+          border: '1px solid rgba(231,178,75,.28)',
           borderRadius: 8,
-          background: 'rgba(94,234,212,.06)',
+          background: 'rgba(231,178,75,.06)',
         },
       },
         React.createElement('div', {
-          style: { fontSize: 11, color: '#94a3b8', marginBottom: 8, lineHeight: 1.45 },
+          style: { fontSize: 11, color: '#A3A3A8', marginBottom: 8, lineHeight: 1.45 },
         }, hint),
         React.createElement('div', {
           className: 'ow-world-map',
@@ -1831,7 +2990,7 @@ window.__ModuleLoader__.load({
         ),
         tab === 'local' && React.createElement(MemoryBrief, { memory, onToast }),
         tab === 'hindsight' && React.createElement('div', { className: 'ow-hub' },
-          React.createElement('div', { style: { fontSize: 10, color: '#64748b', marginBottom: 6 } },
+          React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginBottom: 6 } },
             '长期记忆搜索 · 需本机 Hindsight；与本地 RRM 归档不是同一条路'),
           React.createElement('div', { className: 'ow-msg-row' },
             React.createElement('input', {
@@ -1844,7 +3003,7 @@ window.__ModuleLoader__.load({
               type: 'button', className: 'ow-msg-btn primary', disabled: busy, onClick: search,
             }, busy ? '…' : '搜索'),
           ),
-          source && React.createElement('div', { style: { fontSize: 9, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
+          source && React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } }, `来源 · ${source}`),
           hits.slice(0, 5).map((m, i) => React.createElement('div', {
             key: (m && m.id) || i,
             style: { fontSize: 11, color: '#cbd5e1', marginTop: 6, lineHeight: 1.4 },
@@ -1926,14 +3085,14 @@ window.__ModuleLoader__.load({
         }),
         React.createElement('span', {
           className: 'ow-bridge-summary',
-          style: { fontSize: 9, color: '#94a3b8', marginLeft: 4, fontFamily: 'var(--ow-mono)' },
+          style: { fontSize: 11, color: '#A3A3A8', marginLeft: 4, fontFamily: 'var(--ow-mono)' },
           title: surfaceTitle,
         }, `${apiN}通 · ${degN}弱 · ${badN}无`),
         lastText && React.createElement('span', {
           className: 'ow-bridge-last',
           style: {
-            fontSize: 9, marginLeft: 6, fontFamily: 'var(--ow-mono)',
-            color: last.ok ? '#5eead4' : '#ff9090',
+            fontSize: 11, marginLeft: 6, fontFamily: 'var(--ow-mono)',
+            color: last.ok ? '#E7B24B' : '#ff9090',
           },
           title: last.error
             ? `最近实跑：${last.action} · ${last.error}`
@@ -1956,11 +3115,11 @@ window.__ModuleLoader__.load({
       return React.createElement('span', {
         className: `ow-source-tag ow-source-${source}`,
         style: {
-          fontSize: 7, padding: '1px 4px', marginLeft: 6, borderRadius: 2,
+          fontSize: 11, padding: '2px 7px', marginLeft: 6, borderRadius: 999,
           verticalAlign: 'middle', fontFamily: 'var(--ow-mono)',
-          background: source === 'metaphor' ? 'rgba(244,114,182,.15)' : 'rgba(94,234,212,.12)',
-          color: source === 'metaphor' ? '#f472b6' : '#5eead4',
-          border: `1px solid ${source === 'metaphor' ? 'rgba(244,114,182,.25)' : 'rgba(94,234,212,.2)'}`,
+          background: source === 'metaphor' ? 'rgba(255,159,10,.15)' : 'rgba(231,178,75,.12)',
+          color: source === 'metaphor' ? '#FF9F0A' : '#E7B24B',
+          border: `1px solid ${source === 'metaphor' ? 'rgba(255,159,10,.25)' : 'rgba(231,178,75,.2)'}`,
         },
         title: source === 'metaphor' ? '叙事隐喻，非实时 ML/DL' : '由真实状态推算',
       }, label)
@@ -2021,7 +3180,7 @@ window.__ModuleLoader__.load({
 
       const view = overlay ? { ...memory, ...overlay } : memory
       if (!view || !view.meta) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, 'RRM 记忆未就绪')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, 'RRM 记忆未就绪')
       }
       const m = view.meta
       const f = view.falsify || {}
@@ -2162,15 +3321,15 @@ window.__ModuleLoader__.load({
         )
       }
 
-      return React.createElement('div', { className: 'ow-memory-brief', style: { fontSize: 11, color: '#7c8ea6', lineHeight: 1.55 } },
-        React.createElement('div', { style: { color: '#5eead4', marginBottom: 6 } }, view.hint || '事件记忆'),
+      return React.createElement('div', { className: 'ow-memory-brief', style: { fontSize: 11, color: '#A3A3A8', lineHeight: 1.55 } },
+        React.createElement('div', { style: { color: '#E7B24B', marginBottom: 6 } }, view.hint || '事件记忆'),
         React.createElement('div', {
-          style: { fontSize: 9, color: '#64748b', marginBottom: 6 },
+          style: { fontSize: 11, color: '#64748b', marginBottom: 6 },
         }, '本地 RRM 壳层 · ≠ Hindsight（信箱/集成枢纽走「搜 Hindsight」）'),
         React.createElement('div', null, `精确 ${m.exact} · 压缩 ${m.compressed} · 地标 ${m.landmarks}`),
         f.bytesSaved != null && React.createElement('div', null, `证伪节省 ${f.bytesSaved}B · 比 ${f.ratio}`),
         (act.tau_ms != null || act.byte_budget != null) && React.createElement('div', {
-          style: { marginTop: 8, fontFamily: 'var(--ow-mono)', fontSize: 10, color: sessionOn ? '#fbbf24' : '#94a3b8' },
+          style: { marginTop: 8, fontFamily: 'var(--ow-mono)', fontSize: 11, color: sessionOn ? '#fbbf24' : '#A3A3A8' },
         },
           `生效 · α=${act.alpha ?? '—'} · τ=${act.tau_ms ?? '—'}ms · B=${act.byte_budget ?? '—'}`,
           React.createElement('div', { style: { marginTop: 2 } },
@@ -2179,29 +3338,29 @@ window.__ModuleLoader__.load({
               : '来源 · open-world.yml',
           ),
         ),
-        mb && mb.meta && React.createElement('div', { style: { marginTop: 8, color: '#94a3b8' } },
+        mb && mb.meta && React.createElement('div', { style: { marginTop: 8, color: '#A3A3A8' } },
           mb.hint || '信箱',
           ` · 未读钉住 ${mb.meta.unreadPinned || 0}`,
         ),
-        view.tasks && view.tasks.meta && React.createElement('div', { style: { marginTop: 6, color: '#94a3b8' } },
+        view.tasks && view.tasks.meta && React.createElement('div', { style: { marginTop: 6, color: '#A3A3A8' } },
           view.tasks.hint || '任务',
           ` · 热钉住 ${view.tasks.hotPinned || view.tasks.meta.hotPinned || 0}`,
         ),
-        archives && React.createElement('div', { style: { marginTop: 8, color: '#94a3b8' } },
-          React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, archives.hint || '归档'),
+        archives && React.createElement('div', { style: { marginTop: 8, color: '#A3A3A8' } },
+          React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, archives.hint || '归档'),
           archLine('事件', archives.events),
           archLine('信箱', archives.mailbox),
           archLine('任务', archives.tasks),
           archives.recent && React.createElement('div', { style: { marginTop: 6 } },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, '最近归档（尾预览）'),
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, '最近归档（尾预览）'),
             ['events', 'mailbox', 'tasks'].map((ch) => {
               const zh = ch === 'events' ? '事件' : ch === 'mailbox' ? '信箱' : '任务'
               const list = (archives.recent[ch] || []).slice(-3)
               if (!list.length) {
-                return React.createElement('div', { key: ch, style: { fontSize: 9, opacity: 0.7 } }, `${zh} · —`)
+                return React.createElement('div', { key: ch, style: { fontSize: 11, opacity: 0.7 } }, `${zh} · —`)
               }
               return React.createElement('div', { key: ch, style: { marginBottom: 4 } },
-                React.createElement('div', { style: { fontSize: 9, color: '#64748b' } }, zh),
+                React.createElement('div', { style: { fontSize: 11, color: '#64748b' } }, zh),
                 list.map((it, i) => React.createElement('div', {
                   key: `${ch}-${it.id || i}`,
                   style: { fontFamily: 'var(--ow-mono)', fontSize: 9 },
@@ -2209,7 +3368,7 @@ window.__ModuleLoader__.load({
               )
             }),
             archives.recent.note && React.createElement('div', {
-              style: { marginTop: 2, fontSize: 9, color: '#64748b' },
+              style: { marginTop: 2, fontSize: 11, color: '#64748b' },
             }, archives.recent.note),
           ),
           React.createElement('div', {
@@ -2222,8 +3381,8 @@ window.__ModuleLoader__.load({
               onChange: (e) => setArchQ(e.target.value),
               onKeyDown: (e) => { if (e.key === 'Enter') searchArchives() },
               style: {
-                flex: '1 1 120px', minWidth: 100, fontSize: 10, padding: '2px 6px',
-                background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 3,
+                flex: '1 1 120px', minWidth: 100, fontSize: 11, padding: '2px 6px',
+                background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', color: '#F2F2F4', borderRadius: 9,
               },
             }),
             React.createElement('button', {
@@ -2236,9 +3395,9 @@ window.__ModuleLoader__.load({
             }, archBusy ? '检索中…' : '搜归档'),
           ),
           archHits && archHits.channels && React.createElement('div', {
-            style: { marginTop: 6, fontSize: 9, color: '#94a3b8' },
+            style: { marginTop: 6, fontSize: 11, color: '#A3A3A8' },
           },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } },
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } },
               archHits.note || '归档命中'),
             ['events', 'mailbox', 'tasks'].map((ch) => {
               const zh = ch === 'events' ? '事件' : ch === 'mailbox' ? '信箱' : '任务'
@@ -2262,7 +3421,7 @@ window.__ModuleLoader__.load({
         ),
         React.createElement('div', { style: { marginTop: 10 } },
           React.createElement('div', {
-            style: { color: '#5eead4', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+            style: { color: '#E7B24B', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
           },
             '参数证伪对照',
             React.createElement('button', {
@@ -2310,15 +3469,15 @@ window.__ModuleLoader__.load({
           cmp && cmp.rows && cmp.rows.map((row) => React.createElement('div', {
             key: row.label,
             style: {
-              fontFamily: 'var(--ow-mono)', fontSize: 10,
+              fontFamily: 'var(--ow-mono)', fontSize: 11,
               opacity: cmp.winner && cmp.winner.label === row.label ? 1 : 0.75,
-              color: cmp.winner && cmp.winner.label === row.label ? '#5eead4' : undefined,
+              color: cmp.winner && cmp.winner.label === row.label ? '#E7B24B' : undefined,
             },
           }, `${row.label}: α=${row.alpha} τ=${row.tau_ms} · ${row.liveBytes}B / ${row.naiveBytes}B = ${row.ratio}`)),
           cmp && cmp.channels && React.createElement('div', {
-            style: { marginTop: 8, fontSize: 10, color: '#94a3b8' },
+            style: { marginTop: 8, fontSize: 11, color: '#A3A3A8' },
           },
-            React.createElement('div', { style: { color: '#5eead4', marginBottom: 2 } }, '三通道旁注'),
+            React.createElement('div', { style: { color: '#E7B24B', marginBottom: 2 } }, '三通道旁注'),
             cmp.channels.mailbox && cmp.channels.mailbox.winner && React.createElement('div', null,
               `信箱胜出 · ${cmp.channels.mailbox.winner.label} · 比 ${cmp.channels.mailbox.winner.ratio}`,
             ),
@@ -2326,25 +3485,25 @@ window.__ModuleLoader__.load({
               `任务胜出 · ${cmp.channels.tasks.winner.label} · 比 ${cmp.channels.tasks.winner.ratio}`,
             ),
             !cmp.channels.mailbox && !cmp.channels.tasks && React.createElement('div', {
-              style: { fontSize: 9, color: '#64748b' },
+              style: { fontSize: 11, color: '#64748b' },
             }, '信箱/任务暂无样本可对照'),
           ),
           cmp && cmp.note && React.createElement('div', {
-            style: { marginTop: 4, fontSize: 9, color: '#64748b' },
+            style: { marginTop: 4, fontSize: 11, color: '#64748b' },
           }, cmp.note),
           !cmp && React.createElement('div', { style: { fontSize: 10 } }, '尚无对照 · 点刷新或等下一帧 snapshot'),
         ),
-        view.neuralStub && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#64748b' } },
+        view.neuralStub && React.createElement('div', { style: { marginTop: 8, fontSize: 11, color: '#64748b' } },
           `神经 RRA：未实现（${view.neuralStub.stage || 'L0'} · ${view.neuralStub.protocol || 'stub'}）`,
           view.neuralStub.adapter && React.createElement('div', {
-            style: { marginTop: 2, fontSize: 9, color: '#475569' },
+            style: { marginTop: 2, fontSize: 11, color: '#475569' },
           },
             view.neuralStub.adapter.probe
               ? `适配器 · 已探测${view.neuralStub.adapter.proto && view.neuralStub.adapter.proto.version ? ` rra-proto@${view.neuralStub.adapter.proto.version}` : ''}${view.neuralStub.adapter.error ? ` · ${view.neuralStub.adapter.error}` : ''} · 神经仍关`
               : '适配器 · 未探测（rra.probe=false）· 神经仍关',
           ),
           view.neuralStub.nextCut && React.createElement('div', {
-            style: { marginTop: 2, fontSize: 9, color: '#475569' },
+            style: { marginTop: 2, fontSize: 11, color: '#475569' },
           }, `下一刀 · ${view.neuralStub.nextCut}`),
         ),
       )
@@ -2353,11 +3512,11 @@ window.__ModuleLoader__.load({
     function tierBadge(tier) {
       const label = tier === 'exact' ? '精确' : tier === 'compressed' ? '压缩' : tier === 'landmark' ? '地标' : ''
       if (!label) return null
-      const color = tier === 'exact' ? '#5eead4' : tier === 'compressed' ? '#fbbf24' : '#a78bfa'
+      const color = tier === 'exact' ? '#E7B24B' : tier === 'compressed' ? '#fbbf24' : '#64D2FF'
       return React.createElement('span', {
         className: 'ow-tier-badge',
         style: {
-          fontSize: 9, padding: '1px 5px', borderRadius: 3, marginRight: 6,
+          fontSize: 11, padding: '2px 8px', borderRadius: 999, marginRight: 6,
           border: `1px solid ${color}55`, color, fontFamily: 'var(--ow-mono)',
         },
       }, label)
@@ -2419,7 +3578,7 @@ window.__ModuleLoader__.load({
 
     function SocialPanel({ social, onChannel, onSession }) {
       if (!social) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '社交层加载中…')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '社交层加载中…')
       }
       const presence = social.presence || []
       const channels = social.channels || []
@@ -2427,7 +3586,7 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-social-list' },
         React.createElement('div', { className: 'ow-social-tag' }, social.tagline),
         presence.length > 0 && React.createElement('div', { style: { marginTop: 8 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, `在线会话 · ${social.presenceCount}`),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, `在线会话 · ${social.presenceCount}`),
           presence.map((p) => React.createElement('div', {
             key: p.id,
             className: `ow-social-presence ${p.active ? 'active' : ''}`,
@@ -2442,24 +3601,24 @@ window.__ModuleLoader__.load({
           )),
         ),
         React.createElement('div', { style: { marginTop: 10 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, `社交频道 · ${social.channelCount}`),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, `社交频道 · ${social.channelCount}`),
           channels.map((ch) => React.createElement('div', {
             key: ch.id,
             className: `ow-social-channel ${ch.installed ? '' : 'off'}`,
             onClick: () => ch.installed && onChannel(ch.id),
           },
             React.createElement('span', null, ch.title),
-            React.createElement('span', { style: { fontSize: 9, color: ch.online ? '#5eead4' : '#7c8ea6' } },
+            React.createElement('span', { style: { fontSize: 11, color: ch.online ? '#E7B24B' : '#A3A3A8' } },
               ch.online ? '在线' : (ch.installed ? '就绪' : '未装')),
           )),
         ),
         feed.length > 0 && React.createElement('div', { style: { marginTop: 10 } },
-          React.createElement('div', { style: { fontSize: 10, color: '#4a5a70', marginBottom: 6, letterSpacing: 1 } }, '动态流'),
+          React.createElement('div', { style: { fontSize: 11, color: '#4a5a70', marginBottom: 6, letterSpacing: 0 } }, '动态流'),
           feed.slice(0, 5).map((item) => React.createElement('div', { key: item.id, className: 'ow-social-feed-item' },
             React.createElement('span', { className: 'ow-social-kind' }, item.kind),
             React.createElement('span', null,
-              React.createElement('div', { style: { color: '#e6f1ff' } }, item.title),
-              item.detail && React.createElement('div', { style: { color: '#7c8ea6', fontSize: 10 } }, item.detail),
+              React.createElement('div', { style: { color: '#F2F2F4' } }, item.title),
+              item.detail && React.createElement('div', { style: { color: '#A3A3A8', fontSize: 10 } }, item.detail),
             ),
           )),
         ),
@@ -2476,7 +3635,7 @@ window.__ModuleLoader__.load({
       }
       return React.createElement('div', { className: 'ow-integ-list' },
         list.length === 0
-          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '扫描插件目录…')
+          ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '扫描插件目录…')
           : list.map((p) => React.createElement('div', {
             key: p.id,
             className: `ow-integ-item ${p.online ? '' : 'offline'}`,
@@ -2507,8 +3666,8 @@ window.__ModuleLoader__.load({
 
     function SidebarSummaryView({ snapshot }) {
       const s = buildSidebarSummary(snapshot)
-      return React.createElement('div', { className: 'ow-sidebar-summary', style: { padding: 12, fontSize: 12, color: '#7c8ea6' } },
-        React.createElement('div', { style: { color: '#5eead4', marginBottom: 8, letterSpacing: 1 } }, '开放世界摘要'),
+      return React.createElement('div', { className: 'ow-sidebar-summary', style: { padding: 12, fontSize: 12, color: '#A3A3A8' } },
+        React.createElement('div', { style: { color: '#F2F2F4', fontSize: 13, fontWeight: 590, marginBottom: 8, letterSpacing: 0 } }, '开放世界摘要'),
         React.createElement('div', null, `健康 ${s.health} · 会话 ${s.sessions}`),
         React.createElement('div', { style: { marginTop: 4 } }, `插件在线 ${s.plugins}`),
       )
@@ -2570,7 +3729,7 @@ window.__ModuleLoader__.load({
           ? React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 6 } },
             '摘要 · 点「展开舰队」看进程列表与操作')
           : (list.length === 0
-            ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无进程')
+            ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '暂无进程')
             : list.slice(0, 24).map((p) => {
               const clickable = (p.kind === 'session' && p.sessionId)
                 || (p.kind === 'task' && p.taskId)
@@ -2633,6 +3792,7 @@ window.__ModuleLoader__.load({
       const SURFACE_META = {
       'task-board': { title: '任务世界', en: 'TASKS WORLD' },
       rewind: { title: '回退世界', en: 'REWIND WORLD' },
+      chat: { title: '聊天坞 · 内嵌', en: 'CHAT' },
       'all-in-all': { title: '元宇宙世界包 · 占位', en: 'ALL-IN-ALL' },
       market: { title: '插件中心 · 内嵌', en: 'MARKET' },
       memory: { title: '长期记忆 · 内嵌', en: 'HINDSIGHT' },
@@ -2650,7 +3810,6 @@ window.__ModuleLoader__.load({
     }) {
       const meta = SURFACE_META[panel] || { title: panel || '应用', en: 'APP' }
       const rewind = (snapshot && snapshot.rewind) || {}
-      const timeline = (rewind.timeline && rewind.timeline.anchors) || rewind.anchors || []
       const sessions = (snapshot && snapshot.sessions) || {}
       const core = (snapshot && snapshot.core) || {}
       const integ = (snapshot && snapshot.integrations) || {}
@@ -2666,7 +3825,7 @@ window.__ModuleLoader__.load({
       if (panel === 'task-board') {
         body = React.createElement(React.Fragment, null,
           (tasks || []).length === 0
-            ? React.createElement('div', { style: { color: '#7c8ea6', fontSize: 12 } },
+            ? React.createElement('div', { style: { color: '#A3A3A8', fontSize: 12 } },
               integ.taskBoard ? '暂无任务' : '任务看板离线 · 可点下方到官方入口')
             : (tasks || []).map((t) => React.createElement('div', {
               key: t.id,
@@ -2686,56 +3845,10 @@ window.__ModuleLoader__.load({
           ),
         )
       } else if (panel === 'rewind') {
-        const items = Array.isArray(timeline) ? timeline.slice(0, 12) : []
-        const offlineHint = (plug.find((p) => p.id === 'rewind') || {}).howToEnable
-          || '对话回退未启用 · 在 plugins.yml 将 web-ui-rewind: enabled 设为 true，运行 apply.cmd 后重启 Desktop'
-        body = React.createElement(React.Fragment, null,
-          React.createElement('div', {
-            style: { fontSize: 12, color: rewind.available ? '#7c8ea6' : '#fbbf24', marginBottom: 8, lineHeight: 1.5 },
-          },
-            rewind.available
-              ? `${rewind.anchors || items.length || 0} 锚点 · ${rewind.snapshots || 0} 快照`
-              : offlineHint),
-          !rewind.available
-            ? React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-              React.createElement('button', {
-                type: 'button', className: 'ow-neural-btn',
-                onClick: () => {
-                  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(offlineHint)
-                },
-              }, '复制说明'),
-              React.createElement('button', {
-                type: 'button', className: 'ow-neural-btn',
-                onClick: () => onAction && onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
-              }, '打开设置'),
-            )
-            : React.createElement(React.Fragment, null,
-              items.length === 0
-                ? React.createElement('div', { style: { color: '#7c8ea6', fontSize: 12 } }, '暂无锚点 · 可在对话里用 /rewind')
-                : items.map((a, i) => React.createElement('div', {
-                  key: a.seq != null ? a.seq : i,
-                  className: 'ow-task-item',
-                  style: { marginBottom: 8 },
-                },
-                  React.createElement('div', { className: 'ow-task-head' },
-                    React.createElement('span', { className: 'ow-task-name' }, a.title || a.preview || `锚点 @${a.seq}`),
-                    React.createElement('span', { className: 'ow-task-pct' }, a.seq != null ? `@${a.seq}` : ''),
-                  ),
-                  a.seq != null && React.createElement('button', {
-                    type: 'button',
-                    className: 'ow-neural-btn',
-                    style: { marginTop: 6 },
-                    onClick: () => onAction && onAction({ type: 'rewind-exec', seq: a.seq, mode: 'both' }),
-                  }, '回退到此'),
-                )),
-              React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' } },
-                officialBtn('聊天里打开 /rewind', { type: 'rewind-open', preferChat: true, label: '聊天里打开 /rewind' }),
-              ),
-            ),
-        )
+        body = React.createElement(RewindTimelinePanel, { rewind, plugins: plug, onAction, compact: false })
       } else if (panel === 'market') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8', marginBottom: 8 } },
             `插件 ${plug.filter((p) => p.online).length}/${plug.length} 在线`),
           React.createElement('div', { className: 'ow-integ-list' },
             plug.slice(0, 16).map((p) => React.createElement('div', {
@@ -2754,20 +3867,36 @@ window.__ModuleLoader__.load({
         )
       } else if (panel === 'memory') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginBottom: 8 } },
             '双通路：上方本地 RRM（刷新记忆 / 搜归档）；Hindsight 长期记忆在集成枢纽或事件页信箱「搜 Hindsight」。'),
           React.createElement(MemoryBrief, { memory: memory || (snapshot && snapshot.memory) }),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             integ.hindsightDaemon ? 'Hindsight daemon 在线' : (integ.hindsight ? 'Hindsight 已装' : 'Hindsight 未启用')),
           React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8 } },
             officialBtn('到设置找 Hindsight', { type: 'settings', label: 'Hindsight', settingsHint: '插件' }),
           ),
         )
+      } else if (panel === 'chat') {
+        const ChatLib = require('dsh-open-world/chat')
+        const ChatDock = ChatLib && ChatLib.ChatDock
+        body = ChatDock
+          ? React.createElement(ChatDock, {
+            compact: false,
+            mailbox: snapshot && snapshot.mailbox,
+            hub,
+            onAction,
+            setToast: (msg) => onAction && onAction({ type: 'toast', label: msg }),
+            onInject: (text) => onAction && onAction({
+              type: 'inject-message', body: text, label: '已注入当前会话',
+            }),
+          })
+          : React.createElement('div', { style: { fontSize: 12, color: '#8b95a7' } },
+            '聊天模块未加载：先运行 npm run build:client')
       } else if (panel === 'ssh') {
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#e6f1ff', lineHeight: 1.6 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#F2F2F4', lineHeight: 1.6 } },
             'SSH 会话仍由官方面板承载。这里保留壳内入口，避免把指挥舱关掉才找按钮。'),
-          React.createElement('div', { style: { marginTop: 10, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 10, fontSize: 12, color: '#A3A3A8' } },
             `网络节点 · sessions ${sessions.count != null ? sessions.count : (core.sessionCount || 0)}`),
           React.createElement('div', { style: { marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' } },
             officialBtn('打开官方 SSH', { type: 'panel', label: 'SSH', panel: 'ssh', selector: '[data-dsh-ssh-entry]' }),
@@ -2777,13 +3906,13 @@ window.__ModuleLoader__.load({
       } else if (panel === 'remote') {
         const space = (snapshot && snapshot.space) || {}
         body = React.createElement(React.Fragment, null,
-          React.createElement('div', { style: { fontSize: 12, color: '#e6f1ff', lineHeight: 1.6 } },
+          React.createElement('div', { style: { fontSize: 12, color: '#F2F2F4', lineHeight: 1.6 } },
             '移动端 / Pair 远程由 Host 驱动提供。LAN 第二屏：/api/open-world/space/view（SSE 同步）。'),
-          hub && hub.pair && React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#7c8ea6' } },
+          hub && hub.pair && React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#A3A3A8' } },
             hub.pair.available
               ? `Pair · ${hub.pair.paired ? '已配对' : '未配对'} · 在线 ${hub.pair.onlineCount || 0}`
               : 'Pair 不可用'),
-          React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#5eead4' } },
+          React.createElement('div', { style: { marginTop: 8, fontSize: 12, color: '#E7B24B' } },
             space.enabled === false
               ? 'Space 未启用'
               : `Space · ${space.hasToken ? '令牌就绪' : '待签发'} · ${space.protocol || 'owip/0.3-draft'}${space.sync === false ? '' : ' · sync'}`),
@@ -2820,7 +3949,7 @@ window.__ModuleLoader__.load({
             React.createElement('span', null, 'RSS'), React.createElement('span', null, `${load.rssMb || '—'} MB`)),
           React.createElement('div', { className: 'ow-detail-row' },
             React.createElement('span', null, 'Uptime'), React.createElement('span', null, `${load.uptimeSec || '—'} s`)),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             '完整监视仍看左栏「状态」；进程列表见「进程舰队」。'),
           React.createElement('div', { style: { marginTop: 12 } },
             React.createElement('button', {
@@ -2845,7 +3974,7 @@ window.__ModuleLoader__.load({
           'data-mode': 'placeholder',
           style: { fontSize: 13, color: '#cbd5e1', lineHeight: 1.55 },
         },
-          React.createElement('div', { style: { fontSize: 15, color: '#5eead4', marginBottom: 8 } },
+          React.createElement('div', { style: { fontSize: 15, color: '#E7B24B', marginBottom: 8 } },
             opted ? 'ALL-IN-ALL · 诚实占位' : 'ALL-IN-ALL · 默认关闭'),
           React.createElement('div', null,
             opted
@@ -2857,7 +3986,7 @@ window.__ModuleLoader__.load({
       } else {
         body = React.createElement(React.Fragment, null,
           React.createElement(SidebarSummaryView, { snapshot }),
-          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#7c8ea6' } },
+          React.createElement('div', { style: { marginTop: 12, fontSize: 12, color: '#A3A3A8' } },
             'better-sidebar 的开放世界 Tab 也可看摘要。'),
         )
       }
@@ -2866,7 +3995,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'ow-embed-head' },
           React.createElement('div', null,
             React.createElement('strong', null, meta.title),
-            React.createElement('span', { style: { marginLeft: 8, fontSize: 10, color: '#7c8ea6', letterSpacing: 1 } }, meta.en),
+            React.createElement('span', { style: { marginLeft: 8, fontSize: 10.5, color: '#6B6B72', letterSpacing: '.1em' } }, meta.en),
           ),
           React.createElement('button', {
             type: 'button',
@@ -2955,7 +4084,7 @@ window.__ModuleLoader__.load({
       }
 
       if (!idea || idea.enabled === false) {
-        return React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6' } },
+        return React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8' } },
           'IDEA Lab 已关闭 · 可在 open-world.yml 设 idea.enabled: true')
       }
 
@@ -2968,7 +4097,7 @@ window.__ModuleLoader__.load({
         ),
         React.createElement('div', {
           className: 'ow-hub-stat',
-          style: { marginBottom: compact ? 6 : 10, color: '#f5d67a', lineHeight: 1.5 },
+          style: { marginBottom: compact ? 6 : 10, color: '#F0C674', lineHeight: 1.5 },
         },
           '把人格前缀包进消息，再投递到官方聊天。',
           ' 不是切换 Agent；要换真预设请点「真换 Agent 预设」。',
@@ -3071,7 +4200,16 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const { useState, useEffect, useCallback, useMemo, useRef } = React
     const C = require('dsh-open-world/constants')
-    const { DL_STACK, ACI_PHASES, ATI_STAGES_FALLBACK } = C
+    const { ACI_PHASES, ATI_STAGES_FALLBACK } = C
+    // 本地兜底：服务端未给 dl.stack 时也能渲染（原实现从 constants 解构 DL_STACK，而它并未导出）
+    const DL_STACK = [
+      { label: 'TOKENIZER', zh: '词元化', node: 'user-hub' },
+      { label: 'EMBEDDING', zh: '嵌入层', node: 'network' },
+      { label: 'ATTENTION', zh: '多头注意力', node: 'ai-engine' },
+      { label: 'FFN', zh: '前馈网络', node: 'storage' },
+      { label: 'OPTIMIZER', zh: '优化器', node: 'analytics' },
+      { label: 'OUTPUT', zh: '输出', node: 'task-queue' },
+    ]
 
     function hexRing(cx, cy, r) {
       return Array.from({ length: 6 }, (_, i) => {
@@ -3114,11 +4252,11 @@ window.__ModuleLoader__.load({
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: R + r + 4, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeDasharray: '2 6' }),
-        React.createElement('ellipse', { cx, cy, rx: R + r, ry: (R + r) * 0.46, fill: 'rgba(8,12,24,.35)', stroke: 'rgba(167,139,250,.25)' }),
+        React.createElement('circle', { cx, cy, r: R + r + 4, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeDasharray: '2 6' }),
+        React.createElement('ellipse', { cx, cy, rx: R + r, ry: (R + r) * 0.46, fill: 'rgba(0,0,0,.25)', stroke: 'rgba(100,210,255,.25)' }),
         rings,
-        React.createElement('text', { x: cx + R, y: cy + 8, fill: '#5eead4', fontSize: 8, fontFamily: 'Consolas,monospace' }, 'T² = S¹ × S¹'),
-        React.createElement('text', { x: cx - R - 10, y: cy - 8, textAnchor: 'end', fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, 'g = 1 · χ = 0'),
+        React.createElement('text', { x: cx + R, y: cy + 8, fill: '#E7B24B', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, 'T² = S¹ × S¹'),
+        React.createElement('text', { x: cx - R - 10, y: cy - 8, textAnchor: 'end', fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, 'g = 1 · χ = 0'),
       )
     }
 
@@ -3143,10 +4281,10 @@ window.__ModuleLoader__.load({
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('ellipse', { cx, cy, rx: 190, ry: 105, fill: 'rgba(8,12,24,.4)', stroke: 'rgba(244,114,182,.18)' }),
+        React.createElement('ellipse', { cx, cy, rx: 190, ry: 105, fill: 'rgba(0,0,0,.28)', stroke: 'rgba(255,159,10,.18)' }),
         rows,
-        React.createElement('text', { x: cx - 150, y: cy + 118, fill: '#f472b6', fontSize: 8, fontFamily: 'Consolas,monospace' }, '单面 · 单边 · 不可定向'),
-        React.createElement('text', { x: cx + 90, y: cy - 110, fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, 'χ = 0 · H₁ = ℤ'),
+        React.createElement('text', { x: cx - 150, y: cy + 118, fill: '#FF9F0A', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, '单面 · 单边 · 不可定向'),
+        React.createElement('text', { x: cx + 90, y: cy - 110, fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, 'χ = 0 · H₁ = ℤ'),
       )
     }
 
@@ -3176,15 +4314,15 @@ window.__ModuleLoader__.load({
           key: `kl-${vi}`,
           points: pts.join(' '),
           className: 'ow-lab-wire',
-          stroke: vi % 2 ? '#a78bfa' : '#5eead4',
+          stroke: vi % 2 ? '#64D2FF' : '#E7B24B',
           opacity: 0.14 + 0.55 * (0.4 + maxZ / 3),
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: 118, fill: 'rgba(8,12,24,.35)', stroke: 'rgba(167,139,250,.2)' }),
+        React.createElement('circle', { cx, cy, r: 118, fill: 'rgba(0,0,0,.25)', stroke: 'rgba(100,210,255,.2)' }),
         loops,
-        React.createElement('text', { x: cx - 108, y: cy + 118, fill: '#a78bfa', fontSize: 8, fontFamily: 'Consolas,monospace' }, '自交必须发生在 ℝ⁴'),
-        React.createElement('text', { x: cx + 60, y: cy - 108, fill: '#7c8ea6', fontSize: 7, fontFamily: 'Consolas,monospace' }, '不可定向 · 边界为空'),
+        React.createElement('text', { x: cx - 108, y: cy + 118, fill: '#64D2FF', fontSize: 10.5, fontFamily: 'Consolas,monospace' }, '自交必须发生在 ℝ⁴'),
+        React.createElement('text', { x: cx + 60, y: cy - 108, fill: '#A3A3A8', fontSize: 10, fontFamily: 'Consolas,monospace' }, '不可定向 · 边界为空'),
       )
     }
 
@@ -3210,16 +4348,15 @@ window.__ModuleLoader__.load({
         dots.push(React.createElement('circle', {
           key: `geo-dot-${i}`,
           cx: dot.x, cy: dot.y, r: 2.4,
-          fill: '#5eead4', opacity: 0.9,
-          style: { filter: 'drop-shadow(0 0 4px #5eead4)' },
+          fill: '#E7B24B', opacity: 0.9,
         }))
       }
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('circle', { cx, cy, r: R, fill: 'rgba(8,12,24,.5)', stroke: 'rgba(94,234,212,.4)', strokeWidth: 1.4 }),
-        React.createElement('circle', { cx, cy, r: R - 8, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeDasharray: '1 5' }),
+        React.createElement('circle', { cx, cy, r: R, fill: 'rgba(0,0,0,.3)', stroke: 'rgba(231,178,75,.4)', strokeWidth: 1.4 }),
+        React.createElement('circle', { cx, cy, r: R - 8, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeDasharray: '1 6' }),
         arcs,
         dots,
-        React.createElement('text', { x: cx, y: cy + 26, textAnchor: 'middle', fill: '#5eead4', fontSize: 8, fontFamily: 'Consolas,monospace', letterSpacing: 2 }, 'ℍ² 双曲测地线'),
+        React.createElement('text', { x: cx, y: cy + 26, textAnchor: 'middle', fill: '#E7B24B', fontSize: 10.5, fontFamily: 'Consolas,monospace', letterSpacing: 2 }, 'ℍ² 双曲测地线'),
       )
     }
 
@@ -3251,7 +4388,7 @@ window.__ModuleLoader__.load({
         x1: p.x, y1: p.y,
         x2: steps[i + 1].x, y2: steps[i + 1].y,
         className: 'ow-lab-grad-arrow',
-        strokeDasharray: '5 4',
+        strokeDasharray: '4 5',
         opacity: 0.55 + i * 0.09,
       }))
       const history = (ml.history && ml.history.length > 2)
@@ -3272,7 +4409,7 @@ window.__ModuleLoader__.load({
       return React.createElement('g', { className: 'ow-ati-stage' },
         contours,
         arrows,
-        React.createElement('circle', { cx: minX, cy: minY, r: 5 + bounce * 0.1, fill: '#f5d67a', style: { filter: 'drop-shadow(0 0 6px #f5d67a)' } }),
+        React.createElement('circle', { cx: minX, cy: minY, r: 5 + bounce * 0.1, fill: '#F0C674' }),
         React.createElement('text', { x: minX + 16, y: minY - 16, className: 'ow-lab-title dim' }, 'θ* GLOBAL MIN'),
         React.createElement('polygon', { points: lossArea, className: 'ow-lab-loss-area' }),
         React.createElement('polyline', { points: lossPts.join(' '), className: 'ow-lab-loss' }),
@@ -3289,22 +4426,23 @@ window.__ModuleLoader__.load({
       const rows = (dl.attention && dl.attention.length)
         ? dl.attention
         : [
-          { token: '会', values: [0.9, 0.4, 0.2, 0.1, 0.1, 0.1] },
-          { token: '任', values: [0.4, 0.9, 0.4, 0.2, 0.1, 0.1] },
-          { token: '记', values: [0.2, 0.4, 0.9, 0.4, 0.2, 0.1] },
-          { token: '网', values: [0.1, 0.2, 0.4, 0.9, 0.4, 0.2] },
-          { token: '插', values: [0.1, 0.1, 0.2, 0.4, 0.9, 0.4] },
-          { token: '安', values: [0.1, 0.1, 0.1, 0.2, 0.4, 0.9] },
+          { token: '会话', values: [0.9, 0.4, 0.2, 0.1, 0.1, 0.1] },
+          { token: '任务', values: [0.4, 0.9, 0.4, 0.2, 0.1, 0.1] },
+          { token: '记忆', values: [0.2, 0.4, 0.9, 0.4, 0.2, 0.1] },
+          { token: '网络', values: [0.1, 0.2, 0.4, 0.9, 0.4, 0.2] },
+          { token: '插件', values: [0.1, 0.1, 0.2, 0.4, 0.9, 0.4] },
+          { token: '安全', values: [0.1, 0.1, 0.1, 0.2, 0.4, 0.9] },
         ]
       const stack = (dl.stack && dl.stack.length) ? dl.stack : DL_STACK
       const cell = 44
       const gap = 3
       const gx0 = 596
-      const gy0 = 66
+      const gy0 = 108
+      const short = (s) => (String(s || '').length > 4 ? `${String(s).slice(0, 4)}…` : String(s || ''))
       const cells = []
       rows.forEach((row, ri) => {
         row.values.forEach((v, ci) => {
-          const alpha = 0.06 + v * 0.9
+          const alpha = 0.08 + v * 0.88
           const isDiag = ri === ci
           cells.push(React.createElement('rect', {
             key: `att-${ri}-${ci}`,
@@ -3313,13 +4451,21 @@ window.__ModuleLoader__.load({
             width: cell, height: cell,
             rx: 2,
             className: 'ow-lab-att-cell',
-            fill: isDiag ? `rgba(94,234,212,${alpha})` : `rgba(167,139,250,${alpha})`,
+            fill: isDiag ? `rgba(231,178,75,${0.1 + v * 0.55})` : `rgba(100,210,255,${0.06 + v * 0.42})`,
           }))
+          cells.push(React.createElement('text', {
+            key: `att-v-${ri}-${ci}`,
+            x: gx0 + ci * (cell + gap) + cell / 2,
+            y: gy0 + ri * (cell + gap) + cell / 2 + 4,
+            textAnchor: 'middle',
+            className: 'ow-lab-att-value',
+            fill: v > 0.5 ? '#120c03' : '#F2F2F4',
+          }, v.toFixed(2)))
         })
       })
-      const scanY = gy0 + ((tick * 2.2) % (rows.length * (cell + gap)))
+      const focusRow = Math.floor((tick / 3) % Math.max(1, rows.length))
       const stackNodes = stack.map((layer, i) => {
-        const y = 74 + i * 72
+        const y = 120 + i * 72
         const node = nodeMap[layer.node]
         const active = !node || node.status !== 'offline'
         return React.createElement('g', {
@@ -3328,36 +4474,47 @@ window.__ModuleLoader__.load({
           onClick: () => layer.node && node && node.id,
         },
           React.createElement('rect', {
-            x: 26, y: y - 20, width: 104, height: 40, rx: 4,
+            x: 26, y: y - 20, width: 116, height: 42, rx: 4,
             className: `ow-ati-dl-box ${i === 2 ? 'hl' : ''}`,
             opacity: active ? 1 : 0.4,
           }),
-          React.createElement('text', { x: 78, y: y - 6, textAnchor: 'middle', className: 'ow-ati-dl-label' }, layer.label),
-          React.createElement('text', { x: 78, y: y + 8, textAnchor: 'middle', className: 'ow-ati-dl-zh' }, layer.zh),
-          node && React.createElement('text', { x: 78, y: y + 18, textAnchor: 'middle', className: 'ow-ati-metric' }, `${node.metric}%`),
+          React.createElement('text', { x: 84, y: y - 5, textAnchor: 'middle', className: 'ow-ati-dl-label' }, layer.label),
+          React.createElement('text', { x: 84, y: y + 10, textAnchor: 'middle', className: 'ow-ati-dl-zh' }, layer.zh),
+          node && React.createElement('text', { x: 84, y: y + 21, textAnchor: 'middle', className: 'ow-ati-metric' }, `${node.metric}%`),
         )
       })
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('text', { x: 26, y: 42, className: 'ow-lab-title' }, 'TRANSFORMER STACK'),
-        React.createElement('text', { x: gx0, y: 42, className: 'ow-lab-title' }, 'MULTI-HEAD ATTENTION'),
+        React.createElement('text', { x: 26, y: 46, className: 'ow-lab-title' }, 'TRANSFORMER STACK'),
+        React.createElement('text', { x: 26, y: 62, className: 'ow-lab-sub' }, '数据从下往上流过各层，右侧是该层是否在线'),
+        React.createElement('text', { x: gx0, y: 46, className: 'ow-lab-title' }, '多头注意力 · 谁在看谁'),
+        React.createElement('text', { x: gx0, y: 62, className: 'ow-lab-sub' }, '行 = 一个词 · 列 = 它看向的词 · 越亮权重越大（softmax 归一）'),
+        // 图例
+        React.createElement('g', null,
+          React.createElement('text', { x: gx0, y: 80, className: 'ow-lab-sub' }, '权重'),
+          [0.15, 0.5, 0.85].map((v, i) => React.createElement('rect', {
+            key: `lg-${i}`, x: gx0 + 42 + i * 26, y: 71, width: 22, height: 11, rx: 2,
+            fill: `rgba(231,178,75,${0.08 + v * 0.88})`,
+          })),
+          React.createElement('text', { x: gx0 + 42 + 3 * 26 + 4, y: 80, className: 'ow-lab-sub' }, '低 → 高'),
+          React.createElement('text', { x: gx0 + 190, y: 80, className: 'ow-lab-tick' }, '示意数据 · METAPHOR（非真实模型输出）')),
         stackNodes,
         cells,
         React.createElement('rect', {
-          x: gx0 - 4, y: scanY, width: rows.length * (cell + gap) + 2, height: 1.2,
-          fill: '#5eead4', opacity: 0.8,
-          style: { filter: 'drop-shadow(0 0 4px #5eead4)' },
+          x: gx0 - 6, y: gy0 + focusRow * (cell + gap) - 2,
+          width: rows.length * (cell + gap) + 4, height: cell + 4,
+          fill: 'none', stroke: 'rgba(231,178,75,.45)', strokeWidth: 1, rx: 6,
         }),
         rows.map((row, ri) => React.createElement('text', {
           key: `tok-r-${ri}`,
-          x: gx0 - 10, y: gy0 + ri * (cell + gap) + cell / 2 + 3,
+          x: gx0 - 10, y: gy0 + ri * (cell + gap) + cell / 2 + 4,
           textAnchor: 'end', className: 'ow-lab-att-token',
-        }, row.token)),
+        }, short(row.token))),
         rows.map((row, ci) => React.createElement('text', {
           key: `tok-c-${ci}`,
-          x: gx0 + ci * (cell + gap) + cell / 2, y: gy0 - 8,
+          x: gx0 + ci * (cell + gap) + cell / 2, y: gy0 - 10,
           textAnchor: 'middle', className: 'ow-lab-att-token',
-        }, row.token)),
-        React.createElement('text', { x: gx0, y: gy0 + rows.length * (cell + gap) + 16, className: 'ow-lab-tick' },
+        }, short(row.token))),
+        React.createElement('text', { x: gx0, y: gy0 + rows.length * (cell + gap) + 18, className: 'ow-lab-tick' },
           `heads ${dl.heads ?? 8} · depth ${dl.depth ?? 6} · ${dl.params != null ? (dl.params >= 1000 ? `${(dl.params / 1000).toFixed(1)}K` : dl.params) : '—'} params · ${dl.flashAttention ? 'FA✓' : 'MHA'}`),
         React.createElement('text', { x: 26, y: 474, className: 'ow-lab-tick' },
           `temperature ${dl.temperature ?? '—'} · dropout ${dl.dropout ?? '—'}`),
@@ -3391,7 +4548,7 @@ window.__ModuleLoader__.load({
         const px = hx + 118 * Math.cos(a)
         const py = hy + 96 * Math.sin(a)
         const metaNode = nodeMap[el.node]
-        const color = el.category === 'metal' ? '#f4a261' : (el.category === 'carbon' ? '#a78bfa' : '#5eead4')
+        const color = el.category === 'metal' ? '#FF9F0A' : (el.category === 'carbon' ? '#64D2FF' : '#E7B24B')
         return React.createElement('g', { key: `atom-${el.symbol}` },
           React.createElement('line', {
             x1: hx + 46 * Math.cos(a), y1: hy + 46 * Math.sin(a),
@@ -3403,7 +4560,7 @@ window.__ModuleLoader__.load({
           React.createElement('circle', { cx: px, cy: py, r: 13, className: 'ow-lab-atom', stroke: color }),
           React.createElement('text', {
             x: px, y: py + 4, className: 'ow-lab-elem-symbol',
-            fill: color, fontSize: 9,
+            fill: color, fontSize: 11,
           }, el.symbol),
           React.createElement('text', { x: px, y: py - 18, className: 'ow-lab-elem-name' }, metaNode ? `${metaNode.metric}%` : '—'),
         )
@@ -3414,7 +4571,7 @@ window.__ModuleLoader__.load({
         ring.map((p, i) => React.createElement('circle', {
           key: `ring-c-${i}`,
           cx: p[0], cy: p[1], r: 4.5,
-          fill: 'rgba(8,12,24,.85)', stroke: '#34d399', strokeWidth: 1.2,
+          fill: 'rgba(20,20,22,.85)', stroke: '#30D158', strokeWidth: 1.2,
         })),
         electrons,
         atoms,
@@ -3437,14 +4594,14 @@ window.__ModuleLoader__.load({
         const row = Math.floor(i / 4)
         const x = 108 + col * 175
         const y = 92 + row * 132
-        const color = el.category === 'metal' ? '#f4a261' : (el.category === 'carbon' ? '#a78bfa' : '#5eead4')
+        const color = el.category === 'metal' ? '#FF9F0A' : (el.category === 'carbon' ? '#64D2FF' : '#E7B24B')
         const pulse = 0.5 + 0.5 * Math.sin(tick * 0.05 + i)
         return React.createElement('g', { key: `pe-${el.symbol}`, className: 'ow-nn-node' },
           React.createElement('rect', {
             x: x - 34, y: y - 30, width: 68, height: 68,
             rx: 4,
             className: `ow-lab-elem ${el.category}`,
-            fill: 'rgba(8,12,24,.55)',
+            fill: 'rgba(20,20,22,.55)',
             opacity: el.metric > 0 ? 1 : 0.45,
           }),
           React.createElement('text', { x: x + 26, y: y - 18, className: 'ow-lab-elem-z' }, String(el.z)),
@@ -3454,7 +4611,7 @@ window.__ModuleLoader__.load({
           React.createElement('circle', {
             cx: x + 26, cy: y + 26, r: 3,
             fill: color, opacity: 0.35 + pulse * 0.65,
-            style: { filter: `drop-shadow(0 0 4px ${color})` },
+
           }),
         )
       })
@@ -3490,7 +4647,7 @@ window.__ModuleLoader__.load({
       })
       const circ = 2 * Math.PI * 230
       const prog = evo ? evo.progress : 0
-      const arcColor = '#a78bfa'
+      const arcColor = '#64D2FF'
       const particles = Array.from({ length: 26 }, (_, i) => {
         const a = i * (2 * Math.PI / 26) + tick * 0.008 * (1 + (i % 3) * 0.2)
         const r = 40 + ((i * 37 + tick * 1.2) % 190)
@@ -3499,7 +4656,7 @@ window.__ModuleLoader__.load({
           cx: cx + Math.cos(a) * r,
           cy: cy + Math.sin(a) * r * 0.92,
           r: 1.2 + (i % 3) * 0.6,
-          fill: i % 2 ? '#a78bfa' : '#5eead4',
+          fill: i % 2 ? '#64D2FF' : '#E7B24B',
           opacity: 0.2 + (i % 5) * 0.12,
         })
       })
@@ -3508,15 +4665,14 @@ window.__ModuleLoader__.load({
         particles,
         React.createElement('circle', {
           cx, cy, r: 230, fill: 'none',
-          stroke: 'rgba(167,139,250,.25)', strokeWidth: 6,
+          stroke: 'rgba(100,210,255,.25)', strokeWidth: 6,
           strokeDasharray: `${circ * prog} ${circ * (1 - prog)}`,
           strokeLinecap: 'round',
           transform: `rotate(-90 ${cx} ${cy})`,
-          style: { filter: 'drop-shadow(0 0 8px rgba(167,139,250,.6))' },
         }),
-        React.createElement('circle', { cx, cy, r: 58 + Math.sin(tick * 0.05) * 4, fill: 'rgba(167,139,250,.15)', stroke: arcColor, strokeWidth: 1.2 }),
+        React.createElement('circle', { cx, cy, r: 58 + Math.sin(tick * 0.05) * 4, fill: 'rgba(100,210,255,.15)', stroke: arcColor, strokeWidth: 1.2 }),
         React.createElement('circle', { cx, cy, r: 24, fill: 'none', stroke: '#fff', strokeWidth: 1, opacity: 0.7 }),
-        React.createElement('circle', { cx, cy, r: 8, fill: '#fff', style: { filter: 'drop-shadow(0 0 10px #fff)' } }),
+        React.createElement('circle', { cx, cy, r: 8, fill: '#fff' }),
         React.createElement('text', { x: cx, y: cy - 70, textAnchor: 'middle', className: 'ow-lab-title' }, 'ATI EVOLUTION'),
         React.createElement('text', { x: cx, y: cy + 40, textAnchor: 'middle', className: 'ow-lab-evo-val' }, `${readiness}`),
         React.createElement('text', { x: cx, y: cy + 54, textAnchor: 'middle', className: 'ow-lab-evo-label on' }, `/ 100 · ${evo ? evo.stage.zh : '拓扑胚'}`),
@@ -3564,7 +4720,7 @@ window.__ModuleLoader__.load({
           strokeWidth: isActive ? 2 : 1,
           strokeDasharray: isActive ? undefined : '4 6',
           opacity: isActive ? 0.9 : 0.3,
-          style: isActive ? { filter: `drop-shadow(0 0 6px ${cur.color})` } : undefined,
+          style: undefined,
         }))
         // 流动粒子
         if (isActive) {
@@ -3574,22 +4730,22 @@ window.__ModuleLoader__.load({
           edgesBetween.push(React.createElement('circle', {
             key: `pulse-${i}`,
             cx: px, cy: py, r: 4, fill: cur.color,
-            style: { filter: `drop-shadow(0 0 6px ${cur.color})` },
+
           }))
         }
       }
 
       return React.createElement('g', { className: 'ow-ati-stage' },
-        React.createElement('ellipse', { cx, cy, rx: R + 30, ry: R * 0.72 + 30, fill: 'rgba(8,12,24,.5)', stroke: 'rgba(94,234,212,.1)' }),
+        React.createElement('ellipse', { cx, cy, rx: R + 30, ry: R * 0.72 + 30, fill: 'rgba(0,0,0,.3)', stroke: 'rgba(231,178,75,.1)' }),
         // 阶段节点
         nodes.map((n) => React.createElement('g', { key: `phase-${n.id}` },
           React.createElement('circle', {
             cx: n.x, cy: n.y,
             r: n.idx === activePhase ? 28 : 20,
-            fill: n.idx === activePhase ? `${n.color}22` : 'rgba(8,12,24,.7)',
+            fill: n.idx === activePhase ? `${n.color}22` : 'rgba(20,20,22,.7)',
             stroke: n.color,
             strokeWidth: n.idx === activePhase ? 2.5 : 1,
-            style: n.idx === activePhase ? { filter: `drop-shadow(0 0 12px ${n.color})` } : undefined,
+            style: undefined,
           }),
           React.createElement('text', {
             x: n.x, y: n.y - 2, textAnchor: 'middle',
@@ -3598,7 +4754,7 @@ window.__ModuleLoader__.load({
           }, n.en),
           React.createElement('text', {
             x: n.x, y: n.y + 10, textAnchor: 'middle',
-            fill: '#7c8ea6', fontSize: 7,
+            fill: '#A3A3A8', fontSize: 10,
           }, n.zh),
         )),
         edgesBetween,
@@ -3607,7 +4763,7 @@ window.__ModuleLoader__.load({
           key: `pt-${i}`, cx: p.x, cy: p.y, r: 2, fill: p.color, opacity: 0.5,
         })),
         // 中心：当前阶段指示器 + 分数
-        React.createElement('circle', { cx, cy, r: 52, fill: 'rgba(8,12,24,.85)', stroke: 'rgba(94,234,212,.25)', strokeWidth: 1 }),
+        React.createElement('circle', { cx, cy, r: 52, fill: 'rgba(20,20,22,.85)', stroke: 'rgba(231,178,75,.25)', strokeWidth: 1 }),
         React.createElement('text', {
           x: cx, y: cy - 14, textAnchor: 'middle',
           fill: phases[activePhase].color, fontSize: 11,
@@ -3620,7 +4776,7 @@ window.__ModuleLoader__.load({
         }, score != null ? String(score) : '—'),
         React.createElement('text', {
           x: cx, y: cy + 16, textAnchor: 'middle',
-          fill: '#7c8ea6', fontSize: 7,
+          fill: '#A3A3A8', fontSize: 10,
         }, trend || 'ACI READYNESS'),
         // 底部标签
         React.createElement('text', {
@@ -3682,7 +4838,7 @@ window.__ModuleLoader__.load({
               })),
               React.createElement('text', {
                 x: cx + 220, y: cy - 74, textAnchor: 'middle',
-                fill: '#34d399', fontSize: 8, fontFamily: 'Consolas,monospace', letterSpacing: 2,
+                fill: '#30D158', fontSize: 10.5, fontFamily: 'Consolas,monospace', letterSpacing: 0,
               }, 'C₆ MEMORY RING'),
             )
           })(),
@@ -3737,135 +4893,124 @@ window.__ModuleLoader__.load({
       return data
     }
 
-    function MessageHub({ mailbox, hub, onSend, onRead, onShare, onInjectAgent, onSearchMemory }) {
-      const [body, setBody] = useState('')
-      const [to, setTo] = useState('broadcast')
-      const [attachTopo, setAttachTopo] = useState(true)
-      const [attachMem, setAttachMem] = useState(false)
-      const [memQuery, setMemQuery] = useState('')
-      const [memHits, setMemHits] = useState([])
-      const [memSource, setMemSource] = useState(null)
-      const [sending, setSending] = useState(false)
+    // ── 信箱（原「消息总线」的阅读面）────────────────────────────────────
+    // 投递动作已并入聊天坞的对话框（一排目标小按钮）；这里保留侧栏用的阅读面：
+    //   快速扫记录、点未读、全部已读、分享快照，需要继续操作就跳聊天坞。
+    const MBOX_TO_LABEL = {
+      broadcast: '全体广播', sessions: '全部会话', remote: '跨机外发',
+      agent: '官方聊天', clipboard: '复制分享包', external: '导出外发文件',
+    }
+
+    function mboxAgo(ts) {
+      const d = new Date(ts || Date.now())
+      const sec = (Date.now() - (ts || 0)) / 1000
+      const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      if (sec < 60) return '刚刚'
+      if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`
+      if (new Date().toDateString() === d.toDateString()) return hhmm
+      return `${d.getMonth() + 1}/${d.getDate()} ${hhmm}`
+    }
+
+    function MessageHub({ mailbox, hub, onRead, onShare, onOpenChat }) {
+      const [filter, setFilter] = useState('all')
+      const [q, setQ] = useState('')
+      const [expanded, setExpanded] = useState(false)
       const messages = (mailbox && mailbox.messages) || []
       const unread = (mailbox && mailbox.unread) || 0
       const remoteReady = hub && hub.pair && (hub.pair.paired || hub.remoteMessaging?.paired)
 
-      const searchMem = async () => {
-        if (!onSearchMemory) return
-        const data = await onSearchMemory(memQuery)
-        setMemHits((data && data.items) || [])
-        setMemSource((data && data.source) || (data && data.daemon ? 'daemon' : 'offline'))
-        setAttachMem(true)
+      const filtered = messages
+        .filter((m) => (filter === 'unread' ? m.direction === 'in' && !m.read
+          : filter === 'out' ? m.direction !== 'in' : true))
+        .filter((m) => !q.trim() || String(m.body || '').toLowerCase().includes(q.trim().toLowerCase()))
+      const shown = filtered.slice(0, expanded ? 60 : 6)
+
+      const attsOf = (m) => {
+        const out = []
+        const payloadAtts = (m.payload && m.payload.attachments) || []
+        for (const a of payloadAtts) {
+          if (a.type === 'memory') out.push(`Hindsight · ${(a.items || []).length} 条`)
+          else if (a.type === 'snapshot') out.push('拓扑快照')
+          else out.push(a.type || '附件')
+        }
+        if (m.payload && m.payload.snapshot && !payloadAtts.some((a) => a.type === 'snapshot')) out.push('拓扑快照')
+        if (m.kind === 'notification') out.push('通知中心')
+        return out
       }
 
-      const send = async () => {
-        if (!body.trim() || sending) return
-        setSending(true)
-        try {
-          const attachments = []
-          if (attachMem && memHits.length > 0) {
-            attachments.push({ type: 'memory', items: memHits.slice(0, 5), source: memSource || 'hindsight' })
-          }
-          if (to === 'agent') {
-            const memNote = attachMem && memHits.length
-              ? `\n\n[Hindsight 附件 · ${memSource || '—'}]\n${memHits.slice(0, 3).map((m) => m.text).join('\n')}`
-              : ''
-            await onInjectAgent(body + memNote)
-          } else if (to === 'clipboard') {
-            const data = await onSend({
-              action: 'send-message', to: 'clipboard', body, attachSnapshot: attachTopo, attachments,
-            })
-            if (data.share && navigator.clipboard) {
-              await navigator.clipboard.writeText(JSON.stringify(data.share, null, 2))
-            }
-          } else {
-            await onSend({
-              action: 'send-message',
-              to,
-              body,
-              attachSnapshot: attachTopo,
-              attachments,
-              attachMemory: attachMem && memHits.length ? memHits.slice(0, 5) : undefined,
-            })
-          }
-          setBody('')
-        } finally { setSending(false) }
-      }
-
-      return React.createElement('div', { className: 'ow-msg-hub' },
-        React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } },
-          `信箱 · ${messages.length} 条 · 未读 ${unread}${remoteReady ? ' · 跨机就绪' : ''}`),
-        React.createElement('textarea', {
-          placeholder: '输入消息… 可广播、跨机、投递到官方聊天、附记忆/拓扑',
-          value: body,
-          onChange: (ev) => setBody(ev.target.value),
-        }),
-        React.createElement('div', { className: 'ow-msg-row' },
-          React.createElement('input', {
-            className: 'ow-msg-select', style: { flex: 1, minWidth: 100 },
-            placeholder: 'Hindsight 检索…', value: memQuery,
-            title: '走 /memory/search · 非本地 RRM 归档',
-            onChange: (ev) => setMemQuery(ev.target.value),
-            onKeyDown: (ev) => { if (ev.key === 'Enter') searchMem() },
-          }),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn', onClick: searchMem,
-            title: 'Hindsight daemon/cache · 与 MemoryBrief「搜归档」不是同一通路',
-          }, '搜 Hindsight'),
-        ),
-        React.createElement('div', {
-          style: { fontSize: 9, color: '#64748b', marginTop: 2 },
-        }, memSource
-          ? `来源 · Hindsight · ${memSource} · 非本地 RRM 归档`
-          : '来源 · Hindsight（daemon/cache/offline）· 本地归档请用上方 MemoryBrief「搜归档」'),
-        memHits.length > 0 && React.createElement('div', { className: 'ow-hub-mem' },
-          memHits.slice(0, 3).map((m) => React.createElement('div', { key: m.id }, `· ${m.text.slice(0, 80)}`)),
-        ),
-        React.createElement('div', { className: 'ow-msg-row' },
-          React.createElement('select', {
-            className: 'ow-msg-select', value: to,
-            onChange: (ev) => setTo(ev.target.value),
-          },
-            React.createElement('option', { value: 'broadcast' }, '全体广播'),
-            React.createElement('option', { value: 'sessions' }, '全部会话'),
-            remoteReady && React.createElement('option', { value: 'remote' }, '跨机外发（本地 outbox，非手机实时）'),
-            React.createElement('option', { value: 'agent' }, '投递到官方聊天'),
-            React.createElement('option', { value: 'clipboard' }, '复制分享包'),
-            React.createElement('option', { value: 'external' }, '导出外发文件'),
-          ),
-          React.createElement('label', { style: { fontSize: 10, color: '#7c8ea6' } },
-            React.createElement('input', {
-              type: 'checkbox', checked: attachTopo,
-              onChange: (ev) => setAttachTopo(ev.target.checked),
-              style: { marginRight: 4 },
-            }),
-            '附拓扑'),
-          React.createElement('label', { style: { fontSize: 10, color: '#7c8ea6' } },
-            React.createElement('input', {
-              type: 'checkbox', checked: attachMem,
-              onChange: (ev) => setAttachMem(ev.target.checked),
-              style: { marginRight: 4 },
-            }),
-            '附 Hindsight'),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn primary', onClick: send, disabled: sending,
-          }, sending ? '…' : '发送'),
-          React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn', onClick: () => onShare(),
-          }, '分享快照'),
-        ),
-        messages.slice(0, 8).map((m) => React.createElement('div', {
-          key: m.id,
-          className: `ow-msg-item ${m.direction === 'in' && !m.read ? 'unread' : ''}`,
-          onClick: () => m.direction === 'in' && !m.read && onRead([m.id]),
+      const entry = (m) => {
+        const isIn = m.direction === 'in'
+        const unseen = isIn && !m.read
+        const atts = attsOf(m)
+        return React.createElement('div', {
+          key: m.id, className: `card ${isIn ? 'ag' : 'me'}`,
+          style: { cursor: unseen ? 'pointer' : 'default', opacity: unseen ? 1 : 0.86 },
+          title: unseen ? '点击标记为已读' : undefined,
+          onClick: () => { if (unseen && onRead) onRead([m.id]) },
         },
-          React.createElement('div', { style: { color: '#e6f1ff' } }, m.body),
-          m.payload && m.payload.attachments && React.createElement('div', { className: 'ow-msg-attach' }, '📎 含附件'),
-          m.kind === 'notification' && React.createElement('div', { className: 'ow-msg-attach' }, '🔔 通知中心'),
-          React.createElement('div', { className: 'ow-msg-meta' },
-            `${m.direction === 'in' ? '收' : '发'} · ${m.toLabel || m.to} · ${new Date(m.ts).toLocaleTimeString('zh-CN')}`),
-        )),
-      )
+          React.createElement('div', { className: 'meta' },
+            React.createElement('span', { className: isIn ? 'info' : 'warn' }, isIn ? '收' : '发'),
+            React.createElement('span', null, m.toLabel || MBOX_TO_LABEL[m.to] || m.to || '本地'),
+            React.createElement('span', null, mboxAgo(m.ts)),
+            unseen ? React.createElement('span', { className: 'badge' }, '未读') : null),
+          React.createElement('div', { className: 'ln' }, m.body || '（空消息）'),
+          atts.length > 0 && React.createElement('div', { style: { paddingTop: 5 } },
+            atts.map((t, i) => React.createElement('span', {
+              key: `${m.id}-a-${i}`, className: 'chip att', style: { marginRight: 5 },
+            }, t))))
+      }
+
+      return React.createElement('div', { className: 'owd' },
+        React.createElement('style', { dangerouslySetInnerHTML: { __html: C.OW_SKIN_ACTIVE || '' } }),
+        React.createElement('div', { className: 'panel', style: { padding: '8px 9px 9px' } },
+          React.createElement('div', { className: 'head', style: { margin: '-8px -9px 6px', borderBottom: '1px solid var(--am1)' } },
+            React.createElement('span', { className: remoteReady ? 'sig' : 'sig red' }),
+            React.createElement('span', { className: 'zh' }, '信箱'),
+            React.createElement('span', { className: 'en' }, 'MAILBOX'),
+            React.createElement('span', { className: 'tag' }, `${messages.length} 条${unread ? ` · 未读 ${unread}` : ''}`)),
+
+          onOpenChat && React.createElement('button', {
+            type: 'button', className: 'btn primary', style: { width: '100%', marginBottom: 7 },
+            title: '投递与对话都在聊天坞里完成',
+            onClick: onOpenChat,
+          }, '在聊天坞继续 →'),
+
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingBottom: 5 } },
+            React.createElement('span', {
+              className: `chip${filter === 'all' ? ' on' : ''}`, onClick: () => setFilter('all'),
+            }, `全部 ${messages.length}`),
+            React.createElement('span', {
+              className: `chip${filter === 'unread' ? ' on' : ''}`, onClick: () => setFilter('unread'),
+            }, `未读 ${unread}`),
+            React.createElement('span', {
+              className: `chip${filter === 'out' ? ' on' : ''}`, onClick: () => setFilter('out'),
+            }, '我发的'),
+            React.createElement('input', {
+              className: 'inp', type: 'search', value: q, placeholder: '搜索…',
+              style: { flex: 1, minWidth: 70 }, onChange: (ev) => setQ(ev.target.value),
+            })),
+
+          shown.length === 0 && React.createElement('div', {
+            className: 'muted', style: { fontSize: 10.5, padding: '10px 0', textAlign: 'center' },
+          }, '这里还没有记录'),
+          shown.map(entry),
+          filtered.length > shown.length && React.createElement('button', {
+            type: 'button', className: 'btn', style: { width: '100%', marginTop: 4 },
+            onClick: () => setExpanded(true),
+          }, `展开更多（还有 ${filtered.length - shown.length} 条）`),
+
+          React.createElement('div', { className: 'divider' }),
+          React.createElement('div', { style: { display: 'flex', gap: 6 } },
+            unread > 0 && onRead && React.createElement('button', {
+              type: 'button', className: 'btn', style: { flex: 1 },
+              onClick: () => onRead(messages.filter((m) => m.direction === 'in' && !m.read).map((m) => m.id)),
+            }, '全部已读'),
+            onShare && React.createElement('button', {
+              type: 'button', className: 'btn', style: { flex: 1 }, onClick: () => onShare(),
+            }, '分享快照')),
+          React.createElement('div', { className: 'foot', style: { borderTop: 'none', padding: '6px 0 0' } },
+            React.createElement('span', null, remoteReady ? '跨机就绪' : '本机'),
+            React.createElement('span', { style: { marginLeft: 'auto' } }, 'mailbox.json'))))
     }
 
     function IntegrationsHub({ hub, space, onAction, onEmbedArchify, onToast }) {
@@ -3896,7 +5041,7 @@ window.__ModuleLoader__.load({
         }
       }, [space && space.token_ttl_hours])
       if (!hub) {
-        return React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '集成层加载中…')
+        return React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '集成层加载中…')
       }
       const pair = hub.pair || {}
       const notif = hub.notifications || {}
@@ -4037,7 +5182,7 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'ow-hub' },
         React.createElement('div', {
           className: 'ow-hub-sec',
-          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(94,234,212,.2)', borderRadius: 6 },
+          style: { marginBottom: 10, padding: '8px 10px', border: '1px solid rgba(231,178,75,.2)', borderRadius: 6 },
         },
           React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 观察/回写（Space）'),
           React.createElement('div', { className: 'ow-hub-stat' },
@@ -4050,7 +5195,7 @@ window.__ModuleLoader__.load({
             className: 'ow-hub-row',
             style: { marginTop: 6, gap: 4, flexWrap: 'wrap', alignItems: 'center' },
           },
-            React.createElement('span', { style: { fontSize: 10, color: '#7c8ea6' } }, '签发 TTL'),
+            React.createElement('span', { style: { fontSize: 10, color: '#A3A3A8' } }, '签发 TTL'),
             TTL_CHOICES.map((c) => React.createElement('button', {
               key: String(c.hours),
               type: 'button',
@@ -4105,7 +5250,7 @@ window.__ModuleLoader__.load({
           ),
           spaceTok && !spaceOff && React.createElement('div', { className: 'ow-hub-link' }, spaceTok),
           !spaceOff && (sp.issuedAt || sp.expiresAt) && React.createElement('div', {
-            style: { marginTop: 4, fontSize: 10, color: '#7c8ea6' },
+            style: { marginTop: 4, fontSize: 10, color: '#A3A3A8' },
           }, [
             sp.issuedAt ? `签发 ${sp.issuedAt}` : null,
             sp.expiresAt ? ` · 过期 ${sp.expiresAt}` : ' · 无过期',
@@ -4119,7 +5264,7 @@ window.__ModuleLoader__.load({
           React.createElement('div', { className: 'ow-hub-title' }, '跨机 · 手机控工作区（Pair）'),
           React.createElement('div', { className: 'ow-hub-stat' },
             '由 dsh-remote-web-ui 负责 /m；OW 只代理状态与入口，不重写 Pair Host。'),
-          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4, color: pair.available ? '#7c8ea6' : '#fbbf24' } },
+          React.createElement('div', { className: 'ow-hub-stat', style: { marginTop: 4, color: pair.available ? '#A3A3A8' : '#fbbf24' } },
             pair.available
               ? `${pair.paired ? '已配对' : '未配对'} · 设备 ${pair.deviceCount || 0} · 在线 ${pair.onlineCount || 0}`
               : (pairOfflineHint || 'remote-web-ui 未安装/未启用')),
@@ -4149,8 +5294,8 @@ window.__ModuleLoader__.load({
         notif.available && React.createElement('div', { className: 'ow-hub-sec' },
           React.createElement('div', { className: 'ow-hub-title' }, `通知中心 · 未读 ${notif.unreadCount || 0}`),
           (notif.notifications || []).slice(0, 3).map((n) => React.createElement('div', { key: n.id, className: 'ow-hub-item' },
-            React.createElement('div', { style: { color: '#e6f1ff' } }, n.title),
-            React.createElement('div', { style: { fontSize: 10, color: '#7c8ea6' } }, n.body),
+            React.createElement('div', { style: { color: '#F2F2F4' } }, n.title),
+            React.createElement('div', { style: { fontSize: 10, color: '#A3A3A8' } }, n.body),
           )),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn', style: { marginTop: 6 },
@@ -4176,7 +5321,7 @@ window.__ModuleLoader__.load({
             }, '搜 Hindsight'),
           ),
           memSource && React.createElement('div', {
-            style: { fontSize: 9, color: '#94a3b8', marginTop: 4 },
+            style: { fontSize: 9, color: '#A3A3A8', marginTop: 4 },
           }, `来源 · ${memSource}`),
           memItems.slice(0, 4).map((m) => React.createElement('div', { key: m.id, className: 'ow-hub-mem' }, m.text.slice(0, 120))),
         ),
@@ -4200,6 +5345,7 @@ window.__ModuleLoader__.load({
     function RewindTimelinePanel({ rewind, plugins, onAction, onToast, compact }) {
       const plug = (plugins || []).find((p) => p.id === 'rewind')
       const stats = rewind || {}
+      const blocked = '回退暂不可执行：会话绑定与旧插件兼容性尚未验证；历史时间轴仍可查看。'
       const available = !!(stats.available || (plug && plug.online))
       const points = (stats.timeline && stats.timeline.points) || []
       if (!available) {
@@ -4230,7 +5376,8 @@ window.__ModuleLoader__.load({
       }
       if (compact) {
         return React.createElement('div', { className: 'ow-hub' },
-          React.createElement('div', { className: 'ow-hub-stat' },
+          React.createElement('p', { role: 'status', 'data-rewind-readonly': true }, blocked),
+        React.createElement('div', { className: 'ow-hub-stat' },
             `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 快照 · ${stats.sessions || 0} 会话`),
           React.createElement('div', { style: { fontSize: 11, color: '#64748b', marginTop: 4 } },
             '摘要 · 完整时间轴只在壳内展开一处'),
@@ -4241,57 +5388,36 @@ window.__ModuleLoader__.load({
             }, '展开回退'),
             React.createElement('button', {
               type: 'button', className: 'ow-msg-btn',
-              onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
-            }, '聊天里 /rewind'),
+              disabled: true, title: blocked,
+            }, '执行回退（暂不可用）'),
           ),
         )
       }
       return React.createElement('div', { className: 'ow-hub' },
+        React.createElement('p', { role: 'status', 'data-rewind-readonly': true }, blocked),
         React.createElement('div', { className: 'ow-hub-stat' },
           `${stats.anchors || 0} 锚点 · ${stats.snapshots || 0} 文件快照 · ${stats.sessions || 0} 会话`),
         React.createElement('div', { className: 'ow-rewind-actions' },
           React.createElement('button', {
-            type: 'button', className: 'ow-msg-btn primary',
-            onClick: () => onAction({ type: 'enter-world', worldId: 'rewind', panel: 'rewind', label: '已进入回退世界' }),
-          }, '壳内时间轴'),
-          React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
-            onClick: () => onAction({ type: 'rewind-open', preferChat: true }),
-          }, '聊天里 /rewind'),
+            disabled: true, title: blocked,
+          }, '执行回退（暂不可用）'),
           React.createElement('button', {
             type: 'button', className: 'ow-msg-btn',
             onClick: () => onAction({ type: 'settings', label: 'Rewind', settingsHint: '插件' }),
           }, '设置'),
         ),
         points.length === 0
-          ? React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6', marginTop: 8 } },
+          ? React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginTop: 8 } },
             '暂无快照 · 在对话里用写类工具后会自动记录锚点')
           : React.createElement('div', { className: 'ow-rewind-tl', style: { marginTop: 8 } },
             points.map((p) => React.createElement('div', {
               key: p.id,
               className: `ow-rewind-item ${p.active ? 'active' : ''}`,
             },
-              React.createElement('div', { style: { color: '#e6f1ff' } }, p.label),
+              React.createElement('div', { style: { color: '#F2F2F4' } }, p.label),
               React.createElement('div', { className: 'ow-rewind-meta' },
                 `${p.fileCount} 文件 · ${new Date(p.ts).toLocaleString('zh-CN')}${p.active ? ' · 当前会话' : ''}`),
-              React.createElement('div', { className: 'ow-rewind-actions' },
-                p.anchorSeq != null && React.createElement('button', {
-                  type: 'button', className: 'ow-msg-btn',
-                  onClick: (ev) => {
-                    ev.stopPropagation()
-                    onAction({ type: 'rewind-exec', anchorSeq: p.anchorSeq, mode: 'chat' })
-                    onToast && onToast(`回退对话 @${p.anchorSeq}`)
-                  },
-                }, '仅对话'),
-                p.anchorSeq != null && React.createElement('button', {
-                  type: 'button', className: 'ow-msg-btn primary',
-                  onClick: (ev) => {
-                    ev.stopPropagation()
-                    onAction({ type: 'rewind-exec', anchorSeq: p.anchorSeq, mode: 'both' })
-                    onToast && onToast(`回退对话+文件 @${p.anchorSeq}`)
-                  },
-                }, '对话+文件'),
-              ),
             )),
           ),
       )
@@ -4348,14 +5474,16 @@ void main(){
   vec2 uv = vUv;
   vec2 c = uv - 0.5;
   float dist = length(c);
-  vec3 col = vec3(0.01, 0.015, 0.04);
+  // 550C amber CRT field (warm phosphor, not teal nebula)
+  vec3 col = vec3(0.02, 0.015, 0.01);
   float ang = atan(c.y, c.x);
   float field = sin(ang * 5.0 + dist * 22.0 - uTime * 0.35) * 0.5 + 0.5;
   field *= exp(-dist * 1.8);
-  col += vec3(0.35, 0.15, 0.65) * field * 0.35;
-  col += vec3(0.1, 0.55, 0.5) * field * 0.2 * sin(uTime * 0.5 + dist * 8.0);
+  col += vec3(0.91, 0.63, 0.13) * field * 0.38;
+  col += vec3(1.0, 0.75, 0.26) * field * 0.16 * sin(uTime * 0.5 + dist * 8.0);
+  col += vec3(0.88, 0.31, 0.19) * field * 0.08 * (0.5 + 0.5 * sin(uTime * 0.25 + ang * 2.0));
   float grid = abs(sin(uv.x * uRes.x * 0.04 + uTime * 0.1)) * abs(sin(uv.y * uRes.y * 0.04));
-  col += vec3(0.05, 0.12, 0.2) * grid * 0.08 * exp(-dist * 2.0);
+  col += vec3(0.18, 0.10, 0.03) * grid * 0.10 * exp(-dist * 2.0);
   fragColor = vec4(col, 1.0);
 }`)
         gl.compileShader(vs)
@@ -4401,6 +5529,9 @@ void main(){
 
 
 // Open World · ati-view
+// v107 戏服退役（用户定调「假的全删，真图做干净」）：隐喻舞台 AtiStageRenderer / 假 HUD（κ/∇L/heads/loss/ΔG）/
+// 24 装饰条 / 实验室预设与壁纸系统全部移除；仅保留真实拓扑——器官节点（点选=详情卡，双击=直达面板）+
+// 突触脉冲连线 + 真实健康均值 HUD。ati-lab.js 不再被本模块引用（文件暂留，工厂不执行）。
 window.__ModuleLoader__.load({
   id: 'dsh-open-world/ati-view',
   factory: (require) => {
@@ -4410,11 +5541,9 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const { useState, useEffect, useCallback, useMemo, useRef } = React
     const C = require('dsh-open-world/constants')
-    const { ATI_PRESETS, NODE_ZH, NODE_LAYOUT } = C
+    const { NODE_ZH, NODE_LAYOUT } = C
     const Shell = require('dsh-open-world/shell')
     const { sourceTag } = Shell
-    const AtiLab = require('dsh-open-world/ati-lab')
-    const { AtiStageRenderer } = AtiLab
 
     function Sparkline({ values, color, height = 24 }) {
       const w = 180
@@ -4443,18 +5572,18 @@ window.__ModuleLoader__.load({
         return `${cx + Math.cos(a) * rr},${cy + Math.sin(a) * rr}`
       }).join(' ')
       const rings = [0.25, 0.5, 0.75, 1].map((f) => React.createElement('circle', {
-        key: f, cx, cy, r: r * f, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeWidth: 1,
+        key: f, cx, cy, r: r * f, fill: 'none', stroke: 'rgba(255,255,255,.06)', strokeWidth: 1,
       }))
       const axes = vals.map((_, i) => {
         const a = (i / 5) * Math.PI * 2 - Math.PI / 2
         return React.createElement('line', {
           key: i, x1: cx, y1: cy, x2: cx + Math.cos(a) * r, y2: cy + Math.sin(a) * r,
-          stroke: 'rgba(94,234,212,.15)', strokeWidth: 1,
+          stroke: 'rgba(255,255,255,.1)', strokeWidth: 1,
         })
       })
       return React.createElement('svg', { className: 'ow-radar', viewBox: '0 0 200 120' },
         rings, axes,
-        React.createElement('polygon', { points: pts, fill: 'rgba(94,234,212,.15)', stroke: '#5eead4', strokeWidth: 1 }),
+        React.createElement('polygon', { points: pts, fill: 'rgba(255,255,255,.1)', stroke: '#E7B24B', strokeWidth: 1 }),
       )
     }
 
@@ -4469,19 +5598,13 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function AtiCortex({ nodes, synapses, ati, selected, onSelect, tick, onActivate, preset, onPresetChange, pulseBoost, lab }) {
+    function AtiCortex({ nodes, synapses, selected, onSelect, tick, onActivate, pulseBoost }) {
       const W = 920
       const H = 600
       const cx = 460
       const cy = 300
       const nodeMap = useMemo(() => Object.fromEntries((nodes || []).map((n) => [n.id, n])), [nodes])
       const pulseMul = pulseBoost && pulseBoost > Date.now() - 4000 ? 2.5 : 1
-      const emphasis = preset || 'ati-unified'
-      const presetDef = ATI_PRESETS.find((p) => p.id === emphasis) || ATI_PRESETS[0]
-      const labFocus = ['ml-gradient', 'deep-attention', 'molecular-graph', 'periodic-lattice', 'ati-evolution'].includes(emphasis)
-      const topologyFocus = ['manifold-torus', 'manifold-mobius', 'manifold-klein', 'poincare-disk'].includes(emphasis)
-      const showCommonCore = !topologyFocus && emphasis !== 'ati-evolution'
-      const organDim = labFocus || topologyFocus
 
       const organPos = useMemo(() => ({
         core: { x: cx, y: cy },
@@ -4495,7 +5618,6 @@ window.__ModuleLoader__.load({
         security: { x: cx + 150, y: cy + 30 },
         runtime: { x: cx - 40, y: cy + 130 },
       }), [cx, cy])
-
       const edges = useMemo(() => (synapses || []).map((s) => {
         const a = organPos[s.from] || { x: cx, y: cy }
         const b = organPos[s.to] || { x: cx, y: cy }
@@ -4506,117 +5628,68 @@ window.__ModuleLoader__.load({
         const t = (tick * speed) % 1
         const u = 1 - t
         const pulse = { x: u * u * a.x + 2 * u * t * mx + t * t * b.x, y: u * u * a.y + 2 * u * t * my + t * t * b.y }
-        const color = NODE_LAYOUT[s.from]?.color || '#a78bfa'
+        const color = NODE_LAYOUT[s.from]?.color || '#64D2FF'
         return { ...s, d, pulse, color }
       }), [synapses, organPos, tick, pulseMul, cx, cy])
-
-      const metrics = ati || {}
-      const ml = (lab && lab.ml) || {}
-      const dl = (lab && lab.dl) || {}
-      const chem = (lab && lab.chemistry) || {}
-      const evo = (lab && lab.evolution) || null
-      const topo = (lab && lab.topology) || null
-      const groupClass = presetDef.group === '拓扑'
-        ? 'g-top'
-        : (presetDef.group === 'ML' || presetDef.group === 'DL')
-          ? 'g-ml'
-          : presetDef.group === '化学'
-            ? 'g-chem'
-            : ''
-
-      const hudLine2 = emphasis === 'ml-gradient'
-        ? `loss = ${ml.loss ?? '—'} · acc = ${ml.accuracy ?? '—'}% · lr = ${ml.lr ?? '—'}`
-        : emphasis === 'deep-attention'
-          ? `heads = ${dl.heads ?? 8} · depth = ${dl.depth ?? '—'} · T = ${dl.temperature ?? '—'}`
-          : emphasis === 'molecular-graph'
-            ? `ΔG = ${chem.freeEnergy ?? '—'} kJ/mol · ΔS = ${chem.entropy ?? '—'} J/K`
-            : emphasis === 'periodic-lattice'
-              ? `轨道能 = ${chem.orbitalEnergy ?? '—'} eV · 反应速率 k = ${chem.reactionRate ?? '—'}`
-              : emphasis === 'ati-evolution'
-                ? `ATI readiness = ${evo ? evo.readiness : '—'} · ${evo ? evo.stage.label : '—'}`
-                : topo
-                  ? `${topo.activeLabel} · g = ${topo.genus} · χ = ${topo.eulerCharacteristic} · ${topo.orientable ? '可定向' : '不可定向'}`
-                  : `β = [${(metrics.bettiNumbers || [1, 1, 0]).join(', ')}]  ·  genus = ${metrics.topologyGenus ?? 1}`
+      const org = (nodes || []).filter((n) => n.id !== 'core')
+      const online = org.filter((n) => n.status !== 'offline' && n.status !== 'missing')
+      const avg = online.length ? Math.round(online.reduce((s, n) => s + (n.metric || 0), 0) / online.length) : 0
 
       return React.createElement('div', { className: 'ow-ati-wrap' },
         React.createElement('div', { className: 'ow-ati-title' },
-          `A · T · I   ${presetDef.sub.split('·')[0].trim()}`,
-          sourceTag(presetDef.group === 'ML' || presetDef.group === 'DL' || presetDef.group === '化学' || presetDef.group === '拓扑'
-            ? 'metaphor'
-            : 'derived'),
+          'A · T · I   系统拓扑',
+          sourceTag('derived'),
         ),
-        React.createElement('div', { className: 'ow-ati-sub' }, `ARTIFICIAL TOPOLOGICAL INTELLIGENCE · ${presetDef.group || 'ATI'}`),
+        React.createElement('div', { className: 'ow-ati-sub' }, 'SYSTEM TOPOLOGY · 实时健康 · 点节点看详情，双击直达'),
         React.createElement('div', { className: 'ow-ati-hud' },
           React.createElement('div', null,
-            React.createElement('b', null, 'κ'), ` = ${metrics.manifoldCurvature ?? '—'}  ·  `,
-            React.createElement('b', null, '‖∇L‖'), ` = ${metrics.gradientNorm ?? '—'}`,
-            sourceTag(metrics.source || 'derived'),
+            `节点 ${org.length} · 在线 ${online.length} · 健康均值 ${avg}%`,
+            sourceTag('derived'),
           ),
-          React.createElement('div', null, hudLine2),
-          React.createElement('div', null, `heads = ${metrics.attentionHeads ?? 8} · bonds = ${metrics.molecularBonds ?? 0} · stage = ${metrics.atiStage ?? '—'}`),
-        ),
-        evo && React.createElement('div', { className: 'ow-ati-stage-tag' },
-          React.createElement('div', null, 'ATI READINESS'),
-          React.createElement('div', null, React.createElement('b', null, `${evo.readiness} / 100`)),
-          React.createElement('div', null, `${evo.stage.zh} · ${evo.stage.sub}`),
         ),
         React.createElement('svg', { className: 'ow-ati-svg', viewBox: `0 0 ${W} ${H}` },
           React.createElement('defs', null,
             React.createElement('radialGradient', { id: 'owAtiCore' },
-              React.createElement('stop', { offset: '0%', stopColor: '#fff', stopOpacity: 0.9 }),
-              React.createElement('stop', { offset: '40%', stopColor: '#a78bfa', stopOpacity: 0.5 }),
-              React.createElement('stop', { offset: '100%', stopColor: '#5eead4', stopOpacity: 0 }),
+              React.createElement('stop', { offset: '0%', stopColor: '#FFFFFF', stopOpacity: 0.5 }),
+              React.createElement('stop', { offset: '55%', stopColor: '#E7B24B', stopOpacity: 0.12 }),
+              React.createElement('stop', { offset: '100%', stopColor: '#E7B24B', stopOpacity: 0 }),
             ),
             React.createElement('filter', { id: 'owAtiGlow' },
-              React.createElement('feGaussianBlur', { stdDeviation: 4, result: 'b' }),
+              React.createElement('feGaussianBlur', { stdDeviation: 3, result: 'b' }),
+              React.createElement('feComponentTransfer', { in: 'b', result: 'soft' },
+                React.createElement('feFuncA', { type: 'linear', slope: 0.28 }),
+              ),
               React.createElement('feMerge', null,
-                React.createElement('feMergeNode', { in: 'b' }),
+                React.createElement('feMergeNode', { in: 'soft' }),
                 React.createElement('feMergeNode', { in: 'SourceGraphic' }),
               ),
             ),
-            React.createElement('marker', {
-              id: 'owLabArrow', markerWidth: 8, markerHeight: 8,
-              refX: 6, refY: 3, orient: 'auto', markerUnits: 'strokeWidth',
-            },
-              React.createElement('path', { d: 'M0,0 L6,3 L0,6 z', fill: '#5eead4' }),
-            ),
           ),
-          React.createElement(AtiStageRenderer, {
-            preset: emphasis, tick, W, H, cx, cy, nodeMap, lab,
-          }),
-          Array.from({ length: 24 }).map((_, i) => React.createElement('rect', {
-            key: `bar-${i}`,
-            x: 180 + i * 28, y: H - 36,
-            width: 8 + (i % 3) * 4,
-            height: 4 + (metrics.bettiNumbers && metrics.bettiNumbers[i % 3] ? metrics.bettiNumbers[i % 3] * 6 : 8),
-            className: 'ow-ati-bar',
-            opacity: organDim ? 0.12 : 0.3 + (i % 5) * 0.1,
-          })),
-          edges.map((e) => React.createElement('g', { key: `${e.from}-${e.to}`, opacity: organDim ? 0.3 : 1 },
+                    edges.map((e) => React.createElement('g', { key: `${e.from}-${e.to}`, opacity: 1 },
             React.createElement('path', {
               d: e.d, fill: 'none', stroke: e.color,
-              strokeWidth: e.active ? 2 : 1,
-              strokeOpacity: 0.2 + e.weight * 0.6,
+              strokeWidth: e.active ? 1.4 : 1,
+              strokeOpacity: 0.12 + e.weight * 0.34,
             }),
             e.active && React.createElement('circle', {
-              cx: e.pulse.x, cy: e.pulse.y, r: 4,
-              fill: e.color, opacity: 0.85, className: 'ow-nn-pulse',
+              cx: e.pulse.x, cy: e.pulse.y, r: 2.5,
+              fill: e.color, opacity: 0.5, className: 'ow-nn-pulse',
             }),
           )),
-          showCommonCore && React.createElement('g', { className: 'ow-ati-singularity' },
-            React.createElement('circle', { cx, cy, r: 55 + Math.sin(tick * 0.04) * 4, fill: 'url(#owAtiCore)', opacity: 0.35 }),
-            React.createElement('circle', { cx, cy, r: 28, fill: 'none', stroke: '#fff', strokeWidth: 1.5, opacity: 0.6 }),
-            React.createElement('circle', { cx, cy, r: 10, fill: '#fff', filter: 'url(#owAtiGlow)' }),
+                    React.createElement('g', { className: 'ow-ati-singularity' },
+            React.createElement('circle', { cx, cy, r: 64, fill: 'url(#owAtiCore)', opacity: 0.5 }),
+            React.createElement('circle', { cx, cy, r: 30, fill: 'none', stroke: 'rgba(255,255,255,.16)', strokeWidth: 1 }),
+            React.createElement('circle', { cx, cy, r: 6, fill: '#FFFFFF', opacity: 0.92 }),
             React.createElement('text', {
-              x: cx, y: cy - 42, textAnchor: 'middle', fill: '#e9d5ff',
-              fontSize: 11, fontFamily: 'Consolas,monospace', letterSpacing: 4,
+              x: cx, y: cy - 44, textAnchor: 'middle', fill: '#A3A3A8',
+              fontSize: 11, fontFamily: 'inherit', letterSpacing: 0, fontWeight: 500,
             }, 'ATI CORE'),
           ),
-          React.createElement('g', { opacity: organDim ? 0.34 : 1 },
+                    React.createElement('g', null,
             Object.entries(organPos).map(([id, pos]) => {
               const node = nodeMap[id]
               if (!node || id === 'core') return null
-              const layout = NODE_LAYOUT[id] || { color: node.color || '#5eead4', en: id }
+              const layout = NODE_LAYOUT[id] || { color: node.color || '#E7B24B', en: id }
               const sel = selected === id
               const offline = node.status === 'offline' || node.status === 'missing'
               const stroke = offline ? '#64748b' : layout.color
@@ -4638,14 +5711,17 @@ window.__ModuleLoader__.load({
                 },
               },
                 React.createElement('circle', {
-                  cx: pos.x, cy: pos.y, r: sel ? 14 : 11,
-                  fill, stroke, strokeWidth: sel ? 2.5 : 1,
-                  strokeDasharray: offline ? '3 3' : undefined,
-                  filter: sel && !offline ? 'url(#owAtiGlow)' : undefined,
+                  cx: pos.x, cy: pos.y, r: sel ? 12 : 10,
+                  fill, stroke, strokeWidth: sel ? 1.6 : 1,
+                  strokeOpacity: offline ? 0.5 : 0.85,
+                }),
+                sel && !offline && React.createElement('circle', {
+                  cx: pos.x, cy: pos.y, r: 17, fill: 'none',
+                  stroke: layout.color, strokeWidth: 1, strokeOpacity: 0.35,
                 }),
                 React.createElement('text', {
-                  x: pos.x, y: pos.y - 18, textAnchor: 'middle',
-                  fill: offline ? '#94a3b8' : '#e6f1ff', fontSize: 9,
+                  x: pos.x, y: pos.y - 19, textAnchor: 'middle',
+                  fill: offline ? '#6B6B72' : '#F2F2F4', fontSize: 12, fontWeight: 510,
                 }, NODE_ZH[id] || node.label),
                 React.createElement('text', {
                   x: pos.x, y: pos.y + 24, textAnchor: 'middle', className: 'ow-ati-metric',
@@ -4653,28 +5729,6 @@ window.__ModuleLoader__.load({
                 }, offline ? '未启用' : `${node.metric}%`),
               )
             }),
-          ),
-        ),
-        React.createElement('div', { className: 'ow-ati-preset-bar' },
-          React.createElement('button', {
-            type: 'button',
-            className: `ow-ati-preset ${(!preset || preset === 'ati-unified') ? 'on' : ''}`,
-            onClick: () => onPresetChange('ati-unified'),
-            title: '主视图 · 点节点干活',
-          }, '统一场'),
-          React.createElement('details', { className: 'ow-ati-lab-details' },
-            React.createElement('summary', {
-              className: 'ow-ati-preset',
-              title: '隐喻实验室 · 可选壁纸式预设',
-            }, '实验室'),
-            React.createElement('div', { className: 'ow-ati-lab-presets' },
-              ATI_PRESETS.filter((p) => p.id !== 'ati-unified').map((p) => React.createElement('button', {
-                key: p.id, type: 'button',
-                className: `ow-ati-preset ${groupClassForPreset(p)} ${preset === p.id ? 'on' : ''}`,
-                onClick: () => onPresetChange(p.id),
-                title: `${p.group} · ${p.sub}（隐喻）`,
-              }, p.label)),
-            ),
           ),
         ),
       )
@@ -4697,7 +5751,7 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'ow-donut' },
           React.createElement('svg', { viewBox: '0 0 120 120' },
             items.map((item) => {
-              const layout = NODE_LAYOUT[item.id] || { color: '#5eead4' }
+              const layout = NODE_LAYOUT[item.id] || { color: '#E7B24B' }
               const dash = (item.metric / total) * circumference
               const el = React.createElement('circle', {
                 key: item.id, cx: 60, cy: 60, r: radius, fill: 'none',
@@ -4716,7 +5770,7 @@ window.__ModuleLoader__.load({
         ),
         React.createElement('div', { className: 'ow-res-list' },
           items.map((item) => {
-            const layout = NODE_LAYOUT[item.id] || { color: '#5eead4' }
+            const layout = NODE_LAYOUT[item.id] || { color: '#E7B24B' }
             const pct = Math.round((item.metric / total) * 100)
             return React.createElement('div', { key: item.id, className: 'ow-res-item' },
               React.createElement('span', { className: 'ow-res-dot', style: { background: layout.color, boxShadow: `0 0 4px ${layout.color}` } }),
@@ -4946,7 +6000,7 @@ window.__ModuleLoader__.load({
 
     function NodeDetailCard({ node, synapses, events, usage, onAction, onClose, onOfflineHint }) {
       if (!node) return null
-      const layout = NODE_LAYOUT[node.id] || { en: node.label, color: node.color || '#5eead4' }
+      const layout = NODE_LAYOUT[node.id] || { en: node.label, color: node.color || '#E7B24B' }
       const edgeCount = synapses.filter((s) => s.from === node.id || s.to === node.id).length
       const related = events.filter((e) => (e.detail || '').includes(node.id) || (e.title || '').includes(NODE_ZH[node.id] || '')).slice(0, 3)
       const today = usage && usage.today
@@ -4986,7 +6040,7 @@ window.__ModuleLoader__.load({
               ? Number(today.requests).toLocaleString('zh-CN')
               : '—')),
         ),
-        related.length > 0 && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#7c8ea6' } },
+        related.length > 0 && React.createElement('div', { style: { marginTop: 8, fontSize: 10, color: '#A3A3A8' } },
           related.map((e) => React.createElement('div', { key: e.id }, e.title))),
         React.createElement('div', { className: 'ow-detail-actions' },
           node.action && React.createElement('button', {
@@ -5019,6 +6073,590 @@ window.__ModuleLoader__.load({
 })
 
 
+// Open World · garden-view（园 · 第四视图：一花一草一木 = 一能力一元素）
+// 数据契约：只读 snapshot.{core,nodes,taskBoard,memory,rewind,space,events,mailbox,worldPacks,idea}
+// 动作契约：send-message / idea-inject / idea-compare / pair-issue（OWIP 核心动作，不新造）
+window.__ModuleLoader__.load({
+  id: 'dsh-open-world/garden-view',
+  factory: (require) => {
+    const module = { exports: {} }
+    const exports = module.exports
+    Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
+    const React = require('react')
+    const C = require('dsh-open-world/constants')
+    /* v4：系统「减弱动态」守卫——流星/花瓣等装饰动画降级 */
+    const reducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const Runtime = require('dsh-open-world/runtime')
+    const { useState, useEffect, useRef, useCallback, useMemo } = React
+    const { fetchJson } = Runtime
+
+    /** 园开关：worlds.garden === false 时隐藏（yml: worlds.garden） */
+    function gardenEnabled(snapshot) {
+      const w = snapshot && snapshot.config && snapshot.config.worlds
+      return !(w && w.garden === false)
+    }
+
+    /** 配对令牌签发（请人过桥；与 chat.js 同一 OW_ACTION_URL 通道） */
+    let pairingInFlight = false
+    async function postPairIssue() {
+      if (pairingInFlight) throw new Error('上一枚令牌还在路上，稍候')
+      pairingInFlight = true
+      try {
+      const res = await fetch(C.OW_ACTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pair-issue' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + res.status))
+      return data
+      } finally { window.setTimeout(() => { pairingInFlight = false }, 2000) }
+    }
+
+    /** 信纸落聊天坞线程（一套存储两处渲染：聊天坞与园共用 open-world/chat/ 本地文件） */
+    async function postChatLetter(text) {
+      const res = await fetch(C.CHAT_POST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId: 'main', text: String(text || '').slice(0, 280), attachments: [], role: 'user' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.ok === false) {
+        const reason = res.status >= 500 ? '聊天坞服务暂不可用' : (res.status === 404 ? '聊天坞接口不存在' : (data.error || ('HTTP ' + res.status)))
+        throw new Error(reason)
+      }
+      return data
+    }
+
+    /** 名牌牵连（谁养着谁） */
+    const REL = {
+      moon: '全园（总况映在月色里）',
+      lantern: '舱（核心养着会话）· 塔（话头长成任务）· 桥（带来新话头）',
+      capsule: '灯（核心安稳会话才亮）· 石（园丁看护）',
+      banner: '全园（有动静它先应）',
+      tower: '灯（话头长成任务）· 湖（做完的落进记忆）',
+      moongate: '湖（记忆厚才有据）· 塔（忙时先锁门）',
+      lake: '塔（成果落进来）· 门（攒出回退）· 桥（见闻起新话头）',
+      bridge: '门（存档齐才可信）· 灯（见闻起新话头）',
+      stone: '全园（照看）· 湖（练习用记忆）',
+      well: '桥（外来园子的门路）',
+    }
+
+    /** 园内元素登记（ax/ay 为比例锚点） */
+    function buildElements(snap) {
+      const core = (snap && snap.core) || {}
+      const tb = (snap && snap.taskBoard) || {}
+      const mem = (snap && snap.memory) || {}
+      const rw = (snap && snap.rewind) || {}
+      const sp = (snap && snap.space) || {}
+      const packs = (snap && snap.worldPacks) || {}
+      const plugins = (snap && snap.plugins) || []
+      const canEnter = (id) => !plugins.some((p) => p.id === id && !p.online)
+      const online = plugins.filter((p) => p && p.online).length
+      // v91 十景对账：月=core总况 灯=sessions 塔=taskBoard 舱=core主体 门=rewind 湖=hindsight 桥=space 幡=events 石=dsh-self 井=worldPacks
+      return [
+        { id: 'moon', zi: '月', en: 'core · 总况', seal: '月',
+          who: '月是园子的总况。满而亮，园子就安；月色缺了，就该叫园丁来查。月盈亏，映的是体检分。',
+          now: () => '今晚 ' + (core.healthScore != null ? core.healthScore : '—') + ' 分。',
+          acts: () => [{ t: '看体征', run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'monitor' }) }] },
+        { id: 'lantern', zi: '灯', en: 'sessions · 会话', seal: '灯',
+          who: '灯下坐着正在干活的会话。灯亮着，就是有人在工作。',
+          now: () => '会话在册，健康 ' + (core.healthScore != null ? core.healthScore : '—') + '。',
+          acts: () => [{ t: '看会话', run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'fleet' }) }] },
+        { id: 'capsule', zi: '舱', en: 'core · 系统', seal: '舱',
+          who: '查看系统状态。', now: () => '健康 ' + (core.healthScore ?? '—') + '。',
+          acts: () => [{ t: '看体征', run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'monitor' }) }] },
+        { id: 'tower', zi: '塔', en: 'task-board · 任务', seal: '塔',
+          who: '塔里存放要做的事。做完一层，亮一层；塔顶的旗，是有事在做的意思。',
+          now: () => tb.available !== true ? '任务服务未启用；历史记录不代表正在执行。' : '在做 ' + (tb.doing != null ? tb.doing : '—') + '，排队 ' + (tb.queued != null ? tb.queued : '—') + '，今日成 ' + (tb.doneToday != null ? tb.doneToday : '—') + '。',
+          acts: () => [{ t: tb.available === true ? '看队列' : '任务未启用', disabled: tb.available !== true, run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'task-board' }) }] },
+        { id: 'moongate', zi: '门', en: 'rewind · 回退', seal: '门',
+          who: '查看可用回退点；执行回退前请确认影响范围。',
+          now: () => '存档 ' + (rw.points != null ? rw.points : '—') + ' 份；能否回退以服务检查为准。',
+          acts: () => [{ t: '看存档', run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'rewind' }) }] },
+        { id: 'lake', zi: '湖', en: 'hindsight · 记忆', seal: '湖',
+          who: '湖收着你们说过的话、存过的知识。问它一句，它替你想起。',
+          now: () => '存了 ' + (mem.items != null ? mem.items : '—') + ' 条。',
+          acts: () => [{ t: '查一件事', ask: 'lake' }] },
+        { id: 'bridge', zi: '桥', en: 'space · 连接', seal: '桥',
+          who: '桥那头是你的第二屏和伙伴。有人过桥，桥上会亮一盏客灯。',
+          now: () => '客 ' + ((sp && sp.peers) || 0) + ' 位，同步：' + ((sp && sp.sync) || '未连接') + '。',
+          acts: () => [
+            { t: canEnter('remote-web-ui') ? '打开连接' : '远程连接未启用', disabled: !canEnter('remote-web-ui'), run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'remote' }) },
+          ] },
+        { id: 'banner', zi: '幡', en: 'events · 动静', seal: '幡',
+          who: '园里一有动静，幡就应一声。点幡，看最近七件。',
+          now: () => '园径在右侧，点开即读。', openPath: true,
+          acts: () => [{ t: '看园径', run: (ctx) => ctx.setPathOpen(true) }] },
+        { id: 'stone', zi: '石', en: 'dsh-self · 园丁', seal: '石',
+          who: '守园的石。园丁住在里面：照看所有器官、收编外来插件、出事时把园子复原。',
+          now: () => '在册插件 ' + plugins.length + ' 样，在线 ' + online + '。',
+          acts: () => [{ t: canEnter('market') ? '翻园丁簿' : '插件市场未启用', disabled: !canEnter('market'), run: (ctx) => ctx.runBridge({ type: 'embed', panel: 'market' }) }] },
+        { id: 'well', zi: '井', en: 'world-packs · 世界包', seal: '井',
+          who: '井通着别的园子。装了世界包，井里才映出别家的月色。',
+          now: () => packs.enabled ? ('已装 ' + ((packs.packs || []).filter((p) => p.enterable).length) + ' 包。') : '井中无水——还没装任何世界包。',
+          dim: !packs.enabled,
+          acts: () => [] },
+      ]
+    }
+
+    /** 元素锚点（比例坐标） */
+    const ANCHORS = {
+      moon: [.8, .2], lantern: [.235, .62], capsule: [.4, .56], tower: [.565, .6],
+      moongate: [.685, .62], lake: [.21, .84], bridge: [.375, .82], banner: [.487, .6],
+      stone: [.61, .82], well: [.72, .83],
+    }
+    const HIT_R = { moon: 40, lantern: 36, capsule: 44, tower: 42, moongate: 40, lake: 46, bridge: 38, banner: 34, stone: 34, well: 34 }
+
+    /** 画园（canvas 2d · 无 WebGL） */
+    function drawScene(ctx2, w, h, t, state) {
+      const S = Math.max(.55, Math.min(1.1, Math.min(w / 900, h / 560)))
+      ctx2.clearRect(0, 0, w, h)
+      // 天
+      const g = ctx2.createLinearGradient(0, 0, 0, h * .66)
+      g.addColorStop(0, '#0C0F13'); g.addColorStop(.7, '#111820'); g.addColorStop(1, '#16202A')
+      ctx2.fillStyle = g; ctx2.fillRect(0, 0, w, h * .66)
+      // 星
+      for (const st of state.stars) {
+        ctx2.globalAlpha = st.a; ctx2.fillStyle = '#DCE4E8'
+        ctx2.beginPath(); ctx2.arc(st.x * w, st.y * h, st.r, 0, 7); ctx2.fill()
+      }
+      ctx2.globalAlpha = 1
+      // 月（盈亏映体检分）
+      const mx = ANCHORS.moon[0] * w, my = ANCHORS.moon[1] * h, mr = 34 * S
+      const halo = ctx2.createRadialGradient(mx, my, mr * .4, mx, my, mr * 3.2)
+      halo.addColorStop(0, 'rgba(232,223,200,.15)'); halo.addColorStop(1, 'rgba(232,223,200,0)')
+      ctx2.fillStyle = halo; ctx2.beginPath(); ctx2.arc(mx, my, mr * 3.2, 0, 7); ctx2.fill()
+      ctx2.fillStyle = '#E4DCC4'; ctx2.beginPath(); ctx2.arc(mx, my, mr, 0, 7); ctx2.fill()
+      const shade = Math.max(0, Math.min(1, (100 - (state.healthScore == null ? 100 : state.healthScore)) / 25))
+      if (shade > 0.02) { ctx2.fillStyle = '#0C0F13'; ctx2.beginPath(); ctx2.arc(mx - mr * 1.15 * shade, my - mr * .25, mr * 1.02, 0, 7); ctx2.fill() }
+      // 山三层 + 雾
+      const mt = [
+        { a: .12, y: .56, amp: .05 }, { a: .2, y: .6, amp: .045 }, { a: .3, y: .65, amp: .04 },
+      ]
+      for (const L of mt) {
+        ctx2.beginPath(); ctx2.moveTo(-10, h)
+        const n = 6
+        for (let i = 0; i <= n; i++) {
+          const x = (i / n) * (w + 20) - 10
+          const y = (L.y + Math.sin(i * 2.1 + L.a * 9) * L.amp) * h
+          if (i === 0) ctx2.lineTo(x, y)
+          else ctx2.quadraticCurveTo(x - (w / n) / 2, y - 18 * S, x, y)
+        }
+        ctx2.lineTo(w + 10, h); ctx2.closePath()
+        const mg = ctx2.createLinearGradient(0, h * .4, 0, h * .72)
+        mg.addColorStop(0, 'rgba(150,162,172,' + L.a + ')'); mg.addColorStop(1, 'rgba(150,162,172,0)')
+        ctx2.fillStyle = mg; ctx2.fill()
+      }
+      // 地
+      const gg = ctx2.createLinearGradient(0, h * .64, 0, h)
+      gg.addColorStop(0, '#131920'); gg.addColorStop(1, '#0C0F12')
+      ctx2.fillStyle = gg; ctx2.fillRect(0, h * .64, w, h * .36)
+      ctx2.strokeStyle = 'rgba(217,179,108,.1)'; ctx2.lineWidth = 1
+      ctx2.beginPath(); ctx2.moveTo(0, h * .655); ctx2.lineTo(w, h * .655); ctx2.stroke()
+      // 湖
+      const lx = ANCHORS.lake[0] * w, ly = ANCHORS.lake[1] * h
+      const lg = ctx2.createLinearGradient(0, ly - 20 * S, 0, ly + 20 * S)
+      lg.addColorStop(0, '#1B2C32'); lg.addColorStop(1, '#101C21')
+      ctx2.fillStyle = lg; ctx2.beginPath(); ctx2.ellipse(lx, ly, 108 * S, 22 * S, 0, 0, 7); ctx2.fill()
+      ctx2.strokeStyle = 'rgba(217,179,108,.16)'; ctx2.lineWidth = 1
+      ctx2.beginPath(); ctx2.ellipse(lx, ly, 108 * S, 22 * S, 0, 0, 7); ctx2.stroke()
+      // 涟漪
+      for (const r of state.ripples) {
+        ctx2.globalAlpha = Math.max(0, r.life) * .5; ctx2.strokeStyle = '#9FB8BC'; ctx2.lineWidth = 1
+        ctx2.beginPath(); ctx2.arc(r.x, r.y, r.r, 0, 7); ctx2.stroke()
+      }
+      ctx2.globalAlpha = 1
+      // 舱（核心）
+      const cx = ANCHORS.capsule[0] * w, cb = h * .7, bw = 82 * S, bh = 128 * S
+      const pool = ctx2.createRadialGradient(cx, cb, 4, cx, cb, 96 * S)
+      pool.addColorStop(0, 'rgba(240,208,138,.09)'); pool.addColorStop(1, 'rgba(240,208,138,0)')
+      ctx2.fillStyle = pool; ctx2.beginPath(); ctx2.ellipse(cx, cb, 96 * S, 22 * S, 0, 0, 7); ctx2.fill()
+      const bg = ctx2.createLinearGradient(cx - bw / 2, 0, cx + bw / 2, 0)
+      bg.addColorStop(0, '#1E262C'); bg.addColorStop(.5, '#171E23'); bg.addColorStop(1, '#12181D')
+      ctx2.fillStyle = bg
+      roundRect(ctx2, cx - bw / 2, cb - bh, bw, bh, bw * .42); ctx2.fill()
+      ctx2.strokeStyle = 'rgba(217,179,108,.4)'; ctx2.lineWidth = 1; ctx2.stroke()
+      const wx = cx, wy = cb - bh * .68, wr = 12 * S
+      const wg = ctx2.createRadialGradient(wx - 3, wy - 3, 2, wx, wy, wr)
+      wg.addColorStop(0, '#F6DFA6'); wg.addColorStop(1, '#C89850')
+      ctx2.fillStyle = wg; ctx2.beginPath(); ctx2.arc(wx, wy, wr, 0, 7); ctx2.fill()
+      // 灯（会话）
+      const lx2 = ANCHORS.lantern[0] * w, lb = h * .7
+      ctx2.strokeStyle = '#242C32'; ctx2.lineWidth = 3 * S
+      ctx2.beginPath(); ctx2.moveTo(lx2, lb); ctx2.lineTo(lx2, lb - 66 * S); ctx2.stroke()
+      const ll = 15 * S, lh2 = 19 * S, ly2 = lb - 62 * S
+      const lglow = ctx2.createRadialGradient(lx2, ly2 + lh2 / 2, 2, lx2, ly2 + lh2 / 2, 38 * S)
+      lglow.addColorStop(0, 'rgba(240,208,138,.2)'); lglow.addColorStop(1, 'rgba(240,208,138,0)')
+      ctx2.fillStyle = lglow; ctx2.beginPath(); ctx2.arc(lx2, ly2 + lh2 / 2, 38 * S, 0, 7); ctx2.fill()
+      const lg2 = ctx2.createLinearGradient(lx2 - ll, 0, lx2 + ll, 0)
+      lg2.addColorStop(0, '#EFCF8F'); lg2.addColorStop(1, '#C79A55')
+      roundRect(ctx2, lx2 - ll, ly2, ll * 2, lh2, 4 * S); ctx2.fillStyle = lg2; ctx2.fill()
+      ctx2.strokeStyle = 'rgba(20,16,10,.5)'; ctx2.stroke()
+      // 塔（任务）
+      const tx = ANCHORS.tower[0] * w, tb2 = h * .7
+      let ty = tb2
+      const tiers = [[64, 0], [48, 1], [34, 2]]
+      for (const [tw2, i] of tiers) {
+        const th2 = 22 * S
+        roundRect(ctx2, tx - tw2 * S / 2, ty - th2, tw2 * S, th2, 3 * S)
+        ctx2.fillStyle = i % 2 ? '#171E23' : '#1B2228'; ctx2.fill()
+        ctx2.strokeStyle = 'rgba(217,179,108,.26)'; ctx2.lineWidth = 1; ctx2.stroke()
+        ctx2.beginPath()
+        ctx2.moveTo(tx - tw2 * S / 2 - 8 * S, ty - th2)
+        ctx2.quadraticCurveTo(tx, ty - th2 - 8 * S, tx + tw2 * S / 2 + 8 * S, ty - th2)
+        ctx2.quadraticCurveTo(tx, ty - th2 - 2 * S, tx - tw2 * S / 2 - 8 * S, ty - th2)
+        ctx2.fillStyle = '#232B31'; ctx2.fill()
+        ctx2.fillStyle = 'rgba(240,208,138,.5)'
+        ctx2.fillRect(tx - 3 * S, ty - th2 + 6 * S, 6 * S, 10 * S)
+        ty -= th2 + 6 * S
+      }
+      // 塔旗（随风）
+      const fsway = state.wind * 7 * S + Math.sin(t * 2.6) * 2 * S
+      ctx2.strokeStyle = '#39434B'; ctx2.lineWidth = 1.5
+      ctx2.beginPath(); ctx2.moveTo(tx, tb2); ctx2.lineTo(tx, ty - 4 * S); ctx2.stroke()
+      ctx2.fillStyle = '#C8402F'
+      ctx2.beginPath(); ctx2.moveTo(tx, ty - 4 * S); ctx2.lineTo(tx + 22 * S, ty - 1 * S + fsway * .4); ctx2.lineTo(tx, ty + 4 * S)
+      ctx2.closePath(); ctx2.fill()
+      // 门（回退）
+      const gx = ANCHORS.moongate[0] * w, gy = h * .66, gr = 36 * S
+      ctx2.strokeStyle = '#2A3238'; ctx2.lineWidth = 8 * S
+      ctx2.beginPath(); ctx2.arc(gx, gy, gr, 0, 7); ctx2.stroke()
+      ctx2.strokeStyle = 'rgba(217,179,108,.3)'; ctx2.lineWidth = 1
+      ctx2.beginPath(); ctx2.arc(gx, gy, gr + 4 * S, 0, 7); ctx2.stroke()
+      ctx2.strokeStyle = 'rgba(240,208,138,.5)'; ctx2.lineWidth = 1.6
+      ctx2.beginPath(); ctx2.moveTo(gx, gy - gr + 7 * S); ctx2.lineTo(gx, gy + gr - 7 * S); ctx2.stroke()
+      // 桥（连接）
+      const bx = ANCHORS.bridge[0] * w, by = h * .82, bw2 = 78 * S
+      ctx2.strokeStyle = '#2A3238'; ctx2.lineWidth = 5 * S
+      ctx2.beginPath(); ctx2.moveTo(bx - bw2 / 2, by)
+      ctx2.quadraticCurveTo(bx, by - 30 * S, bx + bw2 / 2, by); ctx2.stroke()
+      // 幡（事件）
+      const px = ANCHORS.banner[0] * w, pb = h * .68, py = pb - 108 * S
+      ctx2.strokeStyle = '#39434B'; ctx2.lineWidth = 2 * S
+      ctx2.beginPath(); ctx2.moveTo(px, pb); ctx2.lineTo(px, py); ctx2.stroke()
+      const sway = state.wind * 11 * S + Math.sin(t * 2.3) * (1.5 + state.dance * 8) * S + Math.sin(t * .8) * 1.4 * S
+      ctx2.beginPath()
+      ctx2.moveTo(px, py)
+      ctx2.quadraticCurveTo(px + 12 * S + sway * .55, py + 19 * S, px + sway, py + 34 * S)
+      ctx2.lineTo(px + sway * 1.08, py + 56 * S); ctx2.lineTo(px, py + 56 * S)
+      ctx2.closePath()
+      ctx2.fillStyle = 'rgba(233,228,216,.88)'; ctx2.fill()
+      // 石（园丁）
+      const sx = ANCHORS.stone[0] * w, sy = h * .84
+      ctx2.fillStyle = '#1C2329'; ctx2.strokeStyle = 'rgba(217,179,108,.2)'; ctx2.lineWidth = 1
+      ctx2.beginPath()
+      ctx2.moveTo(sx - 22 * S, sy)
+      ctx2.quadraticCurveTo(sx - 30 * S, sy - 26 * S, sx - 9 * S, sy - 34 * S)
+      ctx2.quadraticCurveTo(sx + 2 * S, sy - 44 * S, sx + 12 * S, sy - 30 * S)
+      ctx2.quadraticCurveTo(sx + 29 * S, sy - 22 * S, sx + 21 * S, sy)
+      ctx2.closePath(); ctx2.fill(); ctx2.stroke()
+      ctx2.strokeStyle = 'rgba(74,124,111,.75)'; ctx2.lineWidth = 2 * S
+      ctx2.beginPath(); ctx2.moveTo(sx - 17 * S, sy - 7 * S); ctx2.quadraticCurveTo(sx - 7 * S, sy - 12 * S, sx + 2 * S, sy - 7 * S); ctx2.stroke()
+      // 井（世界包）
+      const wx2 = ANCHORS.well[0] * w, wy2 = h * .855
+      ctx2.globalAlpha = state.packsOn ? 1 : .55
+      ctx2.strokeStyle = state.packsOn ? '#39434B' : '#4A5158'; ctx2.lineWidth = 2.6 * S
+      ctx2.beginPath(); ctx2.moveTo(wx2 - 13 * S, wy2); ctx2.lineTo(wx2 - 13 * S, wy2 - 28 * S); ctx2.stroke()
+      ctx2.beginPath(); ctx2.moveTo(wx2 + 13 * S, wy2); ctx2.lineTo(wx2 + 13 * S, wy2 - 28 * S); ctx2.stroke()
+      ctx2.beginPath(); ctx2.moveTo(wx2 - 20 * S, wy2 - 28 * S); ctx2.lineTo(wx2, wy2 - 37 * S); ctx2.lineTo(wx2 + 20 * S, wy2 - 28 * S); ctx2.stroke()
+      ctx2.fillStyle = state.packsOn ? '#1B2C32' : '#101418'
+      ctx2.beginPath(); ctx2.ellipse(wx2, wy2 - 5 * S, 12 * S, 5 * S, 0, 0, 7); ctx2.fill()
+      ctx2.globalAlpha = 1
+      // 草
+      ctx2.lineWidth = 1.3
+      for (const gr2 of state.grass) {
+        const gx2 = gr2.x * w, gy2 = gr2.y * h
+        const gsw = (state.wind * 6 + Math.sin(t * 1.6 + gr2.ph) * 1.1) * gr2.s
+        ctx2.strokeStyle = 'rgba(58,76,66,.6)'
+        ctx2.beginPath(); ctx2.moveTo(gx2, gy2)
+        ctx2.quadraticCurveTo(gx2 + gsw * .5, gy2 - 7 * gr2.s, gx2 + gsw, gy2 - 11 * gr2.s)
+        ctx2.stroke()
+      }
+      // 流星（大事件）
+      for (const p of state.meteors) {
+        const tail = 14 + 24 * p.life
+        const mgl = ctx2.createLinearGradient(p.x, p.y, p.x - p.vx * tail * .28, p.y - p.vy * tail * .28)
+        mgl.addColorStop(0, 'rgba(236,228,206,' + (.85 * p.life) + ')'); mgl.addColorStop(1, 'rgba(236,228,206,0)')
+        ctx2.strokeStyle = mgl; ctx2.lineWidth = 1.5
+        ctx2.beginPath(); ctx2.moveTo(p.x, p.y); ctx2.lineTo(p.x - p.vx * tail * .28, p.y - p.vy * tail * .28); ctx2.stroke()
+      }
+      // 暗元素灰罩
+      if (state.dimWell) {
+        ctx2.globalAlpha = .5; ctx2.fillStyle = '#0C0F12'
+        ctx2.fillRect(wx2 - 24 * S, wy2 - 40 * S, 48 * S, 42 * S)
+        ctx2.globalAlpha = 1
+      }
+    }
+    function roundRect(c, x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2)
+      c.beginPath()
+      c.moveTo(x + r, y)
+      c.arcTo(x + w, y, x + w, y + h, r)
+      c.arcTo(x + w, y + h, x, y + h, r)
+      c.arcTo(x, y + h, x, y, r)
+      c.arcTo(x, y, x + w, y, r)
+      c.closePath()
+    }
+
+    /** 园 · React 视图（挂在 CenterStage 内） */
+    function GardenView({
+      snapshot, events, runBridge, setToast,
+      handleIdeaInject, handleIdeaCompare, handleSendMessage, handleSearchMemory,
+    }) {
+      const wrapRef = useRef(null)
+      const cvsRef = useRef(null)
+      const stateRef = useRef({
+        wind: .14, windT: .14, dance: 0, danceMax: 0,
+        ripples: [], meteors: [], lastEventId: null,
+        stars: [], grass: [],
+        healthScore: null, packsOn: false,
+      })
+      const [card, setCard] = useState(null)
+      const [pathOpen, setPathOpen] = useState(false)
+      const [letter, setLetter] = useState('')
+      const [persona, setPersona] = useState('')
+      const [asking, setAsking] = useState(false)
+      const els = useMemo(() => buildElements(snapshot), [snapshot])
+      const elsRef = useRef(els)
+      elsRef.current = els
+      const evList = (events && events.length ? events : (snapshot && snapshot.events) || []).slice(0, 7)
+      const presets = (snapshot && snapshot.idea && snapshot.idea.presets) || []
+
+      // 初始化静态布景
+      useEffect(() => {
+        const st = stateRef.current
+        if (!st.stars.length) for (let i = 0; i < 36; i++) st.stars.push({ x: Math.random(), y: Math.random() * .38, a: .08 + Math.random() * .28, r: .5 + Math.random() })
+        if (!st.grass.length) for (let i = 0; i < 12; i++) st.grass.push({ x: .06 + Math.random() * .88, y: .86 + Math.random() * .08, s: .7 + Math.random() * .6, ph: Math.random() * 6.28 })
+      }, [])
+
+      // 大事件 → 流星 + 幡舞
+      useEffect(() => {
+        const st = stateRef.current
+        const first = evList[0]
+        if (!first || !first.id) return
+        if (st.lastEventId === null) { st.lastEventId = first.id; return }
+        if (first.id !== st.lastEventId) {
+          st.lastEventId = first.id
+          st.danceMax = .8
+          if (st.meteors.length < 3 && !reducedMotion()) {
+            const cv = cvsRef.current
+            const w = cv ? cv.clientWidth : 600
+            st.meteors.push({ x: w * (.3 + Math.random() * .5), y: 40 + Math.random() * 60, vx: -(3.4 + Math.random() * 2), vy: 1.8 + Math.random(), life: 1 })
+          }
+        }
+      }, [evList.length, evList[0] && evList[0].id])
+
+      // 主循环
+      useEffect(() => {
+        let raf = 0
+        const T0 = Date.now()
+        let last = Date.now()
+        const loop = () => {
+          const cv = cvsRef.current
+          const wrap = wrapRef.current
+          if (!cv || !wrap) return
+          const now = Date.now()
+          const dt = Math.max(1, now - last); last = now
+          const t = (now - T0) / 1000
+          const st = stateRef.current
+          st.wind += (st.windT - st.wind) * .07
+          st.windT = Math.max(.12, st.windT * .985)
+          st.dance = st.danceMax; st.danceMax *= .96
+          const w = wrap.clientWidth, h = wrap.clientHeight
+          const DPR = Math.min(window.devicePixelRatio || 1, 2)
+          if (cv.width !== Math.round(w * DPR) || cv.height !== Math.round(h * DPR)) {
+            cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR)
+            cv.style.width = w + 'px'; cv.style.height = h + 'px'
+          }
+          const ctx2 = cv.getContext('2d')
+          if (ctx2) {
+            ctx2.setTransform(DPR, 0, 0, DPR, 0, 0)
+            const snap = elsRef.current && elsRef.current.length ? snapshot : null
+            st.healthScore = snap && snap.core ? snap.core.healthScore : st.healthScore
+            st.packsOn = !!(snap && snap.worldPacks && snap.worldPacks.enabled)
+            drawScene(ctx2, w, h, t, st)
+          }
+          for (const r of st.ripples) { r.r += 2; r.life -= .02 }
+          st.ripples = st.ripples.filter((r) => r.life > 0)
+          for (const p of st.meteors) { p.x += p.vx * dt * .09; p.y += p.vy * dt * .09; p.life -= dt * .0013 }
+          st.meteors = st.meteors.filter((p) => p.life > 0 && p.y < h * .6)
+          raf = window.requestAnimationFrame(loop)
+        }
+        raf = window.requestAnimationFrame(loop)
+        return () => window.cancelAnimationFrame(raf)
+      }, [snapshot])
+
+      const hitAt = useCallback((x, y) => {
+        const wrap = wrapRef.current
+        if (!wrap) return null
+        const w = wrap.clientWidth, h = wrap.clientHeight
+        let best = null; let bd = 1e9
+        for (const el of elsRef.current) {
+          const a = ANCHORS[el.id]
+          const ex = a[0] * w, ey = a[1] * h
+          const d = Math.hypot(ex - x, ey - y)
+          if (d < (HIT_R[el.id] || 36) + 10 && d < bd) { bd = d; best = { el, ex, ey } }
+        }
+        return best
+      }, [])
+
+      const onCvsDown = useCallback((e) => {
+        const wrap = wrapRef.current
+        if (!wrap) return
+        const rect = wrap.getBoundingClientRect()
+        const x = e.clientX - rect.left, y = e.clientY - rect.top
+        const hit = hitAt(x, y)
+        const st = stateRef.current
+        st.ripples.push({ x, y, r: 4, life: 1 })
+        if (!hit) { setCard(null); return }
+        if (hit.el.id === 'banner') { setCard(null); setPathOpen(true); return }
+        setCard({ el: hit.el, x: hit.ex, y: hit.ey })
+      }, [hitAt])
+
+      const runAct = useCallback(async (el, act) => {
+        stateRef.current.ripples.push({ x: ANCHORS[el.id][0] * (wrapRef.current ? wrapRef.current.clientWidth : 0), y: ANCHORS[el.id][1] * (wrapRef.current ? wrapRef.current.clientHeight : 0), r: 4, life: 1 })
+        if (act.ask === 'lake') { setAsking(true); setCard(null); return }
+        try {
+          await act.run({ setToast, setPathOpen, runBridge })
+        } catch (err) {
+          setToast(String(err && err.message || err))
+        }
+      }, [runBridge, setToast])
+
+      const sendLetter = useCallback(async () => {
+        const text = letter.trim()
+        if (!text) { setToast('写句话再寄。'); return }
+        setLetter('')
+        try {
+          if (persona) {
+            setToast('正在投递「' + persona + '」…')
+            await handleIdeaInject(persona, text)
+          } else {
+            await handleSendMessage({ action: 'send-message', to: 'mailbox', body: text.slice(0, 280) })
+            setToast('信已放进信箱。')
+          }
+        } catch (err) {
+          setToast(String(err && err.message || err))
+        }
+      }, [letter, persona, handleIdeaInject, handleSendMessage, setToast])
+
+      const compareLetter = useCallback(async () => {
+        const text = letter.trim()
+        if (!text) { setToast('先写一句话，再请两位各答一遍。'); return }
+        if (!handleIdeaCompare) return
+        const ids = presets.slice(0, 2).map((p) => p.id)
+        if (ids.length < 2) { setToast('可用人格不足两位。'); return }
+        setLetter('')
+        try {
+          await handleIdeaCompare(ids, text)
+        } catch (err) {
+          setToast(String(err && err.message || err))
+        }
+      }, [letter, handleIdeaCompare, presets])
+
+      const askLake = useCallback(async () => {
+        const q = letter.trim()
+        if (!q || !handleSearchMemory) return
+        setLetter('')
+        try {
+          const hits = await handleSearchMemory(q)
+          const items = (hits && hits.items) || []
+          setToast(items.length ? '湖里捞起 ' + items.length + ' 条，最新：' + String(items[0].text || items[0].body || '').slice(0, 60) : '湖里暂时没有这一条。')
+        } catch (err) {
+          setToast(String(err && err.message || err))
+        }
+      }, [letter, handleSearchMemory, setToast])
+
+      const cardStyle = card ? {
+        left: Math.max(12, Math.min((wrapRef.current ? wrapRef.current.clientWidth : 600) - 252, card.x - 120)),
+        top: Math.max(10, card.y - 150),
+      } : {}
+
+      return React.createElement('div', { className: 'ow-garden', ref: wrapRef },
+        React.createElement('canvas', {
+          ref: cvsRef, className: 'ow-garden-cvs',
+          role: 'img', 'aria-label': '园 · 十景：月灯塔舱门湖桥幡石井，点击景物看名牌',
+          onPointerDown: onCvsDown,
+        }),
+        React.createElement('div', { className: 'ow-garden-vtitle' }, '一花一草一木 · 一叶一菩提'),
+        React.createElement('div', { className: 'ow-garden-corner' },
+          React.createElement('span', { className: 'ow-garden-yu' }, '喻'),
+          React.createElement('span', { className: 'ow-garden-note' }, '园中风雨是气象（喻），数字都是真读数'),
+        ),
+        card && React.createElement('div', { className: 'ow-garden-card', style: cardStyle },
+          React.createElement('div', { className: 'ow-gc-head' },
+            React.createElement('span', { className: 'ow-gc-zi' }, card.el.zi),
+            React.createElement('span', { className: 'ow-gc-en' }, card.el.en),
+            React.createElement('span', { className: 'ow-gc-seal' }, card.el.seal),
+          ),
+          React.createElement('div', { className: 'ow-gc-who' }, card.el.who),
+          React.createElement('div', { className: 'ow-gc-now' }, card.el.now()),
+          React.createElement('div', { className: 'ow-gc-acts' },
+            card.el.acts(card.el).map((a, i) => React.createElement('button', {
+              key: i, type: 'button', disabled: !!a.disabled, onClick: () => runAct(card.el, a),
+            }, a.t)),
+            React.createElement('button', { type: 'button', className: 'ow-gc-x', onClick: () => setCard(null) }, '收起'),
+          ),
+        ),
+        asking && React.createElement('div', { className: 'ow-garden-ask' },
+          React.createElement('input', {
+            autoFocus: true, placeholder: '问湖一件事，如「上周的任务」…（回车查，Esc 收）',
+            value: letter, onChange: (e) => setLetter(e.target.value),
+            onKeyDown: (e) => { if (e.key === 'Enter') askLake(); if (e.key === 'Escape') { setAsking(false); setLetter('') } },
+          }),
+        ),
+        pathOpen && React.createElement('div', { className: 'ow-garden-path' },
+          React.createElement('div', { className: 'ow-gp-head' },
+            React.createElement('b', null, '园径'),
+            React.createElement('span', null, '园里的动静，最近七件'),
+            React.createElement('button', { type: 'button', onClick: () => setPathOpen(false) }, '✕'),
+          ),
+          React.createElement('div', { className: 'ow-gp-list' },
+            evList.length ? evList.map((ev) => React.createElement('div', { key: ev.id || ev.ts, className: 'ow-gp-ev' },
+              React.createElement('span', { className: 'ow-gp-dot' }),
+              React.createElement('span', { className: 'ow-gp-text' }, (ev.title || '') + (ev.detail ? ' · ' + ev.detail : '')),
+            )) : React.createElement('div', { className: 'ow-gp-ev' }, React.createElement('span', { className: 'ow-gp-text' }, '园里还很安静。')),
+          ),
+        ),
+        React.createElement('div', { className: 'ow-garden-letter' },
+          (presets.length > 0) && React.createElement('div', { className: 'ow-garden-personas' },
+            presets.slice(0, 4).map((p) => React.createElement('button', {
+              key: p.id, type: 'button',
+              className: 'ow-garden-pn' + (persona === p.id ? ' on' : ''),
+              onClick: () => setPersona(persona === p.id ? '' : p.id),
+            }, p.title || p.id)),
+            React.createElement('button', {
+              type: 'button', className: 'ow-garden-pn',
+              title: '请前两位人格各答一遍', onClick: compareLetter,
+            }, '对比'),
+          ),
+          React.createElement('div', { className: 'ow-garden-paper' },
+            React.createElement('input', {
+              placeholder: persona ? ('由「' + persona + '」替你答…') : '给园子写句话，落进聊天坞与信箱…',
+              value: letter, maxLength: 280, 'aria-label': '给园子写信，回车寄出（280 字内）',
+              onChange: (e) => setLetter(e.target.value),
+              onKeyDown: (e) => { if (e.key === 'Enter') sendLetter() },
+            }),
+            React.createElement('span', { className: 'ow-garden-count' }, letter ? String(280 - letter.length) : ''),
+            React.createElement('button', { type: 'button', 'aria-label': '寄出信件', title: '回车也可寄出', onClick: sendLetter }, '寄'),
+          ),
+        ),
+      )
+    }
+
+    module.exports = {
+      gardenEnabled,
+      buildElements,
+      GardenView,
+      REL,
+      ANCHORS,
+    }
+    return module.exports
+  },
+})
+
+
 // Open World · app-layout（左栏 / 中区 / 右栏，从 client-main 抽出）
 window.__ModuleLoader__.load({
   id: 'dsh-open-world/app-layout',
@@ -5032,6 +6670,7 @@ window.__ModuleLoader__.load({
     const Idea = require('dsh-open-world/idea')
     const Hubs = require('dsh-open-world/hubs')
     const AtiView = require('dsh-open-world/ati-view')
+    const Garden = require('dsh-open-world/garden-view')
     const Chrome = require('dsh-open-world/chrome')
     const Runtime = require('dsh-open-world/runtime')
 
@@ -5070,10 +6709,10 @@ window.__ModuleLoader__.load({
                               React.createElement('defs', null,
                                 React.createElement('linearGradient', { id: 'owHealthGrad', x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
                                   React.createElement('stop', { offset: '0%', stopColor: '#bfe38e' }),
-                                  React.createElement('stop', { offset: '100%', stopColor: '#5eead4' }),
+                                  React.createElement('stop', { offset: '100%', stopColor: '#E7B24B' }),
                                 ),
                               ),
-                              React.createElement('circle', { cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'rgba(94,234,212,.1)', strokeWidth: 3 }),
+                              React.createElement('circle', { cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'rgba(231,178,75,.1)', strokeWidth: 3 }),
                               React.createElement('circle', {
                                 cx: 60, cy: 60, r: 48, fill: 'none', stroke: 'url(#owHealthGrad)', strokeWidth: 3,
                                 strokeLinecap: 'round', strokeDasharray: `${healthCirc} ${2 * Math.PI * 48}`,
@@ -5092,7 +6731,7 @@ window.__ModuleLoader__.load({
                           ),
                           React.createElement('div', { className: 'ow-health-label-sub' }, 'HEALTH SCORE'),
                         ),
-                        React.createElement(Sparkline, { values: hist.health, color: '#5eead4', height: 36 }),
+                        React.createElement(Sparkline, { values: hist.health, color: '#E7B24B', height: 36 }),
                         React.createElement(StatusSummaryChips, { snapshot, plugins }),
                         React.createElement(EnterWorldCta, {
                           worlds: snapshot && snapshot.worlds,
@@ -5167,7 +6806,7 @@ window.__ModuleLoader__.load({
                         }),
                       ),
                       React.createElement(Panel, { titleZh: '说话风格', titleEn: 'PERSONA', icon: 'config', last: true },
-                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#94a3b8', lineHeight: 1.55 } },
+                        React.createElement('div', { className: 'ow-hub', style: { fontSize: 11, color: '#A3A3A8', lineHeight: 1.55 } },
                           React.createElement('div', null, '加一段人格前缀，再发到官方聊天里试一句。'),
                           React.createElement('div', { style: { marginTop: 4, color: '#64748b' } },
                             '不会真的换掉 Agent；完整面板只在中间打开一次。'),
@@ -5203,7 +6842,7 @@ window.__ModuleLoader__.load({
                       ),
                       React.createElement('details', { className: 'ow-adv-fold', style: { margin: '0 0 8px' } },
                         React.createElement('summary', {
-                          style: { fontSize: 11, color: '#7c8ea6', cursor: 'pointer', padding: '6px 0' },
+                          style: { fontSize: 11, color: '#A3A3A8', cursor: 'pointer', padding: '6px 0' },
                         }, '高级 · 社交层'),
                         React.createElement(Panel, { titleZh: '社交层', titleEn: 'SOCIAL', icon: 'network' },
                           React.createElement(SocialPanel, {
@@ -5213,11 +6852,12 @@ window.__ModuleLoader__.load({
                           }),
                         ),
                       ),
-                      React.createElement(Panel, { titleZh: '消息总线', titleEn: 'MESSAGES', icon: 'network', last: true },
+                      React.createElement(Panel, { titleZh: '信箱', titleEn: 'MAILBOX', icon: 'network', last: true },
                         React.createElement(MessageHub, {
                           mailbox: mailbox || (snapshot && snapshot.mailbox),
                           hub,
                           onSend: handleSendMessage,
+                          onOpenChat: () => runBridge({ type: 'embed', label: '聊天坞', panel: 'chat' }),
                           onRead: handleMarkRead,
                           onShare: handleShareSnapshot,
                           onInjectAgent: handleInjectAgent,
@@ -5231,6 +6871,7 @@ window.__ModuleLoader__.load({
     function CenterStage({
       view, setView,
       idea, handleIdeaInject, handleIdeaCompare, runBridge,
+      handleSendMessage, handleSearchMemory,
       viewport, nodes, synapses, ati, selected, setSelected, tick,
       atiPreset, onAtiPresetChange, pulseBoost, lab,
       archifyEmbed, setArchifyEmbed,
@@ -5238,14 +6879,27 @@ window.__ModuleLoader__.load({
       events, usage, embed, setEmbed, tasks, snapshot, plugins, hub, setToast, taskState,
     }) {
       return React.createElement('div', { className: 'ow-center' },
-                    view === 'idea' && React.createElement(IdeaLabWorkspace, {
+                    embed && renderEmbedSurface(embed, {
+                      tasks, snapshot, plugins, hub, memory: snapshot && snapshot.memory, setEmbed, runBridge,
+                    }),
+                    !embed && view === 'idea' && React.createElement(IdeaLabWorkspace, {
                       idea,
                       compact: false,
                       onInject: handleIdeaInject,
                       onCompare: handleIdeaCompare,
                       onAction: runBridge,
                     }),
-                    view === 'ati' && React.createElement(React.Fragment, null,
+                    !embed && view === 'garden' && React.createElement(Garden.GardenView, {
+                      snapshot,
+                      events,
+                      runBridge,
+                      setToast,
+                      handleIdeaInject,
+                      handleIdeaCompare,
+                      handleSendMessage,
+                      handleSearchMemory,
+                    }),
+                    !embed && view === 'ati' && React.createElement(React.Fragment, null,
                       React.createElement(ViewportWrap, {
                         vp: viewport.vp,
                         onWheel: viewport.onWheel,
@@ -5256,7 +6910,7 @@ window.__ModuleLoader__.load({
                       },
                         React.createElement(AtiCortex, {
                           nodes, synapses, ati, selected, onSelect: setSelected, tick,
-                          onActivate: runBridge, preset: atiPreset, onPresetChange: onAtiPresetChange, pulseBoost, lab,
+                          onActivate: runBridge, pulseBoost,
                         }),
                       ),
                       archifyEmbed && React.createElement(ArchifyEmbed, {
@@ -5267,9 +6921,6 @@ window.__ModuleLoader__.load({
                       detailOpen && selectedNode && React.createElement(NodeDetailCard, {
                         node: selectedNode, synapses, events, usage, onAction: runBridge, onClose: () => setDetailOpen(false),
                         onOfflineHint: (msg) => setToast(msg),
-                      }),
-                      embed && renderEmbedSurface(embed, {
-                        tasks, snapshot, plugins, hub, memory: snapshot && snapshot.memory, setEmbed, runBridge,
                       }),
                       selectedNode && React.createElement('div', { className: 'ow-orbit-hint' },
                         React.createElement('span', null, `ATI · ${NODE_ZH[selectedNode.id] || selectedNode.label} · ${selectedNode.metric}%`),
@@ -5282,21 +6933,21 @@ window.__ModuleLoader__.load({
                         ),
                       ),
                     ),
-                    view === 'monitor' && React.createElement('div', { className: 'ow-monitor' },
+                    !embed && view === 'monitor' && React.createElement('div', { className: 'ow-monitor' },
                       React.createElement('pre', null, JSON.stringify({ snapshot, taskState }, null, 2)),
                     ),
-                    view === 'topology' && React.createElement('div', { className: 'ow-topo' },
+                    !embed && view === 'topology' && React.createElement('div', { className: 'ow-topo' },
                       nodes.map((n) => React.createElement('div', {
                         key: n.id, className: 'ow-topo-card', onClick: () => setSelected(n.id),
                         onDoubleClick: () => {
                           if (n.status === 'offline' && n.howToEnable) setToast(n.howToEnable)
                           else if (n.action) runBridge(n.action)
                         },
-                        style: { outline: selected === n.id ? '1px solid #5eead4' : 'none' },
+                        style: { outline: selected === n.id ? '1px solid #E7B24B' : 'none' },
                       },
-                        React.createElement('strong', { style: { color: '#e6f1ff' } }, NODE_ZH[n.id] || n.label),
-                        React.createElement('div', { style: { fontSize: 11, color: '#7c8ea6', marginTop: 4 } }, NODE_LAYOUT[n.id] && NODE_LAYOUT[n.id].en),
-                        React.createElement('div', { style: { fontSize: 12, color: '#5eead4', marginTop: 6 } }, `${n.metric}% · ${n.status}`),
+                        React.createElement('strong', { style: { color: '#F2F2F4' } }, NODE_ZH[n.id] || n.label),
+                        React.createElement('div', { style: { fontSize: 11, color: '#A3A3A8', marginTop: 4 } }, NODE_LAYOUT[n.id] && NODE_LAYOUT[n.id].en),
+                        React.createElement('div', { style: { fontSize: 12, color: '#E7B24B', marginTop: 6 } }, `${n.metric}% · ${n.status}`),
                       )),
                     ),
                   )
@@ -5310,7 +6961,7 @@ window.__ModuleLoader__.load({
                     React.createElement(Panel, { titleZh: '任务队列', titleEn: 'TASK QUEUE', more: '更多 ›' },
                       React.createElement('div', { className: 'ow-task-list' },
                         tasks.length === 0
-                          ? React.createElement('div', { style: { fontSize: 12, color: '#7c8ea6' } }, '暂无任务 · task-board 离线')
+                          ? React.createElement('div', { style: { fontSize: 12, color: '#A3A3A8' } }, '暂无任务 · task-board 离线')
                           : tasks.slice(0, 5).map((t, i) => {
                             const pct = taskProgress(t)
                             const running = t.running || t.status === 'running'
@@ -5403,25 +7054,11 @@ window.__ModuleLoader__.load({
           ),
         ),
         React.createElement('div', { className: 'ow-view-switch' },
-          React.createElement('div', { className: 'ow-deep-toggle' },
-            React.createElement('span', { className: 'ow-deep-icon' }, '🌙'),
-            React.createElement('div', { className: 'ow-deep-label' },
-              React.createElement('span', { className: 'ow-deep-zh' }, '深空模式'),
-              React.createElement('span', { className: 'ow-deep-en' }, 'DEEP SPACE MODE'),
-            ),
-            React.createElement('div', {
-              className: `ow-deep-switch ${deepSpace ? 'on' : ''}`,
-              onClick: () => setDeepSpace((v) => !v), role: 'switch',
-            }),
-          ),
           viewModes.map((mode) => React.createElement('button', {
             key: mode.id, type: 'button',
             className: `ow-view-btn ${view === mode.id ? 'on' : ''}`,
             onClick: () => setView(mode.id),
           },
-            React.createElement('svg', { className: 'ow-view-hex', viewBox: '0 0 140 60' },
-              React.createElement('polygon', { points: '15,0 125,0 140,30 125,60 15,60 0,30' }),
-            ),
             React.createElement('div', { className: 'ow-view-content' },
               iconSvg(mode.icon),
               React.createElement('span', { className: 'ow-view-label' }, mode.label),
@@ -5444,8 +7081,7 @@ window.__ModuleLoader__.load({
                 className: 'ow-metric-fill',
                 style: {
                   width: `${Math.min(95, ((load && load.heapUsedMb) || 0) / 4)}%`,
-                  background: 'linear-gradient(to right,#5eead4,#bfe38e)',
-                  boxShadow: '0 0 4px rgba(94,234,212,.4)',
+                  background: 'linear-gradient(to right,#E7B24B,#30D158)',
                 },
               }),
             ),
@@ -5464,8 +7100,7 @@ window.__ModuleLoader__.load({
                 className: 'ow-metric-fill',
                 style: {
                   width: `${Math.min(95, ((load && load.rssMb) || 0) / 8)}%`,
-                  background: 'linear-gradient(to right,#f5d67a,#f4a261)',
-                  boxShadow: '0 0 4px rgba(245,214,122,.4)',
+                  background: 'var(--ow-accent)',
                 },
               }),
             ),
@@ -5740,6 +7375,14 @@ window.__ModuleLoader__.load({
           if (ui.view) {
             const v = ui.view
             a.setView(v === 'manifold3d' || v === 'neural' || v === 'galaxy' ? 'ati' : v)
+          } else {
+            // P3：无历史视图时按 default_view 进门（小白=园 / 主人默认=厅）
+            try {
+              const snapDv = await fetchJson(SNAPSHOT_URL)
+              const dv = snapDv && snapDv.config && snapDv.config.default_view
+              const gardenOff = !!(snapDv && snapDv.config && snapDv.config.worlds && snapDv.config.worlds.garden === false)
+              if ((dv === 'garden' && !gardenOff) || dv === 'idea' || dv === 'monitor') a.setView(dv)
+            } catch { /* 取不到 default_view 就走默认主视图 */ }
           }
           if (ui.selected) a.setSelected(ui.selected)
           if (ui.atiPreset) a.setAtiPreset(ui.atiPreset)
@@ -5889,6 +7532,7 @@ window.__ModuleLoader__.load({
       { id: 'ati', label: '主视图', sub: 'COMMAND', icon: 'ati' },
       { id: 'idea', label: 'IDEA', sub: 'PERSONA', icon: 'config' },
       { id: 'monitor', label: '调试 JSON', sub: 'DEBUG', icon: 'monitor' },
+      { id: 'garden', label: '园', sub: 'GARDEN', icon: 'config' },
     ]
 
     function useToast() {
@@ -5998,12 +7642,12 @@ window.__ModuleLoader__.load({
 
     function buildCommandItems({
       nodes, plugins, tasks, social, hub,
-      runBridge, setToast, setSelected, setView, setAtiPreset,
+      runBridge, setToast, setSelected, setView,
       handleEmbedArchify, close,
     }) {
       const Shell = require('dsh-open-world/shell')
       const { pluginAction, socialChannelAction } = Shell
-      const { ATI_PRESETS, NODE_ZH, QUICK_ACTIONS } = C
+      const { NODE_ZH, QUICK_ACTIONS } = C
       const items = []
       nodes.forEach((n) => items.push({
         id: `node-${n.id}`, kind: '器官', label: NODE_ZH[n.id] || n.label,
@@ -6044,13 +7688,6 @@ window.__ModuleLoader__.load({
       items.push({
         id: 'view-monitor', kind: '视图', label: '调试 JSON',
         action: () => { setView('monitor'); close() },
-      })
-      ATI_PRESETS.forEach((p) => {
-        if (p.id === 'ati-unified') return
-        items.push({
-          id: `ati-preset-${p.id}`, kind: 'ATI 实验室', label: `切换 · ${p.label}（${p.group}）`,
-          action: () => { setView('ati'); setAtiPreset(p.id); close() },
-        })
       })
       hub && hub.archify && hub.archify.items && hub.archify.items.forEach((d) => {
         items.push({
@@ -6163,6 +7800,16 @@ window.__ModuleLoader__.load({
 
     let sessionsBridge = null
 
+    /** Align OW chrome with 550C phosphor scheme (settings → 通用). */
+    function readBootScheme() {
+      try {
+        const raw = window.localStorage.getItem('dsh-550c-boot:scheme')
+        return ['amber', 'green', 'cyan', 'white'].includes(raw) ? raw : 'amber'
+      } catch {
+        return 'amber'
+      }
+    }
+
     const {
       bridgeExecute, readBridgeHealth, checkBridgeCapabilities,
     } = BridgeLib.createBridge({
@@ -6193,7 +7840,9 @@ window.__ModuleLoader__.load({
         try { localStorage.setItem(LEFT_TAB_KEY, tab) } catch { /* ignore */ }
       }, [])
       const [bridgeHealth, setBridgeHealth] = useState(() => readBridgeHealth())
+      const [arriving, setArriving] = useState(false)
       const pluginsRef = useRef([])
+      const arriveTimerRef = useRef(null)
 
       const setMode = useCallback((next) => {
         if (typeof onWmMode === 'function') onWmMode(next)
@@ -6210,6 +7859,17 @@ window.__ModuleLoader__.load({
       }), [onClose, setToast, setEmbed])
 
       const runBridge = useCallback(async (action) => {
+        // 进世界门：先播 550C 开场（若已装），播完再进世界。冷启不播。
+        // 可选门——未装 / 关闭档 / 播放失败都不挡进世界。
+        if (action && action.type === 'enter-world') {
+          const gate = window.__dsh550c
+          if (gate && typeof gate.play === 'function') {
+            try { await gate.play() } catch (err) { /* optional gate */ }
+          }
+          if (arriveTimerRef.current) window.clearTimeout(arriveTimerRef.current)
+          setArriving(true)
+          arriveTimerRef.current = window.setTimeout(() => setArriving(false), 1100)
+        }
         try {
           await bridgeExecute(action, bridgeCtx)
         } catch (err) {
@@ -6218,6 +7878,10 @@ window.__ModuleLoader__.load({
           setBridgeHealth(readBridgeHealth() || checkBridgeCapabilities())
         }
       }, [bridgeCtx, setToast])
+
+      useEffect(() => () => {
+        if (arriveTimerRef.current) window.clearTimeout(arriveTimerRef.current)
+      }, [])
 
       const {
         snapshot, taskState, usage, error, logLine, hist,
@@ -6284,7 +7948,6 @@ window.__ModuleLoader__.load({
       } = useCmdPalette({ mode, setMode, buildItems })
 
       const clkFmt = fmtClock(clock)
-      const showAtiBg = deepSpace && view === 'ati'
       const hostBuild = snapshot && snapshot.framework && snapshot.framework.clientBuild
       const staleBuild = !!(hostBuild && CLIENT_BUILD && hostBuild !== CLIENT_BUILD)
       const verLabel = CLIENT_BUILD && CLIENT_BUILD !== 'dev'
@@ -6301,6 +7964,7 @@ window.__ModuleLoader__.load({
           className: 'ow-overlay ow-root is-minimized',
           'data-wm': 'minimized',
           'data-plugin': 'dsh-open-world',
+          'data-ow-scheme': readBootScheme(),
         },
           React.createElement(ShellDock, {
             unread: unreadCount || unread,
@@ -6312,18 +7976,11 @@ window.__ModuleLoader__.load({
 
       return React.createElement('div', {
         ref: overlayRef,
-        className: `ow-overlay ow-root is-${mode}${dragging ? ' is-dragging' : ''}`,
+        className: `ow-overlay ow-root is-${mode}${dragging ? ' is-dragging' : ''}${arriving ? ' is-arriving' : ''}`,
         'data-wm': mode,
+        'data-ow-scheme': readBootScheme(),
         style: overlayStyle,
       },
-        showAtiBg
-          ? React.createElement(AtiFieldCanvas, { active: true, tick })
-          : React.createElement('div', { className: 'ow-starfield' }),
-        deepSpace && React.createElement(React.Fragment, null,
-          React.createElement('div', { className: 'ow-fx-vig' }),
-          React.createElement('div', { className: 'ow-fx-scan' }),
-          React.createElement('div', { className: 'ow-fx-sweep' }),
-        ),
         React.createElement('div', {
           className: 'ow-ver',
           title: CLIENT_BUILD ? `build ${CLIENT_BUILD}` : undefined,
@@ -6352,13 +8009,9 @@ window.__ModuleLoader__.load({
                 social && React.createElement('span', { className: 'ow-social-tag' },
                   (snapshot && snapshot.framework && snapshot.framework.motto) || 'Open World · 指挥舱'),
               ),
-              ['monitor', 'plus', 'scan', 'network'].map((ic) => React.createElement('span', { key: ic, className: 'ow-icon-btn' }, iconSvg(ic))),
-            ),
-            React.createElement('div', { className: 'ow-topbar-center' },
-              React.createElement('span', { className: 'ow-topbar-time' }, clkFmt.time),
-              React.createElement('span', { className: 'ow-topbar-date' }, clkFmt.date),
             ),
             React.createElement('div', { className: 'ow-topbar-right' },
+              React.createElement('span', { className: 'ow-topbar-clock' }, clkFmt.time),
               React.createElement(WindowModeBar, { mode, onMode: setMode, onClose }),
             ),
           ),
@@ -6382,6 +8035,7 @@ window.__ModuleLoader__.load({
               archifyEmbed, setArchifyEmbed,
               detailOpen, setDetailOpen, selectedNode, selectedAction, activateSelectedAction,
               events, usage, embed, setEmbed, tasks, snapshot, plugins, hub, setToast, taskState,
+              handleSendMessage, handleSearchMemory,
             }),
             React.createElement(RightRail, { nodes, tasks, runBridge }),
           ),

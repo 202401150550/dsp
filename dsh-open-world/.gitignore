@@ -1,0 +1,7 @@
+node_modules/
+_scratch/
+*.log
+*.tgz
+.env
+.env.*
+!.env.example

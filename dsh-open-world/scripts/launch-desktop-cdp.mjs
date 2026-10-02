@@ -64,23 +64,32 @@ if (await tcpOpen(PORT)) {
 
 console.log(`启动：${exe}`)
 console.log(`CDP：--remote-debugging-port=${PORT}`)
+// Editor terminals may inherit Electron's Node-only mode. Never pass it to the GUI.
+const desktopEnv = { ...process.env }
+delete desktopEnv.ELECTRON_RUN_AS_NODE
 const child = spawn(exe, [`--remote-debugging-port=${PORT}`], {
+  env: desktopEnv,
   detached: true,
   stdio: 'ignore',
   windowsHide: false,
 })
 child.unref()
 
-for (let i = 0; i < 40; i++) {
+for (let i = 0; i < 120; i++) {
   await new Promise((r) => setTimeout(r, 500))
   if (await tcpOpen(PORT)) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`, {
         signal: AbortSignal.timeout(800),
       })).json()
-      const pages = (list || []).filter((t) => t.type === 'page')
+      if ((list || []).some(t => t.type === 'page' && /\/recovery\.html(?:\?|$)/.test(t.url || ''))) {
+        console.error('✗ Desktop 进入恢复页，不算启动成功。请核对 DSH_DESKTOP_EXE 的版本与现有配置兼容性；不会自动迁移配置。')
+        process.exit(6)
+      }
+      const pages = (list || []).filter((t) => t.type === 'page' && /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/.test(t.url || ''))
+      if (pages.length === 0) continue
       console.log(`✓ CDP 就绪 · page targets=${pages.length}`)
-      console.log(`  下一步：cd dsh-open-world && npm run test:live`)
+      console.log('  请先执行只读页内核验；test:live 会发送测试消息。')
       process.exit(0)
     } catch {
       console.log(`· 端口 ${PORT} 已开，等待 DevTools 列表…`)
@@ -88,6 +97,6 @@ for (let i = 0; i < 40; i++) {
   }
 }
 
-console.log('⚠ 已拉起进程，但 20s 内未见 CDP；稍等再访问')
+console.error('✗ 启动后 60s 内未见 CDP 页面；未通过就绪检查')
 console.log(`  http://127.0.0.1:${PORT}/json/list`)
-process.exit(0)
+process.exit(5)

@@ -142,6 +142,14 @@ window.__ModuleLoader__.load({
           if (ui.view) {
             const v = ui.view
             a.setView(v === 'manifold3d' || v === 'neural' || v === 'galaxy' ? 'ati' : v)
+          } else {
+            // P3：无历史视图时按 default_view 进门（小白=园 / 主人默认=厅）
+            try {
+              const snapDv = await fetchJson(SNAPSHOT_URL)
+              const dv = snapDv && snapDv.config && snapDv.config.default_view
+              const gardenOff = !!(snapDv && snapDv.config && snapDv.config.worlds && snapDv.config.worlds.garden === false)
+              if ((dv === 'garden' && !gardenOff) || dv === 'idea' || dv === 'monitor') a.setView(dv)
+            } catch { /* 取不到 default_view 就走默认主视图 */ }
           }
           if (ui.selected) a.setSelected(ui.selected)
           if (ui.atiPreset) a.setAtiPreset(ui.atiPreset)
@@ -291,6 +299,7 @@ window.__ModuleLoader__.load({
       { id: 'ati', label: '主视图', sub: 'COMMAND', icon: 'ati' },
       { id: 'idea', label: 'IDEA', sub: 'PERSONA', icon: 'config' },
       { id: 'monitor', label: '调试 JSON', sub: 'DEBUG', icon: 'monitor' },
+      { id: 'garden', label: '园', sub: 'GARDEN', icon: 'config' },
     ]
 
     function useToast() {
@@ -400,12 +409,12 @@ window.__ModuleLoader__.load({
 
     function buildCommandItems({
       nodes, plugins, tasks, social, hub,
-      runBridge, setToast, setSelected, setView, setAtiPreset,
+      runBridge, setToast, setSelected, setView,
       handleEmbedArchify, close,
     }) {
       const Shell = require('dsh-open-world/shell')
       const { pluginAction, socialChannelAction } = Shell
-      const { ATI_PRESETS, NODE_ZH, QUICK_ACTIONS } = C
+      const { NODE_ZH, QUICK_ACTIONS } = C
       const items = []
       nodes.forEach((n) => items.push({
         id: `node-${n.id}`, kind: '器官', label: NODE_ZH[n.id] || n.label,
@@ -446,13 +455,6 @@ window.__ModuleLoader__.load({
       items.push({
         id: 'view-monitor', kind: '视图', label: '调试 JSON',
         action: () => { setView('monitor'); close() },
-      })
-      ATI_PRESETS.forEach((p) => {
-        if (p.id === 'ati-unified') return
-        items.push({
-          id: `ati-preset-${p.id}`, kind: 'ATI 实验室', label: `切换 · ${p.label}（${p.group}）`,
-          action: () => { setView('ati'); setAtiPreset(p.id); close() },
-        })
       })
       hub && hub.archify && hub.archify.items && hub.archify.items.forEach((d) => {
         items.push({

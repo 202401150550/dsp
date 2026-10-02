@@ -46,6 +46,16 @@ window.__ModuleLoader__.load({
 
     let sessionsBridge = null
 
+    /** Align OW chrome with 550C phosphor scheme (settings → 通用). */
+    function readBootScheme() {
+      try {
+        const raw = window.localStorage.getItem('dsh-550c-boot:scheme')
+        return ['amber', 'green', 'cyan', 'white'].includes(raw) ? raw : 'amber'
+      } catch {
+        return 'amber'
+      }
+    }
+
     const {
       bridgeExecute, readBridgeHealth, checkBridgeCapabilities,
     } = BridgeLib.createBridge({
@@ -76,7 +86,9 @@ window.__ModuleLoader__.load({
         try { localStorage.setItem(LEFT_TAB_KEY, tab) } catch { /* ignore */ }
       }, [])
       const [bridgeHealth, setBridgeHealth] = useState(() => readBridgeHealth())
+      const [arriving, setArriving] = useState(false)
       const pluginsRef = useRef([])
+      const arriveTimerRef = useRef(null)
 
       const setMode = useCallback((next) => {
         if (typeof onWmMode === 'function') onWmMode(next)
@@ -93,6 +105,17 @@ window.__ModuleLoader__.load({
       }), [onClose, setToast, setEmbed])
 
       const runBridge = useCallback(async (action) => {
+        // 进世界门：先播 550C 开场（若已装），播完再进世界。冷启不播。
+        // 可选门——未装 / 关闭档 / 播放失败都不挡进世界。
+        if (action && action.type === 'enter-world') {
+          const gate = window.__dsh550c
+          if (gate && typeof gate.play === 'function') {
+            try { await gate.play() } catch (err) { /* optional gate */ }
+          }
+          if (arriveTimerRef.current) window.clearTimeout(arriveTimerRef.current)
+          setArriving(true)
+          arriveTimerRef.current = window.setTimeout(() => setArriving(false), 1100)
+        }
         try {
           await bridgeExecute(action, bridgeCtx)
         } catch (err) {
@@ -101,6 +124,10 @@ window.__ModuleLoader__.load({
           setBridgeHealth(readBridgeHealth() || checkBridgeCapabilities())
         }
       }, [bridgeCtx, setToast])
+
+      useEffect(() => () => {
+        if (arriveTimerRef.current) window.clearTimeout(arriveTimerRef.current)
+      }, [])
 
       const {
         snapshot, taskState, usage, error, logLine, hist,
@@ -167,7 +194,6 @@ window.__ModuleLoader__.load({
       } = useCmdPalette({ mode, setMode, buildItems })
 
       const clkFmt = fmtClock(clock)
-      const showAtiBg = deepSpace && view === 'ati'
       const hostBuild = snapshot && snapshot.framework && snapshot.framework.clientBuild
       const staleBuild = !!(hostBuild && CLIENT_BUILD && hostBuild !== CLIENT_BUILD)
       const verLabel = CLIENT_BUILD && CLIENT_BUILD !== 'dev'
@@ -184,6 +210,7 @@ window.__ModuleLoader__.load({
           className: 'ow-overlay ow-root is-minimized',
           'data-wm': 'minimized',
           'data-plugin': 'dsh-open-world',
+          'data-ow-scheme': readBootScheme(),
         },
           React.createElement(ShellDock, {
             unread: unreadCount || unread,
@@ -195,18 +222,11 @@ window.__ModuleLoader__.load({
 
       return React.createElement('div', {
         ref: overlayRef,
-        className: `ow-overlay ow-root is-${mode}${dragging ? ' is-dragging' : ''}`,
+        className: `ow-overlay ow-root is-${mode}${dragging ? ' is-dragging' : ''}${arriving ? ' is-arriving' : ''}`,
         'data-wm': mode,
+        'data-ow-scheme': readBootScheme(),
         style: overlayStyle,
       },
-        showAtiBg
-          ? React.createElement(AtiFieldCanvas, { active: true, tick })
-          : React.createElement('div', { className: 'ow-starfield' }),
-        deepSpace && React.createElement(React.Fragment, null,
-          React.createElement('div', { className: 'ow-fx-vig' }),
-          React.createElement('div', { className: 'ow-fx-scan' }),
-          React.createElement('div', { className: 'ow-fx-sweep' }),
-        ),
         React.createElement('div', {
           className: 'ow-ver',
           title: CLIENT_BUILD ? `build ${CLIENT_BUILD}` : undefined,
@@ -235,13 +255,9 @@ window.__ModuleLoader__.load({
                 social && React.createElement('span', { className: 'ow-social-tag' },
                   (snapshot && snapshot.framework && snapshot.framework.motto) || 'Open World · 指挥舱'),
               ),
-              ['monitor', 'plus', 'scan', 'network'].map((ic) => React.createElement('span', { key: ic, className: 'ow-icon-btn' }, iconSvg(ic))),
-            ),
-            React.createElement('div', { className: 'ow-topbar-center' },
-              React.createElement('span', { className: 'ow-topbar-time' }, clkFmt.time),
-              React.createElement('span', { className: 'ow-topbar-date' }, clkFmt.date),
             ),
             React.createElement('div', { className: 'ow-topbar-right' },
+              React.createElement('span', { className: 'ow-topbar-clock' }, clkFmt.time),
               React.createElement(WindowModeBar, { mode, onMode: setMode, onClose }),
             ),
           ),
@@ -265,6 +281,7 @@ window.__ModuleLoader__.load({
               archifyEmbed, setArchifyEmbed,
               detailOpen, setDetailOpen, selectedNode, selectedAction, activateSelectedAction,
               events, usage, embed, setEmbed, tasks, snapshot, plugins, hub, setToast, taskState,
+              handleSendMessage, handleSearchMemory,
             }),
             React.createElement(RightRail, { nodes, tasks, runBridge }),
           ),
