@@ -33,3 +33,7 @@ v106✅office 成文功能件 + registry tools 粒度（A2/A3 甄别后落地）
 
 ## v107（2026-10-02 傍晚 · ATI 戏服退役）
 v107✅ATI 减法刀（用户看屏定调「假的全删，真图做干净」）：ati-view.js 346→265 行重写——删隐喻舞台 AtiStageRenderer（Transformer 栈/注意力矩阵等壁纸层，ati-lab.js 677 行随之休眠不再被引用）、删假 HUD（κ/‖∇L‖/heads/loss/ΔG/轨道能/genus）、删 24 装饰条、删「统一场/实验室」预设条与命令面板 ATI 实验室项、删隐喻时真节点被压暗 organDim 逻辑；保留全真：器官节点（点选=详情卡/双击=直达）、突触脉冲、核心，HUD 换一行真话「节点 N·在线 M·健康均值 X%」；标题「A·T·I 系统拓扑」（derived）。app-layout 去 preset/lab 传参；hooks 去 ATI_PRESETS 遍历。cdp-shell-smoke 的 metaphor 仅采集未断言（今后自然为 false）。复验：verify+census40/0+garden35/0+capability-registry18/0+chat-store25/0+smoke+live26/0 全 RC=0，CLIENT_BUILD=8e56218a81。**重启桌面后旧戏服（含截图那屏）即换新颜。**
+
+## v108（2026-10-02 晚 · 上线 GitHub）
+v108✅正式上传：隐私终审（个人数据/密钥/隧道地址全史零泄漏；logs 退场；dsh-voice 等 5 件为他人仓 submodule 指针，E 组悬案自然了结）→ 6 commit 落定（b488cea 主线/ae0f87a 550c/d7d4b31 生态/a9b39a4 文档卫生/4913a6d 计划同步）→ 直连 github 被墙 → 探得本机代理 127.0.0.1:7897（Clash 系）→ 带代理推送成功：**https://github.com/202401150550/dsp main@4913a6d**（Public）；补 README.md（介绍词落地）+ LICENSE(MIT)。
+
