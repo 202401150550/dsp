@@ -119,14 +119,21 @@ function createCompatApiProxy(ctx) {
       async prompt(request) {
         try {
           const payload = request.payload ?? {}
+          const text = payload.content?.find?.((part) => part?.type === 'text')?.text
+          // Admission is not command execution. Do not forward legacy commands
+          // as model prompts or manufacture permission acknowledgements.
+          if (typeof text === 'string' && text.trimStart().startsWith('/')) {
+            return err(request, {
+              code: 'compat/command-unsupported',
+              message: 'Legacy slash commands require a verified command API; no prompt was submitted.',
+              details: {},
+            })
+          }
           const value = await ctx.sessionController.prompt({
             ...payload,
             requestId: payload.requestId ?? request.rpcId ?? `compat-${randomUUID()}`,
           })
-          const text = payload.content?.find?.((part) => part?.type === 'text')?.text
-          const slash = typeof text === 'string' && text.trimStart().startsWith('/')
-          // task-board checks command.kind for /permission; alpha prompt only returns accepted.
-          return ok(request, slash ? { ...value, command: { kind: 'success' } } : value)
+          return ok(request, value)
         } catch (error) {
           return fromThrown(request, error)
         }

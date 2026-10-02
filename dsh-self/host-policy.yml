@@ -1,4 +1,6 @@
 ﻿# Phase 2 宿主策略（脊梁）。改完需重启 Desktop。
+# 说明：字符串黑名单不是操作系统沙箱；这里只挡住已知逃逸面，
+#       真正的隔离要靠「每任务工作树 + 受限账户/容器」，见 docs 记录。
 version: 1
 max_steps: 20
 max_read_bytes: 131072
@@ -6,11 +8,16 @@ max_write_bytes: 262144
 timeout_ms: 30000
 max_output_chars: 8000
 
+# 覆盖已存在文件时的内容类型策略：
+#   refuse        —— 目标不是可无损往返的 UTF-8 文本就拒绝写入（默认）
+#   text-only     —— 同上但错误码不同（调用方仍会拿到 binary-target-unsupported）
+binary_write: refuse
+
 # 允许读写的根目录。出界一律拒绝。
 roots:
   - D:/dsp
 
-# 文件名黑名单（任意根下都不读写）
+# 文件名黑名单（任意根下都不读写；realpath 解析后再次检查）
 deny_names:
   - .credentials.yaml
   - credentials.json
@@ -18,6 +25,35 @@ deny_names:
   - .env.local
   - id_rsa
   - id_ed25519
+
+# 参数级拒绝（命令 -> 正则列表，命中任意 argv 即整条拒绝）
+deny_args:
+  git:
+    - '^-C$'
+    - '^-C.+'
+    - '^--git-dir'
+    - '^--work-tree'
+    - '^--exec-path'
+    - '^--namespace'
+    - '^--config-env'
+    - '^--upload-pack'
+    - '^--receive-pack'
+    - '^--git-common-dir'
+    - '^-c$'
+    - '^--config='
+  node:
+    - '^-e$'
+    - '^-p$'
+    - '^--eval'
+    - '^--print'
+    - '^-r$'
+    - '^--require'
+    - '^--loader'
+    - '^--import'
+    - '^--inspect'
+  pnpm:
+    - '^-C$'
+    - '^--dir'
 
 # 参数化命令（禁止 shell:true；argv 逐项校验）
 commands:

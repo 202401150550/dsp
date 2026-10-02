@@ -27,6 +27,10 @@
     "host-policy.yml",
     "native-contract.yml",
     "capability-registry.yml",
+    "capability-manifest.mjs",
+    "host-impact.mjs",
+    "plan-validate.mjs",
+    "dsh.capability.schema.json",
     "organs.yml",
     "cordis.patch.yml",
     "dsh.plugin.json",
@@ -47,6 +51,11 @@
   },
   "scripts": {
     "build:client": "node scripts/compose-client.mjs",
+    "test": "node test/host-boundary-regression.mjs && node test/host-fs-write-snapshot.mjs && node test/capability-registry-meta.mjs && node test/host-dry-run-gate.mjs && node test/capability-manifest.mjs",
+    "test:boundaries": "node test/host-boundary-regression.mjs",
+    "test:capability-meta": "node test/capability-registry-meta.mjs",
+    "test:dry-run-gate": "node test/host-dry-run-gate.mjs",
+    "test:capability-manifest": "node test/capability-manifest.mjs",
     "test:host-fs-write": "node test/host-fs-write-snapshot.mjs"
   },
   "peerDependencies": {

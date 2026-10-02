@@ -158,20 +158,20 @@ function mountThemeToggle(themeToggle: HTMLButtonElement): void {
     if (!themeToggle.isConnected) document.body.append(themeToggle)
     return
   }
-  let footer: HTMLElement | null = settingsSlot.parentElement
-  while (footer && footer !== sidebar) {
-    if (footer.querySelector("[data-slot='sidebar.footer.action']") || footer.hasAttribute('data-maid-sidebar-footer')) {
-      break
-    }
-    footer = footer.parentElement
-  }
-  const host = footer && footer !== sidebar ? footer : settingsSlot.parentElement
+  // Always insert beside settings in its real parent. Walking up to a
+  // footer ancestor and insertBefore(settingsSlot) throws NotFoundError
+  // when settingsSlot is a nested descendant, not a direct child.
+  const host = settingsSlot.parentElement
   if (!host) {
     if (!themeToggle.isConnected) document.body.append(themeToggle)
     return
   }
   if (themeToggle.parentElement === host && themeToggle.nextElementSibling === settingsSlot) return
-  host.insertBefore(themeToggle, settingsSlot)
+  try {
+    host.insertBefore(themeToggle, settingsSlot)
+  } catch {
+    if (!themeToggle.isConnected) document.body.append(themeToggle)
+  }
 }
 
 function decorateSidebar(themeToggle?: HTMLButtonElement): void {
@@ -606,6 +606,14 @@ export function activateMaidAtelier(ctx: Context): () => void {
   document.head.append(favicon)
 
   document.title = SKIN_TITLE
+  // Session/route changes overwrite document.title; keep the atelier brand.
+  const titleEl = document.querySelector('title')
+  const titleObserver = new MutationObserver(() => {
+    if (document.title !== SKIN_TITLE) document.title = SKIN_TITLE
+  })
+  if (titleEl) {
+    titleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true })
+  }
 
   let active = true
   return () => {
@@ -620,6 +628,7 @@ export function activateMaidAtelier(ctx: Context): () => void {
     if (themeTransitionTimer !== undefined) clearTimeout(themeTransitionTimer)
     themeToggle.removeEventListener('click', switchTheme)
     observer.disconnect()
+    titleObserver.disconnect()
     themeColorObserver.disconnect()
     titlebarOverlay?.removeEventListener('geometrychange', syncTitlebarHeight)
     resizeObserver?.disconnect()

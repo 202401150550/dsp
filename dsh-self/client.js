@@ -2516,7 +2516,9 @@ window.__ModuleLoader__.load({
         try { ctx.inject(['conversation'], (c) => { try { installHostSendHook(c.conversation) } catch {} }) } catch {}
       }
       fetch('/api/dsh-self/organs').then((r) => r.json()).then((data) => {
-        const groups = (data && data.report && data.report.organs) || []
+        const groups = (data && data.report && data.report.organs)
+          || (data && data.organs)
+          || []
         if (!atomOn(groups, 'ops', 'body-bin')) {
           undoGuard()
           undoGuard = function () {}

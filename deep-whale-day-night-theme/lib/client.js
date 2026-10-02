@@ -4071,20 +4071,17 @@ function mountThemeToggle(themeToggle) {
     if (!themeToggle.isConnected) document.body.append(themeToggle);
     return;
   }
-  let footer = settingsSlot.parentElement;
-  while (footer && footer !== sidebar) {
-    if (footer.querySelector("[data-slot='sidebar.footer.action']") || footer.hasAttribute("data-maid-sidebar-footer")) {
-      break;
-    }
-    footer = footer.parentElement;
-  }
-  const host = footer && footer !== sidebar ? footer : settingsSlot.parentElement;
+  const host = settingsSlot.parentElement;
   if (!host) {
     if (!themeToggle.isConnected) document.body.append(themeToggle);
     return;
   }
   if (themeToggle.parentElement === host && themeToggle.nextElementSibling === settingsSlot) return;
-  host.insertBefore(themeToggle, settingsSlot);
+  try {
+    host.insertBefore(themeToggle, settingsSlot);
+  } catch {
+    if (!themeToggle.isConnected) document.body.append(themeToggle);
+  }
 }
 function decorateSidebar(themeToggle) {
   const sidebar = document.querySelector(SIDEBAR_COLUMN_SELECTOR);
@@ -4440,6 +4437,13 @@ function activateMaidAtelier(ctx) {
   favicon.dataset.skinOwner = SKIN_OWNER2;
   document.head.append(favicon);
   document.title = SKIN_TITLE;
+  const titleEl = document.querySelector("title");
+  const titleObserver = new MutationObserver(() => {
+    if (document.title !== SKIN_TITLE) document.title = SKIN_TITLE;
+  });
+  if (titleEl) {
+    titleObserver.observe(titleEl, { childList: true, characterData: true, subtree: true });
+  }
   let active = true;
   return () => {
     if (!active) return;
@@ -4453,6 +4457,7 @@ function activateMaidAtelier(ctx) {
     if (themeTransitionTimer !== void 0) clearTimeout(themeTransitionTimer);
     themeToggle.removeEventListener("click", switchTheme);
     observer.disconnect();
+    titleObserver.disconnect();
     themeColorObserver.disconnect();
     titlebarOverlay?.removeEventListener("geometrychange", syncTitlebarHeight);
     resizeObserver?.disconnect();

@@ -8,17 +8,30 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { spawnNodeSync } from './node-bin.mjs'
 import { status as visionStatus, apply as visionApply } from './wizard-vision.mjs'
 import * as runtime from './host-runtime.mjs'
+import { validatePlan } from './plan-validate.mjs'
+import { buildImpactSummary } from './host-impact.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DSP = path.resolve(__dirname, '..')
 const DOCTOR = path.join(DSP, 'dsh-doctor', 'dsh-doctor.mjs')
-const AUDIT = path.join(__dirname, 'host-audit.jsonl')
-const SESSION = path.join(__dirname, 'host-session.json')
-const MAX_STEPS = 20
+// 状态目录可外置（测试/多实例），默认仍在插件目录（已被 .gitignore 忽略）。
+const STATE_DIR = process.env.DSH_HOST_STATE_DIR || __dirname
+const AUDIT = path.join(STATE_DIR, 'host-audit.jsonl')
+const SESSION = path.join(STATE_DIR, 'host-session.json')
+const DEFAULT_MAX_STEPS = 20
+const RUN_ID = process.env.DSH_HOST_RUN_ID || 'default'
+/** P2-2a：confirm 工具必须先 dry-run；预览票据默认 5 分钟有效。 */
+const PREVIEW_TTL_MS = Number(process.env.DSH_HOST_PREVIEW_TTL_MS) || 5 * 60 * 1000
+const previewTickets = new Map()
+
+function stepBudget() {
+  try { return Number(runtime.loadPolicy().max_steps) || DEFAULT_MAX_STEPS } catch { return DEFAULT_MAX_STEPS }
+}
 
 const TOOLS = {
   'vision.wizard.status': { title: '智谱看图配置状态', risk: 'read', confirm: false, concurrencySafe: true, args: {} },
@@ -32,18 +45,41 @@ const TOOLS = {
   'shell.run': { title: '参数化命令（git/node/pnpm）', risk: 'exec', confirm: true, concurrencySafe: false, args: { name: 'git|node|pnpm', argv: 'string[]', cwd: 'string?' } },
   'git.status': { title: 'Git 状态', risk: 'read', confirm: false, concurrencySafe: true, args: {} },
   'git.diff': { title: 'Git diff --stat', risk: 'read', confirm: false, concurrencySafe: true, args: { path: 'string?' } },
-  'git.commit': { title: 'Git 提交（明示 files+message）', risk: 'write-git', confirm: true, concurrencySafe: false, args: { files: 'string[]', message: 'string' } },
+  'git.commit': { title: 'Git 提交（明示 files+message；只提交清单内文件）', risk: 'write-git', confirm: true, concurrencySafe: false, args: { files: 'string[]', message: 'string', cwd: 'string?' } },
+  'plan.validate': { title: '组合校验（多步计划能不能一起跑）', risk: 'read', confirm: false, concurrencySafe: true, args: { steps: 'array' } },
   'dsh.restart': { title: '清理有害 env 后启动 Desktop', risk: 'exec', confirm: true, concurrencySafe: false, args: {} },
 }
 
-function loadSession() {
-  try { return JSON.parse(fs.readFileSync(SESSION, 'utf8')) } catch {
-    return { started_at: new Date().toISOString(), steps: 0, halted: false, reason: null }
-  }
+function emptyRun() {
+  return { started_at: new Date().toISOString(), steps: 0, halted: false, reason: null }
 }
 
-function saveSession(s) {
-  fs.writeFileSync(SESSION, JSON.stringify(s, null, 2) + '\n', 'utf8')
+/** 兼容旧的单任务文件：读到时自动升级为 runs 结构（只在下次写入时落盘）。 */
+function loadStore() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(SESSION, 'utf8'))
+    if (raw && raw.runs && typeof raw.runs === 'object') return raw
+    if (raw && typeof raw.steps === 'number') return { version: 2, runs: { default: raw } }
+  } catch { /* 首次运行 */ }
+  return { version: 2, runs: {} }
+}
+
+function loadSession(runId = RUN_ID) {
+  const store = loadStore()
+  return store.runs[runId] || emptyRun()
+}
+
+function saveSession(s, runId = RUN_ID) {
+  const store = loadStore()
+  store.version = 2
+  store.updated_at = new Date().toISOString()
+  store.runs[runId] = s
+  fs.writeFileSync(SESSION, JSON.stringify(store, null, 2) + '\n', 'utf8')
+}
+
+/** 列出全部任务预算（审计/界面用）。 */
+function listSessions() {
+  return loadStore().runs
 }
 
 function redact(value) {
@@ -55,7 +91,12 @@ function redact(value) {
 }
 
 function audit(event) {
-  fs.appendFileSync(AUDIT, JSON.stringify({ ts: new Date().toISOString(), ...redact(event) }) + '\n', 'utf8')
+  // 先整体脱敏再落盘：避免把密钥写进审计文件后再「忘了」清理。
+  const safe = redact({ ts: new Date().toISOString(), ...event })
+  try {
+    fs.appendFileSync(AUDIT, JSON.stringify(safe) + '\n', 'utf8')
+  } catch { /* 审计失败不阻断主流程 */ }
+  return safe
 }
 
 function firstJson(text) {
@@ -101,9 +142,56 @@ function impactFor(tool, args) {
   if (tool === 'fs.write') return runtime.impactFsWrite(args)
   if (tool === 'fs.read' || tool === 'fs.list') return [{ path: args.path || runtime.DSP, from: args, to: 'read' }]
   if (tool === 'shell.run') return runtime.impactShell(args)
-  if (tool === 'git.commit') return [{ path: (args.files || []).join(', '), from: 'working tree', to: `commit: ${String(args.message || '').slice(0, 80)}` }]
+  if (tool === 'git.commit') return [{ path: (args.files || []).join(', '), from: 'working tree', to: `commit: ${String(args.message || '').slice(0, 80)}（仅清单内文件）` }]
+  if (tool === 'plan.validate') return [{ path: '(plan)', from: `${(args.steps || []).length} steps`, to: 'validate only' }]
   if (tool === 'dsh.restart') return [{ path: 'DSH Desktop', from: 'running?', to: 'launch (env stripped)' }]
   return [{ path: '(read-only)', from: args || {}, to: 'no writes' }]
+}
+
+function stableArgs(args) {
+  const keys = Object.keys(args || {}).sort()
+  const out = {}
+  for (const k of keys) out[k] = args[k]
+  return out
+}
+
+function previewFingerprint(tool, args) {
+  return crypto.createHash('sha256')
+    .update(JSON.stringify({ tool, args: stableArgs(args) }))
+    .digest('hex')
+    .slice(0, 32)
+}
+
+function previewTicketKey(runId, tool, args) {
+  return `${runId || 'default'}::${tool}::${previewFingerprint(tool, args)}`
+}
+
+function rememberPreview(runId, tool, args) {
+  const key = previewTicketKey(runId, tool, args)
+  previewTickets.set(key, Date.now())
+  return key
+}
+
+function consumePreview(runId, tool, args) {
+  const key = previewTicketKey(runId, tool, args)
+  const at = previewTickets.get(key)
+  if (at == null) return false
+  if (Date.now() - at > PREVIEW_TTL_MS) {
+    previewTickets.delete(key)
+    return false
+  }
+  previewTickets.delete(key)
+  return true
+}
+
+/** 测试/诊断：清空预览票据。 */
+function clearPreviewTickets() {
+  previewTickets.clear()
+}
+
+function withImpact(tool, args, rows, extra = {}) {
+  const impact_summary = buildImpactSummary(tool, args, rows, extra)
+  return { impact: impact_summary.rows, impact_summary }
 }
 
 function execute(tool, args) {
@@ -119,11 +207,12 @@ function execute(tool, args) {
   if (tool === 'git.status') return runtime.gitStatus()
   if (tool === 'git.diff') return runtime.gitDiff(args)
   if (tool === 'git.commit') return runtime.gitCommit(args)
+  if (tool === 'plan.validate') return validatePlan(args.steps)
   if (tool === 'dsh.restart') return runNode(DOCTOR, ['launch'], path.dirname(DOCTOR))
   return { ok: false, error: 'unknown tool' }
 }
 
-function run(tool, args = {}, { dryRun = false, confirm = false } = {}) {
+function run(tool, args = {}, { dryRun = false, confirm = false, runId = RUN_ID } = {}) {
   const spec = TOOLS[tool]
   if (!spec) {
     const denied = { ok: false, action: 'run', error: 'tool-not-whitelisted', tool }
@@ -131,55 +220,103 @@ function run(tool, args = {}, { dryRun = false, confirm = false } = {}) {
     return denied
   }
 
-  const session = loadSession()
+  const maxSteps = stepBudget()
+  const session = loadSession(runId)
   if (session.halted) {
-    return { ok: false, action: 'run', error: 'halted', reason: session.reason, steps: session.steps }
+    return { ok: false, action: 'run', error: 'halted', reason: session.reason, steps: session.steps, runId }
   }
-  if (session.steps >= MAX_STEPS) {
+  if (session.steps >= maxSteps) {
     session.halted = true
     session.reason = 'max_steps'
-    saveSession(session)
-    const stopped = { ok: false, action: 'run', error: 'circuit-open', reason: 'max_steps', steps: session.steps }
+    session.halted_at = new Date().toISOString()
+    saveSession(session, runId)
+    const stopped = { ok: false, action: 'run', error: 'circuit-open', reason: 'max_steps', steps: session.steps, runId }
     audit({ kind: 'halt', ...stopped })
     return stopped
   }
 
   if (spec.confirm && !confirm && !dryRun) {
+    const shaped = withImpact(tool, args, impactFor(tool, args))
     return {
       ok: false,
       action: 'run',
       error: 'confirm-required',
       tool,
-      impact: impactFor(tool, args),
-      note: '危险动作需要 confirm:true。可先 dry_run。',
+      ...shaped,
+      note: '危险动作需要 confirm:true。可先 dry_run（dsh_host_preview）。',
     }
   }
 
-  const impact = impactFor(tool, args)
+  // P2-2a：confirm 工具真正执行前必须有匹配的 dry-run 票据。
+  if (spec.confirm && confirm && !dryRun) {
+    if (!consumePreview(runId, tool, args)) {
+      const shaped = withImpact(tool, args, impactFor(tool, args))
+      const denied = {
+        ok: false,
+        action: 'run',
+        error: 'preview-required',
+        tool,
+        ...shaped,
+        note: 'confirm:true 工具必须先 dsh_host_preview / dry_run 同一组参数，再执行。',
+      }
+      audit({ kind: 'deny', ...denied })
+      return denied
+    }
+  }
+
+  const impactRows = impactFor(tool, args)
   if (dryRun) {
-    const preview = { ok: true, action: 'run', dry_run: true, tool, impact, risk: spec.risk }
+    const preview = {
+      ok: true,
+      action: 'run',
+      dry_run: true,
+      tool,
+      risk: spec.risk,
+      ...withImpact(tool, args, impactRows, tool === 'fs.write' ? { will_snapshot: true } : {}),
+    }
     if (tool === 'fs.write') {
       const p = runtime.previewFsWrite(args)
       preview.will_snapshot = p.will_snapshot === true
       preview.existed = !!p.existed
+      preview.status = p.status || 'ok'
+      preview.warnings = p.warnings || []
       if (p.path) preview.path = p.path
-      if (Array.isArray(p.impact)) preview.impact = p.impact
+      if (Array.isArray(p.impact)) {
+        Object.assign(preview, withImpact(tool, args, p.impact, {
+          will_snapshot: p.will_snapshot === true,
+          existed: p.existed,
+        }))
+      }
+      if (p.status === 'denied') {
+        const deniedPreview = { ...preview, ok: false, error: p.error, detail: p.detail }
+        audit({ kind: 'dry-run', tool, ok: false, error: p.error, status: 'denied' })
+        return deniedPreview
+      }
     }
-    audit({ kind: 'dry-run', tool, impact: preview.impact, will_snapshot: preview.will_snapshot })
+    if (spec.confirm) rememberPreview(runId, tool, args)
+    audit({ kind: 'dry-run', tool, ok: true, impact: preview.impact, will_snapshot: preview.will_snapshot, status: preview.status })
     return preview
   }
 
   session.steps += 1
-  saveSession(session)
+  session.updated_at = new Date().toISOString()
+  saveSession(session, runId)
   const result = execute(tool, args)
   const out = {
     ok: result && result.ok !== false,
     action: 'run',
     dry_run: false,
     tool,
+    runId,
     steps: session.steps,
-    max_steps: MAX_STEPS,
-    impact,
+    max_steps: maxSteps,
+    ...withImpact(tool, args, impactRows, result && typeof result === 'object' ? {
+      will_snapshot: result.will_snapshot,
+      callId: result.callId,
+      snapshot_id: result.snapshot_id,
+      snapshot_path: result.snapshot_path,
+      existed: result.existed,
+    } : {}),
     result: redact(result),
   }
   if (tool === 'fs.write' && result && typeof result === 'object') {
@@ -206,7 +343,7 @@ function run(tool, args = {}, { dryRun = false, confirm = false } = {}) {
   return out
 }
 
-export { catalog, run, TOOLS, MAX_STEPS, impactFor }
+export { catalog, run, TOOLS, DEFAULT_MAX_STEPS, impactFor, listSessions, stepBudget, clearPreviewTickets, previewFingerprint }
 
 function parseArgsJson(argv) {
   const fileIdx = argv.indexOf('--args-file')
@@ -238,8 +375,10 @@ if (isMain) {
       confirm: process.argv.includes('--confirm'),
     }))
   } else if (cmd === 'reset-session') {
-    fs.writeFileSync(SESSION, JSON.stringify({ started_at: new Date().toISOString(), steps: 0, halted: false, reason: null }, null, 2) + '\n')
-    printJson({ ok: true, action: 'reset-session' })
+    saveSession(emptyRun(), RUN_ID)
+    printJson({ ok: true, action: 'reset-session', runId: RUN_ID, sessions: Object.keys(listSessions()).length })
+  } else if (cmd === 'sessions') {
+    printJson({ ok: true, action: 'sessions', runId: RUN_ID, runs: listSessions() })
   } else {
     console.error('Commands: catalog | run <tool> [--dry-run] [--confirm] [--args-json {}] | reset-session')
     process.exit(2)

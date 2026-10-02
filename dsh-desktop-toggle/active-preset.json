@@ -1,17 +1,14 @@
 {
   "name": "bridge",
   "title": "指挥舱",
-  "applied_at": "2026-09-05T09:35:07.723Z",
+  "applied_at": "2026-09-30T06:31:50.732Z",
   "enable": [
     "apiproxy-compat",
     "dsh-open-world",
-    "web-ui-settings",
+    "dsh-550c-boot",
     "web-ui-rewind",
     "ventus-progress",
     "better-sidebar",
-    "web-ui-task-board",
-    "web-ui-live-stats",
-    "web-ui-describe-image",
     "archify",
     "dsh-enable-image-input"
   ]

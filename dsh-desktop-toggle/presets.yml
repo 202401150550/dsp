@@ -31,6 +31,7 @@ presets:
     enable:
       - apiproxy-compat
       - dsh-open-world
+      - dsh-550c-boot
       - web-ui-rewind
       - ventus-progress
       - better-sidebar

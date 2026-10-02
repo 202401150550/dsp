@@ -346,6 +346,7 @@ export async function apply(ctx) {
       sendSafe(res, () => hostRun(tool, body.args && typeof body.args === 'object' ? body.args : {}, {
         dryRun: body.dry_run === true || body.dry_run === 'true',
         confirm: body.confirm === true || body.confirm === 'true',
+        runId: typeof body.run_id === 'string' && body.run_id ? body.run_id : undefined,
       }))
     },
   }), 'dsh-self: host-run')

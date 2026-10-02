@@ -42,10 +42,23 @@ capabilities:
     owner: web-ui-remote-web-ui
     match: [remote-web-ui]
     title: 远程 Web UI
+    # P2-1a 组合校验元数据（高风险面）
+    reads: [network, session]
+    writes: [network]
+    side_effects: [network, remote-ui]
+    reversible: false
+    conflicts_with: [ssh]
+    taint_labels: [network-egress]
   ssh:
     owner: web-ui-ssh
     match: [dsh-ssh]
     title: SSH
+    reads: [network, credentials]
+    writes: [network]
+    side_effects: [exec, network]
+    reversible: false
+    conflicts_with: [remote-web-ui]
+    taint_labels: [network-egress, tool-output]
   file-drop:
     owner: dsh-self
     match: [file-drop]
@@ -62,10 +75,22 @@ capabilities:
     owner: dsh-self
     match: [config-doctor, dsh-doctor]
     title: 配置医生（应用内 API；带外仍用 dsp/dsh-doctor）
+    reads: [config]
+    writes: [config]
+    side_effects: [delete-hot-yml]
+    reversible: true
+    conflicts_with: []
+    taint_labels: []
   plugin-market:
     owner: dsh-market
     match: [dshmarket, dsh-market]
     title: 插件市场
+    reads: [network, plugins]
+    writes: [plugins, config]
+    side_effects: [install, network]
+    reversible: false
+    conflicts_with: []
+    taint_labels: [network-egress, untrusted-code]
   subagent-progress:
     owner: ventus-progress
     match: [ventus-progress, dsh-ventus-progress]

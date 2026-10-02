@@ -29,7 +29,13 @@ var MAID_ATELIER_REGISTRATION = Object.freeze({
 var inject = [];
 function apply(ctx) {
   const catalog = ctx.get("themeCatalog");
-  if (catalog === void 0) return;
+  if (catalog === void 0) {
+    // Desktop 2.0.x 未挂 themeCatalog；仍留一条 effect，保证 fiber 保持 active，
+    // 客户端半边可直接激活皮肤（见 package.json dsh.client）。
+    ctx.effect(() => () => {}, "ui-skin-maid-atelier: no themeCatalog (client-only mode)");
+    ctx.logger?.info?.("[deep-whale] themeCatalog missing; host catalog skipped, client skin still loads");
+    return;
+  }
   ctx.effect(
     () => catalog.registerBuiltin(MAID_ATELIER_REGISTRATION),
     "ui-skin-maid-atelier: builtin catalog registration"

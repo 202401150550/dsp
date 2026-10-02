@@ -1,0 +1,15 @@
+{
+  "id": "@dsh-external/dsh-client-ui-skin-deep-whale-day-night",
+  "bucket": "skin",
+  "owner_capability": "desktop-skin",
+  "risk": "low",
+  "reads": ["ui.theme"],
+  "writes": ["ui.theme"],
+  "side_effects": ["ui.mount"],
+  "reversible": true,
+  "conflicts_with": [],
+  "taint_labels": [],
+  "requires_confirm_above": "L0",
+  "default_presets": ["bridge", "full"],
+  "forbidden_with": ["web-ui-all", "skin-center"]
+}

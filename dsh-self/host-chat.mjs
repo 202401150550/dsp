@@ -5,6 +5,7 @@
  */
 import { catalog, run, TOOLS, impactFor } from './host-agent.mjs'
 import { DSP, loadPolicy } from './host-runtime.mjs'
+import { formatImpactSummary, buildImpactSummary } from './host-impact.mjs'
 
 const NAMES = Object.keys(TOOLS)
 const OUTPUT = {
@@ -40,7 +41,8 @@ export function collectArgs(raw = {}) {
   return args
 }
 
-function formatImpact(impact) {
+function formatImpact(impact, impactSummary) {
+  if (impactSummary && typeof impactSummary === 'object') return formatImpactSummary(impactSummary)
   if (!Array.isArray(impact) || impact.length === 0) return '无写影响'
   return impact.map((row) => {
     if (!row || typeof row !== 'object') return String(row)
@@ -61,7 +63,8 @@ export function packHostResult(out, fallbackTool) {
   if (out && out.dry_run) bits.push('预演 ' + (out.tool || fallbackTool))
   if (error) bits.push(String(error))
   if (note) bits.push(String(note))
-  if (Array.isArray(out && out.impact) && out.impact.length) bits.push(formatImpact(out.impact))
+  if (out && out.impact_summary) bits.push(formatImpact(out.impact, out.impact_summary))
+  else if (Array.isArray(out && out.impact) && out.impact.length) bits.push(formatImpact(out.impact))
   const stdout = inner.stdout || inner.text || inner.stderr
   if (stdout) bits.push(clip(stdout, 1200))
   if (bits.length === 0) bits.push(clip(JSON.stringify(inner), 1200))
@@ -211,10 +214,12 @@ export function registerHostChat(ctx) {
         const tool = String(args.tool || '')
         const spec = TOOLS[tool]
         if (!needsAsk(spec)) return next()
-        const impact = impactFor(tool, collectArgs(args))
+        const collected = collectArgs(args)
+        const impact = impactFor(tool, collected)
+        const impactSummary = buildImpactSummary(tool, collected, impact)
         return {
           kind: 'ask',
-          reason: `宿主需要确认：${spec.title}（${tool}）。影响：${formatImpact(impact)}。仅 dsp 白名单；禁止自由 shell。`,
+          reason: `宿主需要确认：${spec.title}（${tool}）。影响：${formatImpact(impact, impactSummary)}。仅 dsp 白名单；禁止自由 shell。须先 dsh_host_preview。`,
         }
       }
       const blob = JSON.stringify(exec.arguments || {})

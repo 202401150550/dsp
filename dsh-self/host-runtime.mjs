@@ -26,9 +26,14 @@ function loadPolicy() {
     max_write_bytes: Number(raw.max_write_bytes) || 262144,
     timeout_ms: Number(raw.timeout_ms) || 30000,
     max_output_chars: Number(raw.max_output_chars) || 8000,
+    max_steps: Number(raw.max_steps) || 20,
     roots: roots.length ? roots : [DSP],
     deny_names: (raw.deny_names || []).map((n) => String(n).toLowerCase()),
     commands: raw.commands || {},
+    // 参数级拒绝表：命令 + 正则。默认策略见 host-policy.yml。
+    deny_args: raw.deny_args || {},
+    // 二进制目标：refuse（默认，拒绝写入）| text-only
+    binary_write: String(raw.binary_write || 'refuse'),
   }
 }
 
@@ -41,6 +46,15 @@ function isDeniedName(abs) {
   const base = path.basename(abs).toLowerCase()
   const parts = norm(abs).split('/')
   return policy.deny_names.some((n) => base === n || parts.includes(n))
+}
+
+/** 读取文件并要求内容可无损 UTF-8 往返（二进制/非法编码返回 ok:false）。 */
+function readUtf8Exact(file) {
+  const raw = fs.readFileSync(file)
+  const text = raw.toString('utf8')
+  const round = Buffer.from(text, 'utf8')
+  if (!round.equals(raw)) return { ok: false, raw, reason: 'not-utf8-exact' }
+  return { ok: true, text, raw }
 }
 
 function coerceHostPath(input) {
@@ -65,6 +79,17 @@ export function resolveAllowed(input, { mustExist = false } = {}) {
   let real = probe
   try { real = fs.realpathSync(probe) } catch {
     return { ok: false, error: 'not-found' }
+  }
+  // 解析后（realpath 穿过多层 symlink/junction）仍要再做一次敏感名检查：
+  // 否则「允许根内的普通别名 → 受保护目录」会绕过 deny_names。
+  if (isDeniedName(real)) {
+    return {
+      ok: false,
+      error: 'denied-secret-path-resolved',
+      path: path.basename(real),
+      via: 'realpath',
+      note: '路径本身合法，但解析后的真实路径命中受保护名称。',
+    }
   }
   const n = norm(real)
   const policy = loadPolicy()
@@ -133,25 +158,54 @@ export function fsRead(args = {}) {
   return { ok: true, path: got.path, bytes: st.size, text: clip(text, policy.max_output_chars) }
 }
 
+/**
+ * 预览写入。status:
+ *   ok               —— 只读预览通过（仍需 confirm 才能真写）
+ *   pending-approval —— 合法但属于写操作，等确认
+ *   denied           —— 策略拒绝（越界 / 受保护名 / 不支持的内容类型）
+ */
 export function previewFsWrite(args = {}) {
+  const policy = loadPolicy()
   const got = resolveAllowed(args.path, { mustExist: false })
   if (!got.ok) {
     return {
       ok: false,
+      status: 'denied',
       will_snapshot: false,
       error: got.error,
       path: String(args.path || ''),
       existed: false,
+      warnings: [],
       impact: [],
     }
   }
   const existed = fs.existsSync(got.path) && fs.statSync(got.path).isFile()
+  const warnings = []
+  if (existed) {
+    const probe = readUtf8Exact(got.path)
+    if (!probe.ok && policy.binary_write === 'refuse') {
+      return {
+        ok: false,
+        status: 'denied',
+        error: 'binary-target-unsupported',
+        detail: '目标已存在且不是可无损往返的 UTF-8 文本；拒绝覆盖以免快照与回滚损坏字节。',
+        path: got.path,
+        existed: true,
+        warnings,
+        impact: [],
+      }
+    }
+    if (probe.raw.length > 32768) warnings.push('overwrite-large-file')
+    if (probe.raw.length === 0) warnings.push('overwrite-empty-file')
+  }
   return {
     ok: true,
+    status: 'pending-approval',
     will_snapshot: true,
     path: got.path,
     existed,
     callId: null,
+    warnings,
     impact: [{
       path: got.path,
       from: existed ? '(existing file)' : '(create)',
@@ -171,9 +225,24 @@ export function fsWrite(args = {}) {
 
   const existed = fs.existsSync(got.path) && fs.statSync(got.path).isFile()
   let before = null
+  let beforeBytes = null
   if (existed) {
     try {
-      before = fs.readFileSync(got.path, 'utf8')
+      const probe = readUtf8Exact(got.path)
+      if (!probe.ok && policy.binary_write === 'refuse') {
+        // 不支持的内容类型：宁可不写，也不产生「回滚成功但字节已坏」的快照。
+        return {
+          ok: false,
+          error: 'binary-target-unsupported',
+          category: 'unsupported-content',
+          detail: 'not-utf8-exact',
+          path: got.path,
+          will_snapshot: false,
+          existed: true,
+        }
+      }
+      before = probe.text
+      beforeBytes = probe.raw
     } catch (err) {
       return {
         ok: false,
@@ -187,7 +256,7 @@ export function fsWrite(args = {}) {
   }
 
   // S1: snapshot failure refuses the write.
-  const snap = commitBeforeSnapshot({ filePath: got.path, before })
+  const snap = commitBeforeSnapshot({ filePath: got.path, before, beforeBytes, existed })
   if (!snap.ok) {
     return {
       ok: false,
@@ -226,6 +295,8 @@ export function fsWrite(args = {}) {
     callId: snap.callId,
     snapshot_id: snap.callId,
     snapshot_path: snap.snapshot_path,
+    snapshot_bytes: snap.byteLen,
+    snapshot_sha256: snap.sha256,
     anchorSeq: snap.anchorSeq,
   }
 }
@@ -253,6 +324,24 @@ function spawnBin(bin, argv, cwd) {
   }
 }
 
+/**
+ * 命令级参数拒绝（策略驱动）。字符串黑名单不是沙箱，但可以挡住
+ * 「改工作目录 / 改配置 / 注入执行路径」这类已知逃逸面。
+ */
+function argDenied(name, argv, policy) {
+  const rules = (policy.deny_args && policy.deny_args[name]) || []
+  for (const rule of rules) {
+    let re
+    try { re = new RegExp(String(rule)) } catch { continue }
+    for (const a of argv) {
+      if (re.test(String(a))) {
+        return { ok: false, error: 'arg-denied', name, rule: String(rule), arg: String(a).slice(0, 60) }
+      }
+    }
+  }
+  return null
+}
+
 function gitDenied(argv) {
   const head = String(argv[0] || '').toLowerCase()
   if (head === 'config') return 'git-config-forbidden'
@@ -269,6 +358,14 @@ function gitDenied(argv) {
   }
   if (argv.includes('--no-verify') || argv.includes('--no-gpg-sign')) return 'skip-hooks-forbidden'
   if (argv.includes('-i') || argv.includes('--interactive')) return 'interactive-forbidden'
+  // 全局选项可把仓库指向白名单之外：显式拒绝（见回归用例 B1/B2）。
+  for (const a of argv) {
+    const s = String(a)
+    if (s === '-C' || s === '-c' || s === '--git-dir' || s === '--work-tree') return 'git-cwd-switch-forbidden'
+    if (/^(-C.+|--git-dir=|--work-tree=|--exec-path|--namespace|--config-env|--upload-pack|--receive-pack|--git-common-dir|--config=)/.test(s)) {
+      return 'git-global-option-forbidden'
+    }
+  }
   return null
 }
 
@@ -298,6 +395,8 @@ export function shellRun(args = {}) {
   const cwdArg = args.cwd ? resolveAllowed(args.cwd, { mustExist: true }) : { ok: true, path: DSP }
   if (!cwdArg.ok) return cwdArg
   if (!fs.statSync(cwdArg.path).isDirectory()) return { ok: false, error: 'cwd-not-directory' }
+  const deniedArg = argDenied(name, argv, policy)
+  if (deniedArg) return deniedArg
   if (name === 'git') {
     const why = gitDenied(argv)
     if (why) return { ok: false, error: why, note: 'Git 纪律：禁 config / force-push / 推 main / 跳过 hook。' }
@@ -327,6 +426,26 @@ export function gitDiff(args = {}) {
   return shellRun({ name: 'git', argv, cwd: DSP })
 }
 
+function gitRun(argv, cwd) {
+  return spawnBin('git', argv, cwd)
+}
+
+/** 只读：当前暂存区文件名（用于提交前后对照与审计）。 */
+export function gitStagedNames(cwd = DSP) {
+  const r = gitRun(['diff', '--cached', '--name-only'], cwd)
+  if (!r.ok) return []
+  return String(r.stdout || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+}
+
+function gitIsTracked(cwd, file) {
+  const r = gitRun(['ls-files', '--error-unmatch', '--', file], cwd)
+  return r.ok
+}
+
+/**
+ * 只提交清单内文件，且不动用户既有暂存区。
+ * 旧实现 `git add` + 无路径 commit 会把已暂存的无关文件一起提交（回归用例 B5）。
+ */
 export function gitCommit(args = {}) {
   const message = String(args.message || '').trim()
   if (!GIT_MSG_OK.test(message) || message.length < 2) {
@@ -340,21 +459,45 @@ export function gitCommit(args = {}) {
     if (!got.ok) return got
     resolved.push(got.path)
   }
-  const add = shellRun({ name: 'git', argv: ['add', '--', ...resolved], cwd: DSP })
-  if (!add.ok) return add
-  return shellRun({
-    name: 'git',
-    argv: ['commit', '-m', message],
-    cwd: DSP,
-  })
+  const cwdArg = args.cwd ? resolveAllowed(args.cwd, { mustExist: true }) : { ok: true, path: DSP }
+  if (!cwdArg.ok) return cwdArg
+  const top = gitToplevel(cwdArg.path)
+  if (!top.ok) return top
+  const stagedBefore = gitStagedNames(top.path)
+  const untracked = resolved.filter((p) => !gitIsTracked(top.path, p))
+  if (untracked.length) {
+    // intent-to-add：只登记路径，不改变既有暂存内容。
+    const intent = gitRun(['add', '-N', '--', ...untracked], top.path)
+    if (!intent.ok) return { ok: false, error: 'intent-add-failed', stderr: intent.stderr }
+  }
+  const commit = gitRun(['commit', '--only', '-m', message, '--', ...resolved], top.path)
+  return {
+    ok: commit.ok,
+    code: commit.code,
+    stdout: commit.stdout,
+    stderr: commit.stderr,
+    strategy: 'only-paths',
+    files: resolved,
+    cwd: top.path,
+    staged_before: stagedBefore,
+    staged_after: gitStagedNames(top.path),
+    note: commit.ok ? '只提交清单内文件；既有暂存区保持不变' : 'commit 未成功，未改动既有暂存区',
+  }
 }
 
 export function impactFsWrite(args = {}) {
-  return previewFsWrite(args).impact
+  const p = previewFsWrite(args)
+  return p.impact && p.impact.length
+    ? p.impact
+    : [{ path: String(args.path || ''), from: '(preview)', to: `${p.status || 'unknown'}: ${p.error || 'no-op'}` }]
 }
 
 export function impactShell(args = {}) {
-  return [{ path: `cmd:${args.name || '?'}`, from: args.argv || [], to: 'spawn shell:false' }]
+  return [{
+    path: `cmd:${args.name || '?'}`,
+    from: args.argv || [],
+    to: 'spawn shell:false（参数策略先行校验）',
+  }]
 }
 
 export { loadPolicy, DSP }

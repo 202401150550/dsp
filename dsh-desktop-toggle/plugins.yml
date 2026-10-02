@@ -75,6 +75,27 @@ features:
     dep: dsh-open-world
     link: D:/dsp/dsh-open-world
 
+  dsh-550c-boot:
+    enabled: true
+    title: 550C 进世界开场
+    group: web-ui
+    note: "仅进开放世界时播开场（冷启不播）；设置→通用可切换简易/完整/关闭（需 DSH ≥0.2.0-rc.1）"
+    bundle: dsh-550c-boot
+    insert_id: boot-550c
+    name: dsh-550c-boot
+    dep: dsh-550c-boot
+    link: D:/dsp/dsh-550c-boot
+
+  dsh-office:
+    enabled: true
+    title: Office 成文（docx/pptx/xlsx/pdf）
+    group: desktop
+    note: "对话成文：聊天坞「成文」一键投递，助手用 @huiliyi37/dsh-office 生成文档并回信路径"
+    insert_id: dsh-office
+    name: '@huiliyi37/dsh-office'
+    dep: '@huiliyi37/dsh-office'
+    version: ^0.2.4
+
   web-ui-rewind:
     enabled: true
     title: 对话回退 Rewind

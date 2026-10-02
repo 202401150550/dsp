@@ -11,6 +11,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { spawnNodeSync } from './node-bin.mjs'
+import {
+  loadAndValidateManifest,
+  findOwnerConflicts,
+  policyForbiddenReason,
+  MANIFEST_FILE,
+} from './capability-manifest.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DSP = path.resolve(__dirname, '..')
@@ -71,8 +77,7 @@ function matchCapability(pkgName, dirName) {
 }
 
 function isForbiddenPkg(name, dir) {
-  const s = `${name} ${dir}`.toLowerCase()
-  return /web-ui-all/.test(s) || /skin-center/.test(s) || /dsh-skins$/.test(s)
+  return !!policyForbiddenReason(name, dir)
 }
 
 function scanSource(text) {
@@ -121,10 +126,23 @@ function inspectDir(root, extra = {}) {
     usesSettings = usesSettings || scanned.usesSettings
     usesOverlay = usesOverlay || scanned.usesOverlay
   }
-  const cap = matchCapability(name, path.basename(root))
-  const forbidden = isForbiddenPkg(name, root)
+
+  const manifestLoad = loadAndValidateManifest(root)
+  if (manifestLoad.validation && !manifestLoad.validation.ok) {
+    for (const err of manifestLoad.validation.errors) {
+      issues.push({ id: 'capability-manifest', severity: 'high', message: `dsh.capability.json: ${err}` })
+    }
+  }
+  const manifestCap = manifestLoad.doc && manifestLoad.doc.owner_capability
+    ? String(manifestLoad.doc.owner_capability)
+    : null
+  const cap = manifestCap || matchCapability(name, path.basename(root))
+  const forbiddenReason = policyForbiddenReason(name, root)
+    || (manifestLoad.doc && policyForbiddenReason(manifestLoad.doc.id || '', root))
+  const forbidden = !!forbiddenReason
   let verdict = 'native'
   if (forbidden) verdict = 'forbidden'
+  else if (manifestLoad.validation && !manifestLoad.validation.ok) verdict = 'manifest-invalid'
   else if (extra.duplicate) verdict = 'duplicate'
   else if (issues.some((i) => i.id === 'body-dump' || i.id === 'sidebar-footer')) {
     verdict = usesSettings || usesOverlay ? 'adopt-runtime' : 'adopt'
@@ -136,7 +154,7 @@ function inspectDir(root, extra = {}) {
   const seen = new Set()
   const uniq = []
   for (const i of issues) {
-    const k = i.id + ':' + (i.file || '')
+    const k = i.id + ':' + (i.file || '') + ':' + (i.message || '')
     if (seen.has(k)) continue
     seen.add(k)
     uniq.push(i)
@@ -146,8 +164,19 @@ function inspectDir(root, extra = {}) {
     path: root,
     name,
     capability: cap,
-    owner: cap ? REGISTRY.capabilities[cap].owner : null,
+    owner_capability: cap,
+    owner: cap ? (REGISTRY.capabilities[cap]?.owner || (manifestLoad.doc && manifestLoad.doc.id) || null) : null,
     verdict,
+    forbidden_reason: forbiddenReason || undefined,
+    manifest: manifestLoad.missing
+      ? { present: false }
+      : {
+          present: true,
+          path: manifestLoad.path,
+          valid: !!(manifestLoad.validation && manifestLoad.validation.ok),
+          errors: manifestLoad.validation?.errors || (manifestLoad.error ? [manifestLoad.error] : []),
+          doc: manifestLoad.doc,
+        },
     usesSettings,
     usesOverlay,
     client_files: files.map((f) => path.relative(root, f)),
@@ -186,31 +215,37 @@ function inspectAll() {
       })
       continue
     }
-    const cap = matchCapability(row.id, path.basename(row.link))
+    // First pass without duplicate flag to discover capability claim
+    const probe = inspectDir(row.link, { id: row.id })
+    const cap = probe.owner_capability || probe.capability
     const duplicate = !!(cap && capOwners.has(cap) && capOwners.get(cap) !== row.id)
-    const info = inspectDir(row.link, { id: row.id, duplicate, duplicate_of: duplicate ? capOwners.get(cap) : undefined })
-    if (cap && row.enabled && !duplicate) capOwners.set(cap, row.id)
+    const info = duplicate
+      ? inspectDir(row.link, { id: row.id, duplicate: true, duplicate_of: capOwners.get(cap) })
+      : probe
+    if (cap && row.enabled && !duplicate && info.verdict !== 'forbidden' && info.verdict !== 'manifest-invalid') {
+      capOwners.set(cap, row.id)
+    }
     targets.push({ ...info, id: row.id })
   }
 
-  const duplicates = []
-  const grouped = new Map()
-  for (const t of targets) {
-    if (!t.capability) continue
-    const arr = grouped.get(t.capability) || []
-    arr.push(t.id)
-    grouped.set(t.capability, arr)
-  }
-  for (const [cap, ids] of grouped) {
-    const uniq = [...new Set(ids)]
-    if (uniq.length > 1) duplicates.push({ capability: cap, owners: uniq })
-  }
+  const duplicates = findOwnerConflicts(
+    targets.map((t) => ({ id: t.id || t.name, owner_capability: t.owner_capability || t.capability })),
+  )
 
-  const adopt = targets.filter((t) => t.verdict === 'adopt' || t.verdict === 'duplicate' || t.verdict === 'forbidden' || t.verdict === 'adopt-runtime')
+  const adopt = targets.filter((t) => (
+    t.verdict === 'adopt'
+    || t.verdict === 'duplicate'
+    || t.verdict === 'forbidden'
+    || t.verdict === 'adopt-runtime'
+    || t.verdict === 'manifest-invalid'
+  ))
+  const hasForbidden = targets.some((t) => t.verdict === 'forbidden')
+  const hasInvalidManifest = targets.some((t) => t.verdict === 'manifest-invalid')
   return {
-    ok: duplicates.length === 0 && !targets.some((t) => t.verdict === 'forbidden' && t.id),
+    ok: duplicates.length === 0 && !hasForbidden && !hasInvalidManifest,
     action: 'inspect',
     contract: { id: CONTRACT.id, version: CONTRACT.version },
+    manifest_file: MANIFEST_FILE,
     scanned: targets.length,
     needs_adopt: adopt.map((t) => t.id || t.name),
     duplicates,
@@ -229,7 +264,10 @@ function safeAdoptId(name) {
 function wrapDir(root) {
   const info = inspectDir(root)
   if (info.verdict === 'forbidden') {
-    return { ok: false, action: 'wrap', error: 'forbidden', target: info }
+    return { ok: false, action: 'wrap', error: 'forbidden', reason: info.forbidden_reason, target: info }
+  }
+  if (info.verdict === 'manifest-invalid') {
+    return { ok: false, action: 'wrap', error: 'manifest-invalid', target: info }
   }
   if (info.verdict === 'native' || info.verdict === 'host-only' || info.verdict === 'adopt-runtime') {
     return {

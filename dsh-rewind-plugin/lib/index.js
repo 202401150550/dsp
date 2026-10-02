@@ -773,9 +773,17 @@ function apply(ctx, config) {
   const statesBySession = /* @__PURE__ */ new Map();
   let fsService;
   ctx.inject(["settings"], (settingsCtx) => {
-    const section = settingsCtx.settings.get(settingsNamespace("locale"));
-    if (section?.preference === "zh" || section?.preference === "en") {
-      activeLocale = section.preference;
+    try {
+      if (typeof settingsNamespace !== "function" || typeof settingsCtx.settings?.get !== "function") {
+        settingsCtx.logger?.warn?.("[dsh-rewind-plugin] settings.get/settingsNamespace unavailable; locale probe skipped");
+        return;
+      }
+      const section = settingsCtx.settings.get(settingsNamespace("locale"));
+      if (section?.preference === "zh" || section?.preference === "en") {
+        activeLocale = section.preference;
+      }
+    } catch (error) {
+      settingsCtx.logger?.warn?.(`[dsh-rewind-plugin] settings probe failed: ${String(error)}`);
     }
   });
   ctx.effect(function* () {
