@@ -22,6 +22,12 @@ DSH Desktop 是很强的 AI 编程助手，但它是「替你干活的员工」�
 - 🩺 **dsh-self 器官自愈** · 🔁 **对话回退** · ⚡ **子代理舰队进度** · 🚪 **550C 进世界开场**（可跳过）
 - 📄 **office 成文**（@huiliyi37/dsh-office）—— docx/xlsx/pdf/pptx 十六件工具
 
+## 🎬 演示视频（37 秒）
+
+[![演示视频](docs/media/cover.jpg)](docs/media/ow_douyin.mp4)
+
+*真机实拍 37 秒全览：十景园 → 系统拓扑镜 → 聊天坞 · 点击封面播放，或直接[下载 mp4](docs/media/ow_douyin.mp4)*
+
 ## 设计原则
 
 1. **真数据不戏服** —— 每个数字都有出处；推算打「推算」标，隐喻打「隐喻」标，编的数据根本不上屏
