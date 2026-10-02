@@ -368,9 +368,9 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | `dsh-desktop-toggle/plugins.yml` + `presets.yml` | 装机镜像与档位 |
 | `rra-proto` 包内文档 | 研究轨边界 |
 
-**现在：Phase 0 门禁已绿（A–E 勾选完成）；P2 切片 0（Rewind×Host）已实现并提交（`3d46482`）。**  
-**下一行动开关**：主人说「开始组合校验」→ 打开 §12.2 切片 1。  
-在此之前：**FEATURE_FREEZE** 仍禁止新插件 / 开记忆进日常档。
+**现在：Phase 0 门禁已绿；P2 切片 0–2 与 Phase 3 manifest 最小闭环已落地。**  
+**下一行动开关**：主人说「开记忆/语音/市场日常档」或「开始 Phase 1 守成验收」。  
+在此之前：**FEATURE_FREEZE** 仍禁止把 Hindsight / 语音 / 市场编入日常预设。
 
 ---
 
@@ -397,21 +397,25 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 
 ### 12.2 切片 1 — 组合校验最小闭环
 
-- [ ] **P2-1a** `capability-registry.yml`（或并行 schema）为至少 3 个高风险能力补：  
+- [x] **P2-1a** `capability-registry.yml`（或并行 schema）为至少 3 个高风险能力补：  
   `reads` / `writes` / `side_effects` / `reversible` / `conflicts_with` / `taint_labels`  
-- [ ] **P2-1b** host-agent 增加 `plan.validate`：输入多步 tool 列表，输出 allow/deny + 原因  
-- [ ] **P2-1c** 固定用例：单步 `fs.write` 合法 + 组合「写后立刻 shell 危险模式」被拒  
+  （已补：`ssh` / `remote-web-ui` / `plugin-market` / `config-doctor`；`plan-validate.mjs` 另有工具级 CAPABILITIES）  
+- [x] **P2-1b** host-agent 增加 `plan.validate`：输入多步 tool 列表，输出 allow/deny + 原因  
+- [x] **P2-1c** 固定用例：单步 `fs.write` 合法 + 组合「写后立刻 shell 危险模式」被拒  
+  （`test/host-boundary-regression.mjs` B8a–B8d）
 
 ### 12.3 切片 2 — dry-run 强制面
 
-- [ ] **P2-2a** 所有 `confirm:true` 工具：UI/chat 路径必须先 `dsh_host_preview`（已有则补测）  
-- [ ] **P2-2b** 影响摘要统一字段：`paths[]` / `network` / `config_keys[]` / `snapshot`  
+- [x] **P2-2a** 所有 `confirm:true` 工具：UI/chat 路径必须先 `dsh_host_preview`（已有则补测）  
+  （`host-agent` 预览票据；无匹配 dry-run → `preview-required`；`test/host-dry-run-gate.mjs` D1–D3/D6）  
+- [x] **P2-2b** 影响摘要统一字段：`paths[]` / `network` / `config_keys[]` / `snapshot`  
+  （`host-impact.mjs` → `impact_summary`；旧 `impact` 行数组保留）
 
 ---
 
-## 13. Phase 3 纸面 — 插件权限 manifest 最小 schema（未实现）
+## 13. Phase 3 — 插件权限 manifest 最小闭环
 
-每个可安装包（市场或 link）声明一份 `dsh.capability.json`（名称可改，字段先定）：
+每个可安装包（市场或 link）声明一份 `dsh.capability.json`（schema：`dsh-self/dsh.capability.schema.json`）：
 
 ```json
 {
@@ -431,7 +435,12 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 }
 ```
 
-验收（行动阶段）：`dsh-self` apply/inspect 读到第二份抢同一 `owner_capability` → 拒绝或降级只读卡；`web-ui-all` / skin-center 在策略层直接 forbidden（已有则补自动测）。
+验收：
+
+- [x] **P3-a** `capability-manifest.mjs` 读校验必填字段；非法 → `manifest-invalid`，`wrap` 拒绝  
+- [x] **P3-b** 第二份抢同一 `owner_capability` → `duplicate` / inspect `duplicates[]`  
+- [x] **P3-c** `web-ui-all` / `skin-center` 策略层 `forbidden`（`policyForbiddenReason` + wrap 拒绝）  
+- [x] **P3-d** 回归：`test/capability-manifest.mjs`；样例已挂 `dsh-better-sidebar` / whale skin
 
 ---
 
@@ -442,6 +451,9 @@ OpenClaw 每通道授权表；外发 L2 确认；webhook 签名；失败熔断�
 | **PLAN_LOCKED** | 规划纸面冻结期（已完成） |
 | **PHASE0_DONE** | 根 scripts / gitignore / gitmodules / 门禁复跑绿（已完成） |
 | **P2_SLICE0_DONE** | Rewind×Host 宿主写快照已落地并提交（`3d46482`，当前） |
-| **FEATURE_FREEZE** | 未开 P2 切片 1 前：禁止新插件、禁止开 Hindsight/语音/市场进日常档 |
+| **P2_SLICE1_DONE** | 组合校验最小闭环：registry 高风险元数据 + `plan.validate` + B8 用例 |
+| **P2_SLICE2_DONE** | dry-run 强制面：preview 票据 + 统一 `impact_summary` |
+| **P3_MANIFEST_DONE** | 插件权限 manifest：校验 / owner 冲突 / forbidden 策略 |
+| **FEATURE_FREEZE** | 未开记忆/语音/市场进日常档前：禁止把 Hindsight / 语音 / 市场编入日常预设 |
 
-当前默认：**P2_SLICE0_DONE** + **FEATURE_FREEZE**（等主人开组合校验 / P2 切片 1）。
+当前默认：**P3_MANIFEST_DONE** + **FEATURE_FREEZE**（等主人开记忆/语音/市场日常档，或 Phase 1 守成验收）。
