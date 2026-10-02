@@ -5,6 +5,12 @@
 
 基于 [DeepSeek Harness（DSH Desktop）](https://www.deepseek.com/) 的社区插件生态：一座会流动的十景园、一间聊天与投递合一的聊天坞、一面只说真话的系统拓扑镜——以及让这一切值得信赖的 **47 条指令普查** 与 **18 套自动化测试**。
 
+| 十景园 | 系统拓扑镜 | 聊天坞 |
+|---|---|---|
+| ![十景园](docs/screenshots/garden.png) | ![ATI 系统拓扑镜](docs/screenshots/ati.png) | ![聊天坞](docs/screenshots/chatdock.png) |
+
+*以上均为真机实拍（CDP 直连运行中的桌面），非设计稿。
+
 ## 这是什么
 
 DSH Desktop 是很强的 AI 编程助手，但它是「替你干活的员工」——用完即走。这套生态把它变成「你的地方」：系统被装进一座园子，记忆是湖、事件是幡、每个器官可点可查可指令。

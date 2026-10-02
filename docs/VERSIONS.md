@@ -37,3 +37,6 @@ v107✅ATI 减法刀（用户看屏定调「假的全删，真图做干净」）
 ## v108（2026-10-02 晚 · 上线 GitHub）
 v108✅正式上传：隐私终审（个人数据/密钥/隧道地址全史零泄漏；logs 退场；dsh-voice 等 5 件为他人仓 submodule 指针，E 组悬案自然了结）→ 6 commit 落定（b488cea 主线/ae0f87a 550c/d7d4b31 生态/a9b39a4 文档卫生/4913a6d 计划同步）→ 直连 github 被墙 → 探得本机代理 127.0.0.1:7897（Clash 系）→ 带代理推送成功：**https://github.com/202401150550/dsp main@4913a6d**（Public）；补 README.md（介绍词落地）+ LICENSE(MIT)。
 
+## v109（2026-10-02 傍晚 · 三景上 README + 桌面惊魂 40 分钟）
+v109✅About 简介（GitHub API，凭据全程本机）+ README 三景真机截图上线。**插曲（自证留痕）**：为截图冷启桌面→触发恢复模式（profile 偏好 version-one 校验失败，深层真因=office 残留：cordis include 还在加载 dsh-office 而 vendored 包已被摘）→「回滚/重启」按钮均无效→用 06-43-49 干净备份恢复 profile+plugins.yml office 条目 enabled:false→taskkill 硬重启→**健康复活**。教训：①半套卸载比不装更危险（残留 include 会卡整个 host-boot）；②ELECTRON_RUN_AS_NODE=1 终端环境下启动桌面 GUI 必须 env -u（bad option 报错即此症）；③CDP Page.navigate 裸地址会丢桌面启动参数使页面退化成恢复态文件树——驱动桌面只能连它自己开的页。截图：scripts/capture-ow-shots.mjs（工具入库）+ 三景（docs/screenshots/{garden,ati,chatdock}.png，逐张隐私审过：消息区全为测试冒烟残留）。office 状态：暂 disabled，待 pnpm TTY 雷根治后再启用。
+

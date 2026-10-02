@@ -87,7 +87,7 @@ features:
     link: D:/dsp/dsh-550c-boot
 
   dsh-office:
-    enabled: true
+    enabled: false
     title: Office 成文（docx/pptx/xlsx/pdf）
     group: desktop
     note: "对话成文：聊天坞「成文」一键投递，助手用 @huiliyi37/dsh-office 生成文档并回信路径"
